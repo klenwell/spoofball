@@ -3,7 +3,7 @@ import { appInfo, formatVersion } from './app-info';
 
 describe('formatVersion', () => {
   it('prefixes a semver version with "v"', () => {
-    expect(formatVersion('0.1.0')).toBe('v9.9.9'); // DELIBERATE FAILURE to prove CI catches it; reverted next commit
+    expect(formatVersion('0.1.0')).toBe('v0.1.0');
   });
 
   it('keeps a pre-release suffix', () => {
