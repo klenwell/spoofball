@@ -1,0 +1,107 @@
+# Roadmap: Spoofball MVP
+
+Written: 2026-11-20 · **Status: approved** (2026-11-20). Based on [pitch.md](../pitch.md). Epics are refined one at a time with `/epic` and tracked in a Spoofball GitHub Project.
+
+## Why
+
+Spoofball is a simple one-player 2D sports simulation for the browser. You draft a team of six discs ("spoofs"), place them on the court, and watch them play a 3-round match ("scrum") on their own against a computer team. It rebuilds the backgammon-chrome / blowrook prototype as a static site on GitHub Pages.
+
+The project has two goals: **ship the game**, and **document openly how it's built**.
+
+## Starting point (findings, 2026-11-20)
+
+The prototype is `~/projects/backgammon-chrome` (2014, Python 2.7 App Engine, Mercurial, KineticJS + jQuery). There, a spoof is a **rook**.
+
+- **The match ran on the server.** The Python in `lib/minrook/` (`rook_ai`, `scorekeeper`, `mise`, `teams`) simulated each round, and the browser replayed the frames. Pages has no server, so **the simulation moves to TypeScript and runs in the browser.**
+- **Round:** 300 frames over 8 seconds. Scoring rewards court position each frame (`scorekeeper.py`).
+- **Placement ("mise"):** teams take turns placing 3 rooks each per round, and the host places last (`mise.py`). You want to change these rules. That decision belongs to the Scrum epic.
+- **Spoof model:** 11 skills (size, mass, growth, burst, stamina, iq, vision, charisma, cooperation, impact, constancy). They roll up into 5 comps (force, zip, smarts, mesh, will). Each spoof also has an avatar, radius limits of 10–24 px, and fatigue.
+- **Per-spoof stats** already exist: imps, pings, pongs, heeds, jecks, dings, dongs, doves, trees. These give the Stats epic a ready list.
+
+We use the prototype as **a spec, not code to port**. We carry over the behavior and the tuning numbers, rewritten as tested TypeScript.
+
+## Goals
+
+1. **Playable from the first epic on.** The game deployed at `klenwell.github.io/spoofball` is playable after every merged step, even if it's thin.
+2. **The four MVP parts:** New Team (with draft), Scrum, GM Screen, Stats.
+3. **Works on phones** as well as desktop.
+4. **Transparent process.** Epics, tickets, PRs and short epic READMEs tell the story of how it was built.
+5. **Quality bar:** lint and tests run in CI on every PR, and the code is readable over clever.
+
+## Scope
+
+**In:** the four parts above, one-off scrums against generated teams, one saved team per browser, and phone support.
+
+**Out (post-MVP):** trades and free agents, spoof progression, leagues and seasons, multiple saved teams, accounts and servers, sound.
+
+## Stack
+
+| Concern | Choice |
+|---|---|
+| Language | TypeScript (strict) |
+| Build / dev server | Vite |
+| Rendering | Canvas 2D for the court, plain DOM and CSS for screens. No game engine or UI framework at first |
+| Tests | Vitest, following `docs/testing.md` (Better Specs principles adapted to Vitest) |
+| Lint / format | ESLint + Prettier |
+| CI / deploy | GitHub Actions: lint, test and build on PRs; deploy to Pages on merge to `main` |
+| Saves | `localStorage` behind a small versioned save module |
+
+The simulation is **deterministic given a seed**, so matches can be tested and replayed.
+
+## Principles
+
+- **Every ticket is releasable.** Merging to `main` deploys, and the game still works.
+- **Approval first.** You approve each epic and ticket before coding, and review each PR before merge.
+- **Static and thin.** A dependency is added only when it earns its place, and the reason is recorded.
+- **Issues and PRs record what really happened,** including failures.
+
+## Tracking
+
+The same conventions as Dr. George and Sweepers:
+
+- A user Project on `klenwell`, named **"Spoofball"**.
+- Each epic is a parent issue labeled `epic`. Each step is a sub-issue labeled `story`, `task` or `bug`.
+- One PR per step. The PR description is the step's runbook, with `Closes #<step issue>` in the body.
+- Project statuses are Todo → In Progress → QA → Done. Defects get a Severity field.
+- GitHub is the record: there are no per-epic docs folders. Lasting docs (this roadmap, guides, the retrospective in `docs/retrospectives/`) live in `docs/`.
+
+## Epics
+
+| # | Epic | Delivers (playable state at the end) |
+|---|---|---|
+| 0 | `foundation` | Repo `klenwell/spoofball`, the Project and labels, Vite + TS skeleton, CI, Pages deploy, `CLAUDE.md`, `docs/testing.md`. **A live "Spoofball" page** |
+| 1 | `design-direction` | A light style guide (palette, type, spacing), mobile-first layout, the disc look, and wireframes for the court and four screens. **The live page has the app shell, navigation and a static court with discs.** Each later epic refines its own screen |
+| 2 | `scrum` | Simulation in TS (physics, spoof AI, scoring, fatigue), the new placement rules, 3 rounds, a scoreboard and a result screen, using two preset teams. **A full match you can play** |
+| 3 | `new-team` | Create a team (name, color, emoji logo). Draft 6 spoofs from a generated pool of 18–24. Save locally. **Scrum your team against a generated opponent** |
+| 4 | `stats` | Record team and spoof stats per scrum. Stats screen with team record and spoof lines. **History survives a reload** |
+| 5 | `gm-screen` | Roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2) |
+| 6 | `mvp-release` | Phone QA pass, accessibility basics, README, tag `v1.0.0`, retrospective |
+
+Scrum comes before New Team because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
+
+## Decisions (2026-11-20)
+
+1. **Scrums are autonomous after placement.** You place spoofs, then the scrum plays itself. Who plays, and the placement rules, are decided at the scrum level. The new rules are settled when the Scrum epic is planned.
+2. **The GM screen can replace a spoof or re-draft the team.** Trades, free agents and progression come after the MVP.
+3. **A spoof's type is fixed when it's created, shapes its skill rolls, and sets its avatar.** This keeps the prototype's logic (`AVATAR_DIST` in `backgammon-chrome/.../models/rook.py`).
+   - **Types:** king, queen, rook, bishop and knight (spelled "night" in the prototype's code), plus three pawn variants (basic, noble, angry).
+   - **What each type sets:**
+     - a per-skill weighting across the 11 skills;
+     - a cap on total skill points (792 for king and queen, 748 for rook, bishop and knight, 704 for pawns);
+     - draft odds. Pawns make up 65% of draws, and kings 2%.
+   - **Visuals:** the Design Direction epic redesigns the avatars, which are chess glyphs today.
+4. **Semver.**
+   - Each epic ships as a minor version: Foundation is `v0.1.0`, and so on through GM Screen at `v0.6.0`.
+   - Fixes between epics are patch releases.
+   - The MVP release is `v1.0.0`.
+   - After 1.0, a change that breaks existing saves needs a major version or a save migration.
+
+## Open questions
+
+None at the moment. Questions that come up during planning are recorded in each epic.
+
+## Done when
+
+- `klenwell.github.io/spoofball` lets you create a team, draft it, play scrums, see stats, and manage the roster, on desktop and phone.
+- Every epic is closed in the Project, with every step closed by a merged PR that passed CI.
+- The retrospective is written.
