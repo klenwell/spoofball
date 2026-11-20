@@ -7,6 +7,9 @@ coverage/
 .env
 .env.*
 
+# Scratch files (screenshots, notes) shared during review
+tmp/
+
 # Editor and tool state
 .idea/
 .vscode/
