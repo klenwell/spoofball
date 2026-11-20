@@ -32,14 +32,28 @@ function star(points: number, outer: number, inner: number): Point[] {
 }
 
 const STROKE = 0.13;
+
+/** Spokes radiating from the center, starting straight up, as separate strokes. */
+function asteriskSpokes(count: number, inner: number, outer: number): MarkShape[] {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = ((Math.PI * 2) / count) * i - Math.PI / 2;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    return {
+      kind: 'line' as const,
+      width: STROKE,
+      points: [
+        [inner * cos, inner * sin],
+        [outer * cos, outer * sin],
+      ] as const,
+    };
+  });
+}
 export const marks: Record<Avatar, readonly MarkShape[]> = {
   // A four-point star.
   king: [{ kind: 'polygon', points: star(4, 0.46, 0.17) }],
-  // A ring with a center dot.
-  queen: [
-    { kind: 'ring', cx: 0, cy: 0, r: 0.32, width: STROKE },
-    { kind: 'circle', cx: 0, cy: 0, r: 0.1 },
-  ],
+  // An asterisk: six spokes around a center dot.
+  queen: [...asteriskSpokes(6, 0.1, 0.42), { kind: 'circle', cx: 0, cy: 0, r: 0.11 }],
   // A square.
   rook: [
     {

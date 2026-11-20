@@ -19,7 +19,7 @@ These were chosen by the owner from a set of mockup comparisons.
 3. **Spoof avatars: custom geometric marks,** one per avatar, drawn in code.
    - **First draft:**
      - king: a star;
-     - queen: a ring;
+     - queen: an asterisk with a center dot (the owner's idea in #18, replacing a ring that looked busy at 10 px);
      - rook: a square;
      - bishop: a diamond;
      - knight: a chevron;
