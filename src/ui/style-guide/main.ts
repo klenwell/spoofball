@@ -11,6 +11,7 @@ import {
   type TeamColorName,
 } from '../../design/tokens';
 import { appInfo } from '../../app-info';
+import { spoofsSection } from './spoofs';
 import './style-guide.css';
 
 installDesignTokens();
@@ -92,7 +93,7 @@ function teamColorsSection(): HTMLElement {
   });
   return section(
     'Team colors and kits',
-    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. When two teams share a color, the visitor wears away. The court is white, so every color (and so every away trim) is at least 3:1 against it, and every deep shade at least 4.5:1. A light shadow lifts discs off the court. The marks here are placeholders until the avatar step (#18).',
+    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. When two teams share a color, the visitor wears away. The court is white, so every color (and so every away trim) is at least 3:1 against it, and every deep shade at least 4.5:1. A light shadow lifts discs off the court. The real marks are in the Spoofs section below.',
     [h('div', { className: 'sg-teams' }, rows)],
   );
 }
@@ -152,6 +153,7 @@ root.replaceChildren(
   ]),
   paletteSection(),
   teamColorsSection(),
+  spoofsSection(section),
   typeSection(),
   spaceAndRadiusSection(),
 );

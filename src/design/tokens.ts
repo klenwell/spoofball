@@ -25,6 +25,8 @@ export const palette = {
   accent: '#4A86E8',
   /** The away kit's disc. */
   white: '#FFFFFF',
+  /** The ring around a selected spoof. Dark, so it reads on the white court and on any team color. */
+  highlight: '#111317',
 } as const;
 
 export const teamColorNames = [

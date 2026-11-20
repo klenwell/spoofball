@@ -16,22 +16,18 @@ These were chosen by the owner from a set of mockup comparisons.
    - On a phone in portrait, the opponent's seat row sits above the court and yours below.
    - The surface is white (`--color-court`), inside a light gray ring (`--color-court-ring`), as in the prototype's arena. The owner chose white over a dark court on #17 (2026-11-20).
    - **Why:** scoring depends on where a spoof is on the court, so the court's shape is part of the game, not just decoration. It also follows the prototype's court (radius 150, with the mosh at its center).
-3. **Spoof avatars: custom geometric marks.** There's one mark per type, drawn in code.
+3. **Spoof avatars: custom geometric marks,** one per avatar, drawn in code.
    - **First draft:**
      - king: a star;
-     - queen: a ring;
-     - rook: a square;
-     - bishop: a diamond;
-     - knight: a chevron;
-     - pawns: a dot (basic), a dot with a bar (noble), a dot with a peak (angry).
-   - **Why:**
-     - they look the same on every device;
-     - they stay readable on a 10 px disc;
-     - the three pawn variants can be told apart.
-
-     Chess glyphs fail the last two, and emoji fail the first two.
-
-   - **Status:** the owner will refine them in #18.
+     - queen: an asterisk with a center dot (the owner's idea in #18, replacing a ring that looked busy at 10 px);
+     - rook: a club (♣);
+     - bishop: a diamond (♦);
+     - knight: a spade (♠);
+     - pawn: a dot.
+   - **Playing-card suits for the rook, bishop and knight** (the owner's idea in #18). The heart (♥) is unused.
+   - **Pawn subtypes are hidden.** There are 8 spoof types but 6 avatars: basic, noble and angry pawns all show the same pawn mark. A subtype shows only through how the pawn plays in a scrum (the owner's decision on #18, 2026-11-20). The prototype did the same, sending only "pawn" to the browser. In code, `avatarOf(type)` maps a spoof type to what the player sees.
+   - **Why geometric marks:** they look the same on every device and stay readable on a 10 px disc. Chess glyphs blur at that size, and emoji vary by device and get muddy.
+   - **Status:** the owner is refining them in #18.
 4. **Team colors: 8 named colors, re-tuned for the white court, with home and away kits.**
    - The names come from the prototype: red, orange, gold, green, teal, blue, purple and pink.
    - Each color is just dark enough to stand out on white, so all 8 have similar weight, and pure red against pure green is avoided.
@@ -65,17 +61,19 @@ These were chosen by the owner from a set of mockup comparisons.
 
 ## Glossary
 
-| Term           | Meaning                                                                                                                                                                                                   |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Spoof**      | A player: a 2D disc. A team has 6. (The prototype called them "rooks".)                                                                                                                                   |
-| **Spoof type** | A spoof's archetype. It's fixed when the spoof is created, sets its avatar mark, and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry |
-| **Scrum**      | A match against one other team, played over 3 rounds                                                                                                                                                      |
-| **Round**      | One period of a scrum. Spoofs are placed, then play on their own for a fixed time                                                                                                                         |
-| **Court**      | The circular playing area. Where a spoof is on the court affects its score                                                                                                                                |
-| **Mosh**       | The court's center zone, which scores the most. The name comes from the prototype                                                                                                                         |
-| **Seat**       | Where a spoof waits before it's placed on the court. Each team has a row of seats                                                                                                                         |
-| **Kit**        | How a team's discs look in a scrum: **home** (filled with the team color) or **away** (white, trimmed in the team color)                                                                                  |
-| **Expansion**  | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                                                      |
-| **Draft**      | Picking your 6 spoofs from a generated pool of 18–24                                                                                                                                                      |
-| **Pharm**      | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                                       |
-| **Stats**      | Your team's record and each spoof's numbers across scrums                                                                                                                                                 |
+| Term             | Meaning                                                                                                                                                                            |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Spoof**        | A player: a 2D disc. A team has 6. (The prototype called them "rooks".)                                                                                                            |
+| **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry |
+| **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                         |
+| **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a scrum                                                                                 |
+| **Scrum**        | A match against one other team, played over 3 rounds                                                                                                                               |
+| **Round**        | One period of a scrum. Spoofs are placed, then play on their own for a fixed time                                                                                                  |
+| **Court**        | The circular playing area. Where a spoof is on the court affects its score                                                                                                         |
+| **Mosh**         | The court's center zone, which scores the most. The name comes from the prototype                                                                                                  |
+| **Seat**         | Where a spoof waits before it's placed on the court. Each team has a row of seats                                                                                                  |
+| **Kit**          | How a team's discs look in a scrum: **home** (filled with the team color) or **away** (white, trimmed in the team color)                                                           |
+| **Expansion**    | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                               |
+| **Draft**        | Picking your 6 spoofs from a generated pool of 18–24                                                                                                                               |
+| **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                |
+| **Stats**        | Your team's record and each spoof's numbers across scrums                                                                                                                          |
