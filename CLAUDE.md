@@ -47,4 +47,21 @@ PR descriptions use the "Generated with Claude Code" footer instead, and commits
 ## Environment
 
 - **Node version:** `.nvmrc` pins Node 24. The system Node is older, so load nvm first: `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; nvm use`.
-- **Commands:** none yet. Added with the app skeleton (#3).
+- **npm cache inside the sandbox:** for `npm install` or `npm view` in Claude's sandbox, set `npm_config_cache=$TMPDIR/npm-cache`, because `~/.npm` is read-only there.
+
+## Commands
+
+| Command                | What it does                                                    |
+| ---------------------- | --------------------------------------------------------------- |
+| `npm install`          | Install dependencies (CI uses `npm ci`)                         |
+| `npm run dev`          | Dev server at http://localhost:5173/spoofball/                  |
+| `npm run build`        | Production build into `dist/`                                   |
+| `npm run preview`      | Serve the built `dist/` locally                                 |
+| `npm test`             | Run the unit tests once (`npm run test:watch` to rerun on save) |
+| `npm run typecheck`    | Type-check with `tsc`                                           |
+| `npm run lint`         | ESLint (typescript-eslint strict and stylistic, type-checked)   |
+| `npm run format:check` | Check Prettier formatting (`npm run format` to fix)             |
+
+Before opening a PR, run `npm run lint && npm run typecheck && npm test && npm run format:check && npm run build`.
+
+**Testing conventions** are in [docs/testing.md](docs/testing.md).
