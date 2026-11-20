@@ -59,6 +59,24 @@ PR descriptions use the "Generated with Claude Code" footer instead, and commits
 - **Keep infrastructure minimal.** A dependency is added only when it earns its place, and the PR records why.
 - **The prototype is a spec, not code to port.** It is `~/projects/backgammon-chrome`, where a spoof is a "rook". Rewrite its behavior as tested TypeScript.
 
+## Source layout
+
+As agreed on PR #7, folders are added when their first code arrives.
+
+```
+src/
+  main.ts          app entry point
+  design/          design tokens, color math, kits (docs/design.md)
+  game/            pure game logic: spoofs, draft, scrum simulation, scoring, stats
+  ui/              screens and canvas drawing (DOM code stays thin)
+  storage/         saving and loading in localStorage
+  test-support/    factories and seeded random sources, for tests only
+```
+
+- **Game logic never touches the DOM,** so it stays fast to test in Node, and a scrum can be replayed from its seed.
+- **Tests sit next to the code they test,** as `*.test.ts` files.
+- **Use the game's own words** for names in code and docs: spoof, scrum, expansion, pharm, kit and so on. They're defined in the [glossary](docs/design.md#glossary).
+
 ## Environment
 
 - **Node version:** `.nvmrc` pins Node 24. The system Node is older, so load nvm first: `export NVM_DIR="$HOME/.nvm"; . "$NVM_DIR/nvm.sh"; nvm use`.
