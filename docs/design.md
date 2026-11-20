@@ -12,10 +12,10 @@ These were chosen by the owner from a set of mockup comparisons.
 1. **Feel: dark, minimal, built from circles.**
    - It refines the prototype's look: a near-black background (`--color-background`), calm surfaces, and geometric shapes.
    - **Why:** the dark page frames the white court like an arena under lights, so the eye goes to the play. It also suits round discs on a round court.
-2. **Court: circular and white, with a center target, on the dark page.**
+2. **Court: circular and white, with the mosh at its center, on the dark page.**
    - On a phone in portrait, the opponent's seat row sits above the court and yours below.
    - The surface is white (`--color-court`), inside a light gray ring (`--color-court-ring`), as in the prototype's arena. The owner chose white over a dark court on #17 (2026-11-20).
-   - **Why:** scoring depends on where a spoof is on the court, so the court's shape is part of the game, not just decoration. It also follows the prototype's court (radius 150, with a center target).
+   - **Why:** scoring depends on where a spoof is on the court, so the court's shape is part of the game, not just decoration. It also follows the prototype's court (radius 150, with the mosh at its center).
 3. **Spoof avatars: custom geometric marks.** There's one mark per type, drawn in code.
    - **First draft:**
      - king: a star;
@@ -55,13 +55,13 @@ These were chosen by the owner from a set of mockup comparisons.
 
 ## Tokens at a glance
 
-| Group       | Tokens                                                                                                                                                |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Palette     | `background`, `surface`, `court`, `court-ring`, `court-line`, `target`, `court-text`, `text`, `text-muted`, `line`, `accent`, `white`, as `--color-*` |
-| Team colors | `red`, `orange`, `gold`, `green`, `teal`, `blue`, `purple`, `pink`, as `--team-*` (base) and `--team-*-deep`                                          |
-| Type        | `--font-body` (system UI), `--font-numeric` (monospace, for scores). Sizes from `--text-xs` to `--text-display`, on a 1.25 scale                      |
-| Spacing     | `--space-1` to `--space-12`, on a 4 px grid                                                                                                           |
-| Radii       | `--radius-sm`, `-md`, `-lg`, `-pill`, `-circle`                                                                                                       |
+| Group       | Tokens                                                                                                                                              |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Palette     | `background`, `surface`, `court`, `court-ring`, `court-line`, `mosh`, `court-text`, `text`, `text-muted`, `line`, `accent`, `white`, as `--color-*` |
+| Team colors | `red`, `orange`, `gold`, `green`, `teal`, `blue`, `purple`, `pink`, as `--team-*` (base) and `--team-*-deep`                                        |
+| Type        | `--font-body` (system UI), `--font-numeric` (monospace, for scores). Sizes from `--text-xs` to `--text-display`, on a 1.25 scale                    |
+| Spacing     | `--space-1` to `--space-12`, on a 4 px grid                                                                                                         |
+| Radii       | `--radius-sm`, `-md`, `-lg`, `-pill`, `-circle`                                                                                                     |
 
 ## Glossary
 
@@ -72,7 +72,7 @@ These were chosen by the owner from a set of mockup comparisons.
 | **Scrum**      | A match against one other team, played over 3 rounds                                                                                                                                                      |
 | **Round**      | One period of a scrum. Spoofs are placed, then play on their own for a fixed time                                                                                                                         |
 | **Court**      | The circular playing area. Where a spoof is on the court affects its score                                                                                                                                |
-| **Target**     | The court's center zone, which scores the most. (The prototype called it the "mosh".)                                                                                                                     |
+| **Mosh**       | The court's center zone, which scores the most. The name comes from the prototype                                                                                                                         |
 | **Seat**       | Where a spoof waits before it's placed on the court. Each team has a row of seats                                                                                                                         |
 | **Kit**        | How a team's discs look in a scrum: **home** (filled with the team color) or **away** (white, trimmed in the team color)                                                                                  |
 | **Expansion**  | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                                                      |

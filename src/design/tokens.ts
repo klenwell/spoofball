@@ -15,8 +15,8 @@ export const palette = {
   courtRing: '#CCCCCC',
   /** Lines drawn on the court. */
   courtLine: '#D5D9E0',
-  /** The center target. */
-  target: '#EEF1F5',
+  /** The mosh: the court's center scoring zone. */
+  mosh: '#EEF1F5',
   /** Labels drawn on the court. */
   courtText: '#5F6670',
   text: '#E8EAED',
