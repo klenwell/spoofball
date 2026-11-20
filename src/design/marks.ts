@@ -54,19 +54,21 @@ export const marks: Record<Avatar, readonly MarkShape[]> = {
   king: [{ kind: 'polygon', points: star(4, 0.46, 0.17) }],
   // An asterisk: six spokes around a center dot.
   queen: [...asteriskSpokes(6, 0.1, 0.42), { kind: 'circle', cx: 0, cy: 0, r: 0.11 }],
-  // A square.
+  // A club (♣): three lobes on a short stem.
   rook: [
+    { kind: 'circle', cx: 0, cy: -0.17, r: 0.155 },
+    { kind: 'circle', cx: -0.165, cy: 0.06, r: 0.155 },
+    { kind: 'circle', cx: 0.165, cy: 0.06, r: 0.155 },
     {
       kind: 'polygon',
       points: [
-        [-0.29, -0.29],
-        [0.29, -0.29],
-        [0.29, 0.29],
-        [-0.29, 0.29],
+        [0, -0.02],
+        [0.11, 0.38],
+        [-0.11, 0.38],
       ],
     },
   ],
-  // A diamond, taller than wide.
+  // A diamond (♦), taller than wide.
   bishop: [
     {
       kind: 'polygon',
@@ -78,15 +80,25 @@ export const marks: Record<Avatar, readonly MarkShape[]> = {
       ],
     },
   ],
-  // A chevron pointing up.
+  // A spade (♠): a point, two rounded shoulders and a short stem.
   knight: [
     {
-      kind: 'line',
-      width: STROKE,
+      kind: 'polygon',
       points: [
-        [-0.3, 0.17],
-        [0, -0.17],
-        [0.3, 0.17],
+        [0, -0.42],
+        [0.29, -0.06],
+        [0, 0.12],
+        [-0.29, -0.06],
+      ],
+    },
+    { kind: 'circle', cx: -0.15, cy: 0.03, r: 0.155 },
+    { kind: 'circle', cx: 0.15, cy: 0.03, r: 0.155 },
+    {
+      kind: 'polygon',
+      points: [
+        [0, 0.02],
+        [0.11, 0.38],
+        [-0.11, 0.38],
       ],
     },
   ],

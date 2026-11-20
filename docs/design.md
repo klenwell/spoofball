@@ -20,10 +20,11 @@ These were chosen by the owner from a set of mockup comparisons.
    - **First draft:**
      - king: a star;
      - queen: an asterisk with a center dot (the owner's idea in #18, replacing a ring that looked busy at 10 px);
-     - rook: a square;
-     - bishop: a diamond;
-     - knight: a chevron;
+     - rook: a club (♣);
+     - bishop: a diamond (♦);
+     - knight: a spade (♠);
      - pawn: a dot.
+   - **Playing-card suits for the rook, bishop and knight** (the owner's idea in #18). The heart (♥) is unused.
    - **Pawn subtypes are hidden.** There are 8 spoof types but 6 avatars: basic, noble and angry pawns all show the same pawn mark. A subtype shows only through how the pawn plays in a scrum (the owner's decision on #18, 2026-11-20). The prototype did the same, sending only "pawn" to the browser. In code, `avatarOf(type)` maps a spoof type to what the player sees.
    - **Why geometric marks:** they look the same on every device and stay readable on a 10 px disc. Chess glyphs blur at that size, and emoji vary by device and get muddy.
    - **Status:** the owner is refining them in #18.

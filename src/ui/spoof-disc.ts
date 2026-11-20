@@ -65,42 +65,89 @@ function traceShape(ctx: CanvasRenderingContext2D, shape: MarkShape, scale: numb
   }
 }
 
-export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): void {
-  const { x, y, radius, kit } = disc;
+/** Room around a disc for its shadow and highlight ring, as a fraction of the radius. */
+const LAYER_PADDING = 0.45;
+
+let scratch: HTMLCanvasElement | null = null;
+
+/** Draws the disc body (fill, trim, shadow, mark) centered on (0, 0), at full opacity. */
+function drawBody(ctx: CanvasRenderingContext2D, radius: number, type: SpoofType, kit: Kit): void {
   const trim = trimWidth(radius);
+  const inner = radius - trim;
 
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.globalAlpha = fatigueOpacity(disc.fatigue ?? 0);
-
-  // Disc, with a light shadow to lift it off the white court.
+  // Disc, with a light shadow to lift it off the white court. The fill stops
+  // where the trim starts, so the two never overlap.
   ctx.save();
   ctx.shadowColor = 'rgb(0 0 0 / 35%)';
   ctx.shadowBlur = Math.max(1.5, radius * 0.15);
   ctx.shadowOffsetY = Math.max(0.5, radius * 0.06);
   ctx.beginPath();
-  ctx.arc(0, 0, radius - trim / 2, 0, Math.PI * 2);
-  ctx.fillStyle = kit.fill;
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fillStyle = kit.trim;
   ctx.fill();
   ctx.restore();
 
-  // Trim.
   ctx.beginPath();
-  ctx.arc(0, 0, radius - trim / 2, 0, Math.PI * 2);
-  ctx.lineWidth = trim;
-  ctx.strokeStyle = kit.trim;
-  ctx.stroke();
+  ctx.arc(0, 0, inner, 0, Math.PI * 2);
+  ctx.fillStyle = kit.fill;
+  ctx.fill();
 
   // Mark.
   ctx.fillStyle = kit.mark;
   ctx.strokeStyle = kit.mark;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (const shape of marks[avatarOf(disc.type)]) traceShape(ctx, shape, radius);
+  for (const shape of marks[avatarOf(type)]) traceShape(ctx, shape, radius);
+}
 
-  // Highlight: a dark ring just outside the disc.
+/**
+ * Draws the body faded as one image. Fading each shape separately would make
+ * overlaps (a club's lobes, the queen's spokes and dot) show through as
+ * brighter seams, so the body is drawn at full opacity on a scratch canvas
+ * first, then copied with the fade applied once.
+ */
+function drawFadedBody(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  type: SpoofType,
+  kit: Kit,
+  opacity: number,
+): void {
+  const transform = ctx.getTransform();
+  const scale = Math.hypot(transform.a, transform.b) || 1;
+  const half = radius * (1 + LAYER_PADDING);
+  const size = Math.ceil(half * 2 * scale);
+
+  scratch ??= document.createElement('canvas');
+  if (scratch.width < size || scratch.height < size) {
+    scratch.width = size;
+    scratch.height = size;
+  }
+  const layer = scratch.getContext('2d');
+  if (!layer) throw new Error('Canvas 2D is not supported');
+  layer.setTransform(1, 0, 0, 1, 0, 0);
+  layer.clearRect(0, 0, size, size);
+  layer.setTransform(scale, 0, 0, scale, size / 2, size / 2);
+  drawBody(layer, radius, type, kit);
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.drawImage(scratch, 0, 0, size, size, -half, -half, size / scale, size / scale);
+  ctx.restore();
+}
+
+export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): void {
+  const { x, y, radius, type, kit } = disc;
+  const opacity = fatigueOpacity(disc.fatigue ?? 0);
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  if (opacity < 1) drawFadedBody(ctx, radius, type, kit, opacity);
+  else drawBody(ctx, radius, type, kit);
+
+  // Highlight: a dark ring just outside the disc, never faded.
   if (disc.highlighted) {
-    ctx.globalAlpha = 1;
     ctx.beginPath();
     ctx.arc(0, 0, radius + Math.max(2, radius * 0.18), 0, Math.PI * 2);
     ctx.lineWidth = Math.max(1.5, radius * 0.1);
