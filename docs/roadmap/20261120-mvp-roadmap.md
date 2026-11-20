@@ -23,7 +23,7 @@ We use the prototype as **a spec, not code to port**. We carry over the behavior
 ## Goals
 
 1. **Playable from the first epic on.** The game deployed at `klenwell.github.io/spoofball` is playable after every merged step, even if it's thin.
-2. **The four MVP parts:** New Team (with draft), Scrum, GM Screen, Stats.
+2. **The four MVP parts:** Expansion (create and draft your team), Scrum, Pharm (manage your team), Stats. See the [glossary](../design.md#glossary).
 3. **Works on phones** as well as desktop.
 4. **Transparent process.** Epics, tickets, PRs and short epic READMEs tell the story of how it was built.
 5. **Quality bar:** lint and tests run in CI on every PR, and the code is readable over clever.
@@ -97,18 +97,18 @@ What a player gets: **a full, styled match between two preset teams.**
 
 What a player gets: **create and draft your own team, play scrums, and see stats that last.**
 
-- **Epic 3, `new-team`:**
+- **Epic 3, `expansion`:**
   - create a team (name, color, emoji logo);
   - draft 6 spoofs from a generated pool of 18–24;
   - save locally;
   - scrum your team against a generated opponent.
 - **Epic 4, `stats`:** record team and spoof stats for each scrum. A stats screen shows the team record and a line for each spoof. History survives a reload.
 
-### GM (`v0.4.0`)
+### Pharm (`v0.4.0`)
 
 What a player gets: **manage the roster.**
 
-- **Epic 5, `gm-screen`:** a roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2).
+- **Epic 5, `pharm`:** a roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2).
 
 ### MVP (`v1.0.0`)
 
@@ -116,12 +116,12 @@ What a player gets: **the finished MVP, polished and tested on phones.**
 
 - **Epic 6, `mvp-release`:** a phone QA pass, accessibility basics, the README, the `v1.0.0` tag, and a retrospective.
 
-Scrum comes before New Team because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
+Scrum comes before Expansion because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
 
 ## Decisions (2026-11-20)
 
 1. **Scrums are autonomous after placement.** You place spoofs, then the scrum plays itself. Who plays, and the placement rules, are decided at the scrum level. The new rules are settled when the Scrum epic is planned.
-2. **The GM screen can replace a spoof or re-draft the team.** Trades, free agents and progression come after the MVP.
+2. **The Pharm screen can replace a spoof or re-draft the team.** Trades, free agents and progression come after the MVP.
 3. **A spoof's type is fixed when it's created, shapes its skill rolls, and sets its avatar.** This keeps the prototype's logic (`AVATAR_DIST` in `backgammon-chrome/.../models/rook.py`).
    - **Types:** king, queen, rook, bishop and knight (spelled "night" in the prototype's code), plus three pawn variants (basic, noble, angry).
    - **What each type sets:**
@@ -130,7 +130,7 @@ Scrum comes before New Team because it's the core of the game and its biggest ri
      - draft odds. Pawns make up 65% of draws, and kings 2%.
    - **Visuals:** the Design Direction epic redesigns the avatars, which are chess glyphs today.
 4. **Semver, one minor version per milestone.**
-   - Each milestone ships the next minor version: Foundation is `v0.1.0`, First Scrum `v0.2.0`, Your Team `v0.3.0` and GM `v0.4.0`.
+   - Each milestone ships the next minor version: Foundation is `v0.1.0`, First Scrum `v0.2.0`, Your Team `v0.3.0` and Pharm `v0.4.0`.
    - **Each epic ships a version too.** An epic that isn't the last in its milestone ships a pre-release of the milestone's version, published as a GitHub pre-release.
      - For example, Design Direction ships `v0.2.0-alpha.1`, then Scrum completes First Scrum as `v0.2.0`.
      - The last epic in a milestone ships the milestone's version itself, so a single-epic milestone has no alpha.
@@ -141,6 +141,11 @@ Scrum comes before New Team because it's the core of the game and its biggest ri
    - They're GitHub milestones on the repo, with no due dates: all the work is as soon as possible.
    - Every epic and step issue is assigned to one.
    - A small task outside any epic goes in the current milestone.
+
+6. **Screen names** (2026-11-20).
+   - **Expansion** replaces "New Team". In sports, a league adds new teams through expansion.
+   - **Pharm** replaces "GM screen". It comes from "farm system", as in the prototype.
+   - The pitch keeps its original wording.
 
 ## Open questions
 
