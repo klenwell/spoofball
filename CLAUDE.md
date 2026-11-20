@@ -19,6 +19,14 @@ A one-player 2D sports simulation for the browser, built in TypeScript and deplo
   - Testing instructions go in the step issue as a checklist. Link the PR and any files or pages to check directly.
   - The last checklist item is always **"Approve by merging"**. The owner can't click Approve on a PR opened from their own account, so merging (with a merge commit) is the approval.
 - **Every merge to `main` must leave the game working.** Each step is releasable.
+- **`main` is protected** by the "Protect main" ruleset (#13), which nobody can bypass, admins included:
+  - every change arrives through a PR;
+  - the "Lint, test and build" check must pass before merging;
+  - merge commits only;
+  - no force-pushes or deletion.
+
+  Never try to push to `main` directly.
+
 - **Milestones:** a milestone is a release, made of one or more epics (see the roadmap).
   - Every new epic and step issue must be assigned to a milestone.
   - A small task outside any epic goes in the current milestone.
