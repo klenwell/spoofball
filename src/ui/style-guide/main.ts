@@ -51,7 +51,7 @@ function paletteSection(): HTMLElement {
   );
   return section(
     'Palette',
-    'App colors. Near-black, so the court and team colors carry the screen.',
+    'App colors. A near-black page, so the white court and the team colors carry the screen.',
     [h('div', { className: 'sg-grid' }, items)],
   );
 }
@@ -85,13 +85,15 @@ function teamColorsSection(): HTMLElement {
         h('dd', { text: `${base} · ${ratio(base, palette.court)} on court` }),
         h('dt', { text: 'deep' }),
         h('dd', { text: `${deep} · ${ratio(deep, palette.white)} on white` }),
+        h('dt', { text: 'seats' }),
+        h('dd', { text: `${ratio(base, palette.surface)} on the dark seat rows` }),
       ]),
     ]);
   });
   return section(
     'Team colors and kits',
-    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. When two teams share a color, the visitor wears away. Every color is at least 3:1 against the court, and every away mark at least 3:1 on white. The marks here are placeholders until the avatar step (#18).',
-    [h('div', { className: 'sg-court-panel' }, rows)],
+    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. When two teams share a color, the visitor wears away. The court is white, so every color (and so every away trim) is at least 3:1 against it, and every deep shade at least 4.5:1. A light shadow lifts discs off the court. The marks here are placeholders until the avatar step (#18).',
+    [h('div', { className: 'sg-teams' }, rows)],
   );
 }
 

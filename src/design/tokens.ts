@@ -9,12 +9,16 @@ export const palette = {
   background: '#111317',
   /** Raised surfaces: cards, panels, seat rows. */
   surface: '#1A1E24',
-  /** The court's playing surface. Team colors are checked against this. */
-  court: '#1C2027',
-  /** The court's outer ring and inner lines. */
-  courtLine: '#2D333D',
+  /** The court's playing surface: white, like the prototype's arena. Team colors are checked against it. */
+  court: '#FFFFFF',
+  /** The band around the court. */
+  courtRing: '#CCCCCC',
+  /** Lines drawn on the court. */
+  courtLine: '#D5D9E0',
   /** The center target. */
-  target: '#3A4250',
+  target: '#EEF1F5',
+  /** Labels drawn on the court. */
+  courtText: '#5F6670',
   text: '#E8EAED',
   textMuted: '#8A919C',
   line: '#2A2F37',
@@ -37,25 +41,26 @@ export const teamColorNames = [
 export type TeamColorName = (typeof teamColorNames)[number];
 
 export interface TeamColor {
-  /** Home kit fill. At least 3:1 against the court. */
+  /** Home kit fill and away kit trim. At least 3:1 against the white court. */
   base: string;
-  /** A darker shade for marks and trim on the white away kit. At least 3:1 against white. */
+  /** A darker shade: the home kit's trim and the away kit's mark. At least 4.5:1 against white. */
   deep: string;
 }
 
 /**
- * The prototype's 8 team colors, re-tuned for the dark court: similar
- * brightness so no team stands out more than another, and no pure red/green.
+ * The prototype's 8 team colors, re-tuned for the white court: each is just
+ * dark enough to stand out on white, so they have similar weight and no team
+ * stands out more than another. No pure red/green.
  */
 export const teamColors: Record<TeamColorName, TeamColor> = {
-  red: { base: '#E5534B', deep: '#C9443D' },
-  orange: { base: '#E8853A', deep: '#C57131' },
-  gold: { base: '#D9B43A', deep: '#9E832A' },
-  green: { base: '#4BAE6A', deep: '#41975C' },
-  teal: { base: '#2FA8A3', deep: '#29948F' },
-  blue: { base: '#4A86E8', deep: '#3F72C6' },
-  purple: { base: '#9A6FE0', deep: '#845FC0' },
-  pink: { base: '#E06CA8', deep: '#CC6299' },
+  red: { base: '#E5534B', deep: '#DB2920' },
+  orange: { base: '#DD6E1A', deep: '#B25815' },
+  gold: { base: '#A98921', deep: '#896F1B' },
+  green: { base: '#449E60', deep: '#37804E' },
+  teal: { base: '#2C9C97', deep: '#247E7A' },
+  blue: { base: '#4A86E8', deep: '#246CE3' },
+  purple: { base: '#9A6FE0', deep: '#8754DA' },
+  pink: { base: '#DE61A2', deep: '#CF2B80' },
 };
 
 export const fontFamily = {

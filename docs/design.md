@@ -11,9 +11,10 @@ These were chosen by the owner from a set of mockup comparisons.
 
 1. **Feel: dark, minimal, built from circles.**
    - It refines the prototype's look: a near-black background (`--color-background`), calm surfaces, and geometric shapes.
-   - **Why:** the team colors and the discs are the brightest things on screen, so the eye goes to the play. It also suits round discs on a round court.
-2. **Court: circular, with a center target.**
+   - **Why:** the dark page frames the white court like an arena under lights, so the eye goes to the play. It also suits round discs on a round court.
+2. **Court: circular and white, with a center target, on the dark page.**
    - On a phone in portrait, the opponent's seat row sits above the court and yours below.
+   - The surface is white (`--color-court`), inside a light gray ring (`--color-court-ring`), as in the prototype's arena. The owner chose white over a dark court on #17 (2026-11-20).
    - **Why:** scoring depends on where a spoof is on the court, so the court's shape is part of the game, not just decoration. It also follows the prototype's court (radius 150, with a center target).
 3. **Spoof avatars: custom geometric marks.** There's one mark per type, drawn in code.
    - **First draft:**
@@ -31,16 +32,19 @@ These were chosen by the owner from a set of mockup comparisons.
      Chess glyphs fail the last two, and emoji fail the first two.
 
    - **Status:** the owner will refine them in #18.
-4. **Team colors: 8 named colors, re-tuned for the dark court, with home and away kits.**
-   - The names come from the prototype: red, orange, gold, green, teal, blue, purple and pink. The values are adjusted so the colors have similar brightness, and pure red against pure green is avoided.
+4. **Team colors: 8 named colors, re-tuned for the white court, with home and away kits.**
+   - The names come from the prototype: red, orange, gold, green, teal, blue, purple and pink.
+   - Each color is just dark enough to stand out on white, so all 8 have similar weight, and pure red against pure green is avoided.
+   - **Cost of the white court:** the light colors had to deepen. Gold is now an olive-leaning `#A98921`, because a bright gold is only about 2:1 on white. Refining colors is part of #19.
    - **Home kit:** a disc filled with the team color (`base`), trimmed in its `deep` shade, with a white mark.
-   - **Away kit:** a white disc trimmed in the team color, with the mark in its `deep` shade.
+   - **Away kit:** a white disc trimmed in the team color, with the mark in its `deep` shade. On the white court, the trim, plus a light drop shadow on every disc, is what separates it from the court.
    - **Clash rule:** when both teams in a scrum have the same color, the visitor wears away. Otherwise both teams wear home. See `scrumKits()` in `src/design/kits.ts`. The Scrum epic decides which team is home.
    - **Why kits:** there are only 8 colors, so two teams will sometimes share one. This was the owner's revision on #17, modeled on home and visitor uniforms.
    - **Checked by unit tests:**
-     - every `base` color has at least 3:1 contrast against the court;
-     - every away mark has at least 3:1 contrast on white;
-     - the white disc has at least 3:1 contrast against the court.
+     - every `base` color, and so every away trim, has at least 3:1 contrast against the white court;
+     - every home mark (white) has at least 3:1 contrast on its disc;
+     - every away mark (`deep`) has at least 4.5:1 contrast on white;
+     - every `base` color has at least 3:1 contrast on the dark seat rows (`--color-surface`).
 
      3:1 is the WCAG minimum for meaningful graphics (WCAG 2.1, 1.4.11).
 5. **Navigation: a bottom tab bar on phones, a top bar on desktop.**
@@ -51,13 +55,13 @@ These were chosen by the owner from a set of mockup comparisons.
 
 ## Tokens at a glance
 
-| Group       | Tokens                                                                                                                           |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| Palette     | `background`, `surface`, `court`, `court-line`, `target`, `text`, `text-muted`, `line`, `accent`, `white`, as `--color-*`        |
-| Team colors | `red`, `orange`, `gold`, `green`, `teal`, `blue`, `purple`, `pink`, as `--team-*` (base) and `--team-*-deep`                     |
-| Type        | `--font-body` (system UI), `--font-numeric` (monospace, for scores). Sizes from `--text-xs` to `--text-display`, on a 1.25 scale |
-| Spacing     | `--space-1` to `--space-12`, on a 4 px grid                                                                                      |
-| Radii       | `--radius-sm`, `-md`, `-lg`, `-pill`, `-circle`                                                                                  |
+| Group       | Tokens                                                                                                                                                |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Palette     | `background`, `surface`, `court`, `court-ring`, `court-line`, `target`, `court-text`, `text`, `text-muted`, `line`, `accent`, `white`, as `--color-*` |
+| Team colors | `red`, `orange`, `gold`, `green`, `teal`, `blue`, `purple`, `pink`, as `--team-*` (base) and `--team-*-deep`                                          |
+| Type        | `--font-body` (system UI), `--font-numeric` (monospace, for scores). Sizes from `--text-xs` to `--text-display`, on a 1.25 scale                      |
+| Spacing     | `--space-1` to `--space-12`, on a 4 px grid                                                                                                           |
+| Radii       | `--radius-sm`, `-md`, `-lg`, `-pill`, `-circle`                                                                                                       |
 
 ## Glossary
 
