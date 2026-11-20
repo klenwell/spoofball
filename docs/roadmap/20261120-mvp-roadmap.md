@@ -36,15 +36,15 @@ We use the prototype as **a spec, not code to port**. We carry over the behavior
 
 ## Stack
 
-| Concern | Choice |
-|---|---|
-| Language | TypeScript (strict) |
-| Build / dev server | Vite |
-| Rendering | Canvas 2D for the court, plain DOM and CSS for screens. No game engine or UI framework at first |
-| Tests | Vitest, following `docs/testing.md` (Better Specs principles adapted to Vitest) |
-| Lint / format | ESLint + Prettier |
-| CI / deploy | GitHub Actions: lint, test and build on PRs; deploy to Pages on merge to `main` |
-| Saves | `localStorage` behind a small versioned save module |
+| Concern            | Choice                                                                                          |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| Language           | TypeScript (strict)                                                                             |
+| Build / dev server | Vite                                                                                            |
+| Rendering          | Canvas 2D for the court, plain DOM and CSS for screens. No game engine or UI framework at first |
+| Tests              | Vitest, following `docs/testing.md` (Better Specs principles adapted to Vitest)                 |
+| Lint / format      | ESLint + Prettier                                                                               |
+| CI / deploy        | GitHub Actions: lint, test and build on PRs; deploy to Pages on merge to `main`                 |
+| Saves              | `localStorage` behind a small versioned save module                                             |
 
 The simulation is **deterministic given a seed**, so matches can be tested and replayed.
 
@@ -67,15 +67,15 @@ The same conventions as Dr. George and Sweepers:
 
 ## Epics
 
-| # | Epic | Delivers (playable state at the end) |
-|---|---|---|
-| 0 | `foundation` | Repo `klenwell/spoofball`, the Project and labels, Vite + TS skeleton, CI, Pages deploy, `CLAUDE.md`, `docs/testing.md`. **A live "Spoofball" page** |
-| 1 | `design-direction` | A light style guide (palette, type, spacing), mobile-first layout, the disc look, and wireframes for the court and four screens. **The live page has the app shell, navigation and a static court with discs.** Each later epic refines its own screen |
-| 2 | `scrum` | Simulation in TS (physics, spoof AI, scoring, fatigue), the new placement rules, 3 rounds, a scoreboard and a result screen, using two preset teams. **A full match you can play** |
-| 3 | `new-team` | Create a team (name, color, emoji logo). Draft 6 spoofs from a generated pool of 18–24. Save locally. **Scrum your team against a generated opponent** |
-| 4 | `stats` | Record team and spoof stats per scrum. Stats screen with team record and spoof lines. **History survives a reload** |
-| 5 | `gm-screen` | Roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2) |
-| 6 | `mvp-release` | Phone QA pass, accessibility basics, README, tag `v1.0.0`, retrospective |
+| #   | Epic               | Delivers (playable state at the end)                                                                                                                                                                                                                   |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | `foundation`       | Repo `klenwell/spoofball`, the Project and labels, Vite + TS skeleton, CI, Pages deploy, `CLAUDE.md`, `docs/testing.md`. **A live "Spoofball" page**                                                                                                   |
+| 1   | `design-direction` | A light style guide (palette, type, spacing), mobile-first layout, the disc look, and wireframes for the court and four screens. **The live page has the app shell, navigation and a static court with discs.** Each later epic refines its own screen |
+| 2   | `scrum`            | Simulation in TS (physics, spoof AI, scoring, fatigue), the new placement rules, 3 rounds, a scoreboard and a result screen, using two preset teams. **A full match you can play**                                                                     |
+| 3   | `new-team`         | Create a team (name, color, emoji logo). Draft 6 spoofs from a generated pool of 18–24. Save locally. **Scrum your team against a generated opponent**                                                                                                 |
+| 4   | `stats`            | Record team and spoof stats per scrum. Stats screen with team record and spoof lines. **History survives a reload**                                                                                                                                    |
+| 5   | `gm-screen`        | Roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2)                                                                                                                    |
+| 6   | `mvp-release`      | Phone QA pass, accessibility basics, README, tag `v1.0.0`, retrospective                                                                                                                                                                               |
 
 Scrum comes before New Team because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
 
