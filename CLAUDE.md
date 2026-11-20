@@ -19,7 +19,11 @@ A one-player 2D sports simulation for the browser, built in TypeScript and deplo
   - Testing instructions go in the step issue as a checklist. Link the PR and any files or pages to check directly.
   - The last checklist item is always **"Approve by merging"**. The owner can't click Approve on a PR opened from their own account, so merging (with a merge commit) is the approval.
 - **Every merge to `main` must leave the game working.** Each step is releasable.
-- **Versions:** semver. Each epic ships the next minor version (`v0.1.0`, `v0.2.0`, …). The MVP is `v1.0.0`.
+- **Milestones:** a milestone is a release, made of one or more epics (see the roadmap).
+  - Every new epic and step issue must be assigned to a milestone.
+  - A small task outside any epic goes in the current milestone.
+  - Milestones have no due dates.
+- **Versions:** semver. Each milestone ships the next minor version (`v0.1.0`, `v0.2.0`, …). The MVP milestone is `v1.0.0`. Fixes between milestones are patch releases.
 
 ## Posting to GitHub
 
