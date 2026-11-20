@@ -1,6 +1,6 @@
 import { kit, scrumKits } from '../../design/kits';
 import { teamColorNames, type TeamColorName } from '../../design/tokens';
-import { spoofTypes } from '../../game/spoof-types';
+import { avatars, type Avatar, type SpoofType } from '../../game/spoof-types';
 import { createCanvas } from '../canvas';
 import { drawSpoofDisc, type SpoofDisc } from '../spoof-disc';
 
@@ -26,9 +26,15 @@ function label(text: string): HTMLElement {
   return span;
 }
 
-/** One card per type: home kit on the top row, away kit below, at each size. */
+/** A spoof type that shows this avatar. Every pawn subtype shows the same one. */
+function typeFor(avatar: Avatar): SpoofType {
+  return avatar === 'pawn' ? 'pawn-basic' : avatar;
+}
+
+/** One card per avatar: home kit on the top row, away kit below, at each size. */
 function typeCards(color: TeamColorName): HTMLElement[] {
-  return spoofTypes.map((type) => {
+  return avatars.map((avatar) => {
+    const type = typeFor(avatar);
     const card = document.createElement('figure');
     card.className = 'sg-spoof-card';
     const { canvas, ctx } = courtCanvas(CELL * SIZES.length, CELL * 2);
@@ -44,9 +50,9 @@ function typeCards(color: TeamColorName): HTMLElement[] {
       });
     });
     canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', `${type}: home and away kits at 10, 16 and 24 px`);
+    canvas.setAttribute('aria-label', `${avatar}: home and away kits at 10, 16 and 24 px`);
     const caption = document.createElement('figcaption');
-    caption.textContent = type;
+    caption.textContent = avatar === 'pawn' ? 'pawn (all subtypes)' : avatar;
     card.append(canvas, caption);
     return card;
   });
@@ -151,7 +157,7 @@ export function spoofsSection(
 
   return section(
     'Spoofs',
-    'Every spoof type on the white court. Top row: home kit. Bottom row: away kit. Left to right: 10, 16 and 24 px radius, the smallest and largest a spoof can be. These are the draft marks, for review in #18.',
+    'Every avatar on the white court. Top row: home kit. Bottom row: away kit. Left to right: 10, 16 and 24 px radius, the smallest and largest a spoof can be. There are 8 spoof types but 6 avatars: pawn subtypes (basic, noble, angry) are hidden and look the same, showing only through how they play. These are the draft marks, for review in #18.',
     [picker, types, h3('States'), stateList],
   );
 }

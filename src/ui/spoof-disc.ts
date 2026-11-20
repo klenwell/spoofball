@@ -1,7 +1,7 @@
 import type { Kit } from '../design/kits';
 import { marks, type MarkShape } from '../design/marks';
 import { palette } from '../design/tokens';
-import type { SpoofType } from '../game/spoof-types';
+import { avatarOf, type SpoofType } from '../game/spoof-types';
 
 /**
  * Draws a spoof as a disc: filled and trimmed per its kit, with its type's
@@ -96,7 +96,7 @@ export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): v
   ctx.strokeStyle = kit.mark;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (const shape of marks[disc.type]) traceShape(ctx, shape, radius);
+  for (const shape of marks[avatarOf(disc.type)]) traceShape(ctx, shape, radius);
 
   // Highlight: a dark ring just outside the disc.
   if (disc.highlighted) {

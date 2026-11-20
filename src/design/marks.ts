@@ -1,7 +1,7 @@
-import type { SpoofType } from '../game/spoof-types';
+import type { Avatar } from '../game/spoof-types';
 
 /**
- * Avatar marks: one per spoof type, defined in disc-relative units where the
+ * Avatar marks: one per avatar (pawn subtypes share the pawn's), defined in disc-relative units where the
  * disc's radius is 1 and its center is (0, 0), with y pointing down. The
  * renderer scales them to any disc size, so a refined shape can replace a
  * definition here without touching the drawing code.
@@ -32,9 +32,7 @@ function star(points: number, outer: number, inner: number): Point[] {
 }
 
 const STROKE = 0.13;
-const PAWN_DOT: MarkShape = { kind: 'circle', cx: 0, cy: 0.06, r: 0.17 };
-
-export const marks: Record<SpoofType, readonly MarkShape[]> = {
+export const marks: Record<Avatar, readonly MarkShape[]> = {
   // A four-point star.
   king: [{ kind: 'polygon', points: star(4, 0.46, 0.17) }],
   // A ring with a center dot.
@@ -78,33 +76,8 @@ export const marks: Record<SpoofType, readonly MarkShape[]> = {
       ],
     },
   ],
-  // A dot.
-  'pawn-basic': [PAWN_DOT],
-  // A dot under a flat bar.
-  'pawn-noble': [
-    PAWN_DOT,
-    {
-      kind: 'line',
-      width: STROKE,
-      points: [
-        [-0.28, -0.27],
-        [0.28, -0.27],
-      ],
-    },
-  ],
-  // A dot under a peak.
-  'pawn-angry': [
-    PAWN_DOT,
-    {
-      kind: 'line',
-      width: STROKE,
-      points: [
-        [-0.28, -0.2],
-        [0, -0.38],
-        [0.28, -0.2],
-      ],
-    },
-  ],
+  // A dot. Every pawn, whatever its hidden subtype.
+  pawn: [{ kind: 'circle', cx: 0, cy: 0, r: 0.17 }],
 };
 
 /** The farthest any part of a shape reaches from the disc's center. */
