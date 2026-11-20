@@ -60,22 +60,61 @@ The simulation is **deterministic given a seed**, so matches can be tested and r
 The same conventions as Dr. George and Sweepers:
 
 - A user Project on `klenwell`, named **"Spoofball"**.
+- Each milestone is a GitHub milestone on the repo, holding its epics and their steps.
 - Each epic is a parent issue labeled `epic`. Each step is a sub-issue labeled `story`, `task` or `bug`.
 - One PR per step. The PR description is the step's runbook, with `Closes #<step issue>` in the body.
 - Project statuses are Todo → In Progress → QA → Done. Defects get a Severity field.
 - GitHub is the record: there are no per-epic docs folders. Lasting docs (this roadmap, guides, the retrospective in `docs/retrospectives/`) live in `docs/`.
 
-## Epics
+## Milestones and epics
 
-| #   | Epic               | Delivers (playable state at the end)                                                                                                                                                                                                                   |
-| --- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0   | `foundation`       | Repo `klenwell/spoofball`, the Project and labels, Vite + TS skeleton, CI, Pages deploy, `CLAUDE.md`, `docs/testing.md`. **A live "Spoofball" page**                                                                                                   |
-| 1   | `design-direction` | A light style guide (palette, type, spacing), mobile-first layout, the disc look, and wireframes for the court and four screens. **The live page has the app shell, navigation and a static court with discs.** Each later epic refines its own screen |
-| 2   | `scrum`            | Simulation in TS (physics, spoof AI, scoring, fatigue), the new placement rules, 3 rounds, a scoreboard and a result screen, using two preset teams. **A full match you can play**                                                                     |
-| 3   | `new-team`         | Create a team (name, color, emoji logo). Draft 6 spoofs from a generated pool of 18–24. Save locally. **Scrum your team against a generated opponent**                                                                                                 |
-| 4   | `stats`            | Record team and spoof stats per scrum. Stats screen with team record and spoof lines. **History survives a reload**                                                                                                                                    |
-| 5   | `gm-screen`        | Roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2)                                                                                                                    |
-| 6   | `mvp-release`      | Phone QA pass, accessibility basics, README, tag `v1.0.0`, retrospective                                                                                                                                                                               |
+Each **milestone** is a release, and it ships the next minor version. A milestone contains one or more **epics**, and each epic is a set of steps. The live site still updates on every merge, so the game stays playable after every step. A milestone is the point where we tag a version and publish release notes.
+
+### Foundation (`v0.1.0`)
+
+What a player gets: **a live "Spoofball" page.**
+
+- **Epic 0, `foundation`:** repo `klenwell/spoofball`, the Project and labels, the Vite + TS skeleton, CI, the Pages deploy, `CLAUDE.md` and `docs/testing.md`.
+
+### First Scrum (`v0.2.0`)
+
+What a player gets: **a full, styled match between two preset teams.**
+
+- **Epic 1, `design-direction`:**
+  - a light style guide (palette, type, spacing);
+  - a mobile-first layout and the disc look;
+  - wireframes for the court and the four screens;
+  - the app shell, navigation, and a static court with discs.
+
+  Each later epic refines the design of its own screen.
+
+- **Epic 2, `scrum`:**
+  - the simulation in TS (physics, spoof AI, scoring, fatigue);
+  - the new placement rules;
+  - 3 rounds, a scoreboard and a result screen, using two preset teams.
+
+### Your Team (`v0.3.0`)
+
+What a player gets: **create and draft your own team, play scrums, and see stats that last.**
+
+- **Epic 3, `new-team`:**
+  - create a team (name, color, emoji logo);
+  - draft 6 spoofs from a generated pool of 18–24;
+  - save locally;
+  - scrum your team against a generated opponent.
+- **Epic 4, `stats`:** record team and spoof stats for each scrum. A stats screen shows the team record and a line for each spoof. History survives a reload.
+
+### GM (`v0.4.0`)
+
+What a player gets: **manage the roster.**
+
+- **Epic 5, `gm-screen`:** a roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2).
+
+### MVP (`v1.0.0`)
+
+What a player gets: **the finished MVP, polished and tested on phones.**
+
+- **Epic 6, `mvp-release`:** a phone QA pass, accessibility basics, the README, the `v1.0.0` tag, and a retrospective.
 
 Scrum comes before New Team because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
 
@@ -90,11 +129,18 @@ Scrum comes before New Team because it's the core of the game and its biggest ri
      - a cap on total skill points (792 for king and queen, 748 for rook, bishop and knight, 704 for pawns);
      - draft odds. Pawns make up 65% of draws, and kings 2%.
    - **Visuals:** the Design Direction epic redesigns the avatars, which are chess glyphs today.
-4. **Semver.**
-   - Each epic ships as a minor version: Foundation is `v0.1.0`, and so on through GM Screen at `v0.6.0`.
-   - Fixes between epics are patch releases.
-   - The MVP release is `v1.0.0`.
+4. **Semver, one minor version per milestone.**
+   - Each milestone ships the next minor version: Foundation is `v0.1.0`, First Scrum `v0.2.0`, Your Team `v0.3.0` and GM `v0.4.0`.
+   - **Each epic ships a version too.** An epic that isn't the last in its milestone ships a pre-release of the milestone's version, published as a GitHub pre-release.
+     - For example, Design Direction ships `v0.2.0-alpha.1`, then Scrum completes First Scrum as `v0.2.0`.
+     - The last epic in a milestone ships the milestone's version itself, so a single-epic milestone has no alpha.
+   - Fixes are patch releases (`v0.2.1`).
+   - The MVP milestone is `v1.0.0`.
    - After 1.0, a change that breaks existing saves needs a major version or a save migration.
+5. **Milestones group epics** (decided 2026-11-20, replacing "one minor version per epic").
+   - They're GitHub milestones on the repo, with no due dates: all the work is as soon as possible.
+   - Every epic and step issue is assigned to one.
+   - A small task outside any epic goes in the current milestone.
 
 ## Open questions
 
@@ -103,5 +149,5 @@ None at the moment. Questions that come up during planning are recorded in each 
 ## Done when
 
 - `klenwell.github.io/spoofball` lets you create a team, draft it, play scrums, see stats, and manage the roster, on desktop and phone.
-- Every epic is closed in the Project, with every step closed by a merged PR that passed CI.
+- Every milestone and epic is closed, with every step closed by a merged PR that passed CI.
 - The retrospective is written.
