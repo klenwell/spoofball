@@ -23,7 +23,10 @@ A one-player 2D sports simulation for the browser, built in TypeScript and deplo
   - Every new epic and step issue must be assigned to a milestone.
   - A small task outside any epic goes in the current milestone.
   - Milestones have no due dates.
-- **Versions:** semver. Each milestone ships the next minor version (`v0.1.0`, `v0.2.0`, …). The MVP milestone is `v1.0.0`. Fixes between milestones are patch releases.
+- **Versions (semver):**
+  - Each milestone ships the next minor version (`v0.1.0`, `v0.2.0`, …), and the MVP milestone is `v1.0.0`.
+  - An epic that isn't the last in its milestone ships a pre-release, `v<milestone version>-alpha.N` (for example `v0.2.0-alpha.1`), as a GitHub pre-release.
+  - Fixes are patch releases.
 
 ## Posting to GitHub
 

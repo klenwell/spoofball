@@ -131,7 +131,10 @@ Scrum comes before New Team because it's the core of the game and its biggest ri
    - **Visuals:** the Design Direction epic redesigns the avatars, which are chess glyphs today.
 4. **Semver, one minor version per milestone.**
    - Each milestone ships the next minor version: Foundation is `v0.1.0`, First Scrum `v0.2.0`, Your Team `v0.3.0` and GM `v0.4.0`.
-   - Fixes between milestones are patch releases.
+   - **Each epic ships a version too.** An epic that isn't the last in its milestone ships a pre-release of the milestone's version, published as a GitHub pre-release.
+     - For example, Design Direction ships `v0.2.0-alpha.1`, then Scrum completes First Scrum as `v0.2.0`.
+     - The last epic in a milestone ships the milestone's version itself, so a single-epic milestone has no alpha.
+   - Fixes are patch releases (`v0.2.1`).
    - The MVP milestone is `v1.0.0`.
    - After 1.0, a change that breaks existing saves needs a major version or a save migration.
 5. **Milestones group epics** (decided 2026-11-20, replacing "one minor version per epic").
