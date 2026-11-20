@@ -16,7 +16,8 @@ A one-player 2D sports simulation for the browser, built in TypeScript and deplo
 - **One branch and one PR per step.**
   - Branches are named `<epic-slug>-<step-slug>`, for example `foundation-repo-groundwork`.
   - The PR description is the step's runbook. It contains `Closes #<step>`, and no other closing keyword next to an issue number.
-  - Testing instructions go in the step issue as a checklist.
+  - Testing instructions go in the step issue as a checklist. Link the PR and any files or pages to check directly.
+  - The last checklist item is always **"Approve by merging"**. The owner can't click Approve on a PR opened from their own account, so merging (with a merge commit) is the approval.
 - **Every merge to `main` must leave the game working.** Each step is releasable.
 - **Versions:** semver. Each epic ships the next minor version (`v0.1.0`, `v0.2.0`, …). The MVP is `v1.0.0`.
 
