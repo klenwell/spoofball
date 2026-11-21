@@ -65,27 +65,22 @@ function traceShape(ctx: CanvasRenderingContext2D, shape: MarkShape, scale: numb
   }
 }
 
-/** Room around a disc for its shadow and highlight ring, as a fraction of the radius. */
+/** Room around a disc for its highlight ring, as a fraction of the radius. */
 const LAYER_PADDING = 0.45;
 
 let scratch: HTMLCanvasElement | null = null;
 
-/** Draws the disc body (fill, trim, shadow, mark) centered on (0, 0), at full opacity. */
+/** Draws the disc body (fill, trim, mark) centered on (0, 0), at full opacity. */
 function drawBody(ctx: CanvasRenderingContext2D, radius: number, type: SpoofType, kit: Kit): void {
   const trim = trimWidth(radius);
   const inner = radius - trim;
 
-  // Disc, with a light shadow to lift it off the white court. The fill stops
+  // Disc: flat, with no shadow (the owner's choice on #30). The fill stops
   // where the trim starts, so the two never overlap.
-  ctx.save();
-  ctx.shadowColor = 'rgb(0 0 0 / 35%)';
-  ctx.shadowBlur = Math.max(1.5, radius * 0.15);
-  ctx.shadowOffsetY = Math.max(0.5, radius * 0.06);
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.fillStyle = kit.trim;
   ctx.fill();
-  ctx.restore();
 
   ctx.beginPath();
   ctx.arc(0, 0, inner, 0, Math.PI * 2);

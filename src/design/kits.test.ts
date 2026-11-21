@@ -64,6 +64,8 @@ describe('team colors in the arena', () => {
   describe.each([
     ['mosh', palette.mosh],
     ['apron', palette.apron],
+    ['bench', palette.bench],
+    ['seat', palette.seat],
   ])('on the %s', (_zone, surface) => {
     it.each(kits.map((k) => [label(k), k] as const))(
       '%s disc edge has at least 3:1 contrast',
@@ -74,7 +76,7 @@ describe('team colors in the arena', () => {
   });
 
   // The crush is excluded on purpose: the owner chose a red that matches the
-  // trims' brightness, so discs there stand out by hue and shadow. See #19.
+  // trims' brightness, so discs there stand out by hue (they're flat, #30). See #19.
 
   it.each(teamColorNames)('%s home fill has at least 3:1 contrast on the white mosh', (color) => {
     expect(contrastRatio(teamColors[color].base, palette.mosh)).toBeGreaterThanOrEqual(3);
@@ -90,7 +92,7 @@ describe('team colors in the arena', () => {
     expect(contrastRatio(away.mark, away.fill)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(teamColorNames)('%s has at least 3:1 contrast on the dark benches', (color) => {
+  it.each(teamColorNames)('%s has at least 3:1 contrast on the white benches', (color) => {
     expect(contrastRatio(teamColors[color].base, palette.bench)).toBeGreaterThanOrEqual(3);
   });
 });

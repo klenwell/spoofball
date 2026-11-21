@@ -53,7 +53,7 @@ function paletteSection(): HTMLElement {
   );
   return section(
     'Palette',
-    'App colors. A near-black page, so the white court and the team colors carry the screen.',
+    'App colors. A light, flat page: off-white behind, white bars and cards, dark text, and the team colors on a white court.',
     [h('div', { className: 'sg-grid' }, items)],
   );
 }
@@ -87,14 +87,14 @@ function teamColorsSection(): HTMLElement {
         h('dd', { text: `${base} · ${ratio(base, palette.mosh)} on mosh` }),
         h('dt', { text: 'deep' }),
         h('dd', { text: `${deep} · ${ratio(deep, palette.white)} on white` }),
-        h('dt', { text: 'bench' }),
-        h('dd', { text: `${ratio(base, palette.bench)} on the dark benches` }),
+        h('dt', { text: 'seat' }),
+        h('dd', { text: `${ratio(deep, palette.seat)} trim on a seat` }),
       ]),
     ]);
   });
   return section(
     'Team colors and kits',
-    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. In a match your team (home) wears home and the visitor always wears away: solid discs are yours, white discs are theirs. Every disc trim is at least 3:1 against both the white mosh and the gray apron, and every deep shade at least 4.5:1 on white. A light shadow lifts discs off the court. The real marks are in the Spoofs section below.',
+    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. In a match your team (home) wears home and the visitor always wears away: solid discs are yours, white discs are theirs. Every disc trim is at least 3:1 against the white mosh, the gray apron, the white benches and the seats, and every deep shade at least 4.5:1 on white. The real marks are in the Spoofs section below.',
     [h('div', { className: 'sg-teams' }, rows)],
   );
 }
@@ -105,7 +105,7 @@ function typeSection(): HTMLElement {
     .map(([name, size]) =>
       h('div', { className: 'sg-type-row' }, [
         h('code', { text: `--text-${name} · ${size}` }),
-        h('span', { text: 'Spoofball 1,204', style: { fontSize: size } }),
+        h('span', { text: 'Spoofball 47', style: { fontSize: size } }),
       ]),
     );
   return section(
@@ -115,7 +115,7 @@ function typeSection(): HTMLElement {
       ...rows,
       h('div', { className: 'sg-type-row' }, [
         h('code', { text: '--font-numeric' }),
-        h('span', { className: 'sg-numeric', text: '412 – 388' }),
+        h('span', { className: 'sg-numeric', text: '47 – 38' }),
       ]),
     ],
   );

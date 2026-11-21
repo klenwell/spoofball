@@ -101,7 +101,7 @@ export function arenaSection(
 
   return section(
     'Arena',
-    'The court and both benches, with sample spoofs mid-match. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. The visitor always wears the away kit, so solid discs are yours and white discs are theirs, even when both teams share a color. Draft for review in #19.',
+    'The court and both benches, with sample spoofs mid-match. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. A gray edge shows where the court ends on the light page, and the white benches have a thin outline. The visitor always wears the away kit, so solid discs are yours and white discs are theirs, even when both teams share a color. Discs are flat (#30).',
     [pickers, legend(), stage],
   );
 }
