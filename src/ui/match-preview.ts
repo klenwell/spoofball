@@ -73,7 +73,7 @@ export function createMatchPreview(): HTMLElement {
     canvas.setAttribute('role', 'img');
     canvas.setAttribute(
       'aria-label',
-      `The court as a scrum starts: ${PRESET_HOME.team.name} (you) and ${PRESET_VISITOR.team.name} each have 3 spoofs on the court and 3 on their bench.`,
+      `The court as a scrum starts: ${PRESET_HOME.team.name} (you) and ${PRESET_VISITOR.team.name} each have 3 spoofs on the court and 2 on their bench.`,
     );
     const view = fitArena(bounds, width, height);
     drawArena(ctx, view);

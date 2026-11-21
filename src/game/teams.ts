@@ -6,7 +6,7 @@ import type { SpoofType } from './spoof-types';
 
 /**
  * The spoof and team model: a spoof's type, hidden skills (#35) and size, and
- * a team's name, color and 6 spoofs. Names come later (#28); the Match epic
+ * a team's name, color and 5 spoofs. Names come later (#28); the Match epic
  * adds positions and fatigue during play.
  */
 
@@ -45,7 +45,11 @@ export interface Team {
   spoofs: Spoof[];
 }
 
-export const SPOOFS_PER_TEAM = 6;
+/**
+ * 5, as in the prototype (the owner, on #44): with 3 on the court each scrum,
+ * only 2 can rest, so who plays tired is a coaching decision.
+ */
+export const SPOOFS_PER_TEAM = 5;
 
 /** Where a spoof is before play: a seat on its team's bench, or a spot on the court. */
 export type Spot = { seat: number } | { x: number; y: number };

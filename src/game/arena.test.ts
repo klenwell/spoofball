@@ -17,7 +17,28 @@ describe('benchSeats', () => {
   it('numbers seats left to right', () => {
     const xs = benchSeats('visitor').map((s) => s.x);
     expect(xs).toEqual([...xs].sort((a, b) => a - b));
-    expect(benchSeats('home').map((s) => s.index)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(benchSeats('home').map((s) => s.index)).toEqual([0, 1, 2, 3, 4]);
+  });
+
+  it('has 5 seats, one per spoof, as in the prototype (#44)', () => {
+    expect(SEATS_PER_BENCH).toBe(5);
+  });
+
+  it('centers each bench on its side of the court, with the middle seat straight above or below', () => {
+    for (const side of ['home', 'visitor'] as const) {
+      const seats = benchSeats(side);
+      const middle = seats[2];
+      if (!middle) throw new Error('missing middle seat');
+      expect(middle.x, side).toBeCloseTo(0);
+      // Mirror image: seat i and seat 4 - i sit at the same height, opposite x.
+      for (let i = 0; i < 2; i += 1) {
+        const left = seats[i];
+        const right = seats[seats.length - 1 - i];
+        if (!left || !right) throw new Error('missing seat');
+        expect(left.x, side).toBeCloseTo(-right.x);
+        expect(left.y, side).toBeCloseTo(right.y);
+      }
+    }
   });
 
   it('keeps every seat clear of the court', () => {

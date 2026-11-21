@@ -31,7 +31,7 @@ export const tabs: readonly Tab[] = [
     label: 'Match',
     title: 'Match',
     coming:
-      'A preview: two preset teams as a scrum starts, 3 spoofs each on the court and 3 on the bench. Nothing moves yet. Matches become playable in v0.2.0.',
+      'A preview: two preset teams as a scrum starts, 3 spoofs each on the court and 2 on the bench. Nothing moves yet. Matches become playable in v0.2.0.',
   },
   {
     id: 'pharm',
