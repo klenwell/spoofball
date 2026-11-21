@@ -53,8 +53,11 @@ export function impact(bounciness: number): CollisionRule {
   return { kind: 'impact', bounciness };
 }
 
-/** How the prototype actually played, until the owner chooses on #38. */
-export const DEFAULT_COLLISION_RULE: CollisionRule = PROTOTYPE_SHOVE;
+/**
+ * A bit of bounce: the owner liked 0.35–0.50 on #49 (2026-11-21), so 0.4
+ * until the final pick. The prototype actually shoved (`PROTOTYPE_SHOVE`).
+ */
+export const DEFAULT_COLLISION_RULE: CollisionRule = { kind: 'impact', bounciness: 0.4 };
 
 /** True when two circles overlap. Circles that only touch don't. */
 export function overlaps(a: Body, b: Body): boolean {

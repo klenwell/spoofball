@@ -28,7 +28,9 @@ import {
   skid,
   steerToward,
   thoughtProbability,
+  DEFAULT_TUNING,
   type ScrumSkills,
+  type Tuning,
 } from './spoof-motion';
 import type { Spoof } from './teams';
 import { distance, dot, subtract, ZERO, type Vec } from './vec';
@@ -119,6 +121,8 @@ export interface ScrumOptions {
   readonly collision?: CollisionRule;
   /** The spoof AI (`spoofBrain`) unless given. */
   readonly brain?: Brain;
+  /** How lively the scrum is; `DEFAULT_TUNING` unless given. */
+  readonly tuning?: Partial<Tuning>;
 }
 
 /**
@@ -284,7 +288,7 @@ function adopt(runner: Runner, goal: Goal): void {
 }
 
 /** Drops a goal that's done: reached (with a skid), hit (for a charge), or given up on. */
-function reassess(runner: Runner, secondsGone: number, random: Random): void {
+function reassess(runner: Runner, secondsGone: number, random: Random, tuning: Tuning): void {
   const goal = runner.goal;
   if (!goal) return;
   if (goal.expires !== null && secondsGone >= goal.expires) {
@@ -292,7 +296,7 @@ function reassess(runner: Runner, secondsGone: number, random: Random): void {
   } else if (goal.kind === 'crash') {
     if (runner.justHit) runner.goal = null;
   } else if (goal.kind === 'goto' && distance(runner.position, goal.point) <= runner.radius) {
-    runner.velocity = skid(runner.velocity, runner.skills, random);
+    runner.velocity = skid(runner.velocity, runner.skills, random, tuning.skidFloor);
     runner.goal = null;
   }
 }
@@ -320,6 +324,7 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
   const { random } = options;
   const collision = options.collision ?? DEFAULT_COLLISION_RULE;
   const brain = options.brain ?? spoofBrain;
+  const tuning: Tuning = { ...DEFAULT_TUNING, ...options.tuning };
   const runners = entries.map(startRunner);
   const byId = new Map(runners.map((r) => [r.id, r]));
   const frames: ScrumFrame[] = [];
@@ -348,10 +353,10 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
 
     // 2. Each spoof acts.
     for (const runner of runners) {
-      reassess(runner, secondsGone, random);
+      reassess(runner, secondsGone, random, tuning);
       runner.justHit = false;
 
-      if (random.chance(thoughtProbability(runner.skills, secondsGone))) {
+      if (random.chance(thoughtProbability(runner.skills, secondsGone, tuning.thinkingPace))) {
         runner.stats.imps += 1;
         const scrum: ScrumView = { spoofs: runners.map(view), secondsGone };
         // Re-aim at every thought, at whatever goal it keeps or picks, as in

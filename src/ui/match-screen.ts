@@ -6,7 +6,7 @@ import { createRandom } from '../game/random';
 import { finalScores, liveScores, type Scores } from '../game/scoring';
 import { simulateScrum, type ScrumFrame } from '../game/scrum';
 import { avatarOf, type SpoofType } from '../game/spoof-types';
-import { SCRUM_SECONDS } from '../game/spoof-motion';
+import { DEFAULT_TUNING, SCRUM_SECONDS, type Tuning } from '../game/spoof-motion';
 import { lineupEntries, type Lineup } from '../game/teams';
 import type { Panel } from './app-shell';
 import { drawArena, drawSpoofInArena } from './arena';
@@ -60,18 +60,20 @@ function avatarName(type: SpoofType): string {
 interface Played {
   readonly seed: number;
   readonly collision: CollisionRule;
+  readonly tuning: Tuning;
   readonly frames: readonly ScrumFrame[];
   readonly live: readonly Scores[];
   readonly final: Scores;
 }
 
-function play(seed: number, collision: CollisionRule): Played {
-  const result = simulateScrum(ENTRIES, { random: createRandom(seed), collision });
+function play(seed: number, collision: CollisionRule, tuning: Tuning): Played {
+  const result = simulateScrum(ENTRIES, { random: createRandom(seed), collision, tuning });
   const last = result.frames[result.frames.length - 1];
   if (!last) throw new Error('A scrum produced no frames');
   return {
     seed,
     collision,
+    tuning,
     frames: [startFrame(ENTRIES), ...result.frames],
     live: liveScores(result.frames),
     final: finalScores(last),
@@ -87,6 +89,7 @@ export function createMatchScreen(): Panel {
   let seconds = 0;
   let lastTick = 0;
   let collision: CollisionRule = DEFAULT_COLLISION_RULE;
+  let tuning: Tuning = DEFAULT_TUNING;
   let scrum: Played | null = null;
   let raf = 0;
 
@@ -137,25 +140,45 @@ export function createMatchScreen(): Panel {
   // --- Review-only controls ---------------------------------------------
   const review = el('fieldset', 'review-controls');
   review.hidden = !isReview();
-  const bounceLabel = el('label', 'review-row');
-  const bounce = el('input');
-  bounce.type = 'range';
-  bounce.min = '0';
-  bounce.max = '1';
-  bounce.step = '0.05';
-  bounce.value = '0';
-  const bounceValue = el('span', 'review-value', '0.00');
-  bounceLabel.append(el('span', undefined, 'Bounciness'), bounce, bounceValue);
+  const slider = (
+    name: string,
+    min: number,
+    max: number,
+    step: number,
+    value: number,
+    digits: number,
+  ) => {
+    const label = el('label', 'review-row');
+    const input = el('input');
+    input.type = 'range';
+    input.min = String(min);
+    input.max = String(max);
+    input.step = String(step);
+    input.value = String(value);
+    const shown = el('span', 'review-value', value.toFixed(digits));
+    input.addEventListener('input', () => {
+      shown.textContent = Number(input.value).toFixed(digits);
+    });
+    label.append(el('span', 'review-name', name), input, shown);
+    return { label, input };
+  };
+  const startBounce =
+    DEFAULT_COLLISION_RULE.kind === 'impact' ? DEFAULT_COLLISION_RULE.bounciness : 0;
+  const bounce = slider('Bounciness', 0, 1, 0.05, startBounce, 2);
+  const pace = slider('Thinking pace (×)', 1, 3, 0.25, DEFAULT_TUNING.thinkingPace, 2);
+  const floor = slider('Skid keeps at least', 0, 0.8, 0.1, DEFAULT_TUNING.skidFloor, 1);
   const shoveLabel = el('label', 'review-row');
   const shove = el('input');
   shove.type = 'checkbox';
-  shove.checked = true;
+  shove.checked = DEFAULT_COLLISION_RULE.kind === 'prototype-shove';
   shoveLabel.append(shove, el('span', undefined, 'Prototype shove (ignores bounciness)'));
   const seedText = el('p', 'review-seed');
   review.append(
-    el('legend', undefined, 'Review only (#38): how opponents collide'),
+    el('legend', undefined, 'Review only (#49): how lively scrums are'),
     shoveLabel,
-    bounceLabel,
+    bounce.label,
+    pace.label,
+    floor.label,
     seedText,
   );
 
@@ -286,7 +309,8 @@ export function createMatchScreen(): Panel {
         scrum.collision.kind === 'prototype-shove'
           ? 'prototype shove'
           : `bounciness ${scrum.collision.bounciness.toFixed(2)}`;
-      seedText.textContent = `Seed ${String(scrum.seed)} · ${rule}. Changing a setting replays this scrum.`;
+      const { thinkingPace, skidFloor } = scrum.tuning;
+      seedText.textContent = `Seed ${String(scrum.seed)} · ${rule} · thinking ${thinkingPace.toFixed(2)}× · skid floor ${skidFloor.toFixed(1)}. Changing a setting replays this scrum.`;
     } else {
       seedText.textContent = 'Changing a setting replays the same scrum.';
     }
@@ -321,7 +345,7 @@ export function createMatchScreen(): Panel {
   }
 
   function start(seed: number): void {
-    scrum = play(seed, collision);
+    scrum = play(seed, collision, tuning);
     seconds = 0;
     results.hidden = true;
     run();
@@ -340,10 +364,10 @@ export function createMatchScreen(): Panel {
     else if (status === 'paused') run();
   }
 
-  function readCollision(): CollisionRule {
-    bounceValue.textContent = Number(bounce.value).toFixed(2);
-    bounce.disabled = shove.checked;
-    return shove.checked ? PROTOTYPE_SHOVE : impact(Number(bounce.value));
+  function readSettings(): void {
+    bounce.input.disabled = shove.checked;
+    collision = shove.checked ? PROTOTYPE_SHOVE : impact(Number(bounce.input.value));
+    tuning = { thinkingPace: Number(pace.input.value), skidFloor: Number(floor.input.value) };
   }
 
   // --- Events -----------------------------------------------------------------
@@ -352,15 +376,13 @@ export function createMatchScreen(): Panel {
   });
   pauseButton.addEventListener('click', togglePause);
   const replay = () => {
-    collision = readCollision();
+    readSettings();
     if (scrum) start(scrum.seed);
     else updateControls();
   };
-  bounce.addEventListener('input', () => {
-    bounceValue.textContent = Number(bounce.value).toFixed(2);
-  });
-  bounce.addEventListener('change', replay);
-  shove.addEventListener('change', replay);
+  for (const input of [bounce.input, pace.input, floor.input, shove]) {
+    input.addEventListener('change', replay);
+  }
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pause();
   });
@@ -372,7 +394,7 @@ export function createMatchScreen(): Panel {
     rebuildCanvas();
   }).observe(stage);
 
-  collision = readCollision();
+  readSettings();
   updateControls();
   updateText(true);
 

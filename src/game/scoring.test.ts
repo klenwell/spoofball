@@ -131,19 +131,23 @@ describe('liveScores', () => {
     expect(live).toHaveLength(r.frames.length);
   });
 
-  it('estimates one spoof per frame, in turn, keeping the others', () => {
-    const first = live[0];
-    expect(Object.keys(first?.spoofs ?? {})).toHaveLength(1);
-    expect(Object.keys(live[5]?.spoofs ?? {})).toHaveLength(6);
+  it('estimates every spoof in every frame', () => {
+    for (const scores of live) expect(Object.keys(scores.spoofs)).toHaveLength(6);
   });
 
-  it('comes close to the exact final score', () => {
-    const last = r.frames[r.frames.length - 1];
-    const lastLive = live[live.length - 1];
-    if (!last || !lastLive) throw new Error('no frames');
-    const exact = finalScores(last).teams;
-    for (const team of ['home', 'visitor']) {
-      expect(Math.abs((lastLive.teams[team] ?? 0) - (exact[team] ?? 0))).toBeLessThanOrEqual(4);
+  it('ends within 2 points of the exact final score, so the scoreboard barely moves at the whistle', () => {
+    for (let seed = 0; seed < 40; seed += 1) {
+      const run = simulateScrum(presetScrumEntries(), { random: createRandom(seed) });
+      const last = run.frames[run.frames.length - 1];
+      const lastLive = liveScores(run.frames).at(-1);
+      if (!last || !lastLive) throw new Error('no frames');
+      const exact = finalScores(last).teams;
+      for (const team of ['home', 'visitor']) {
+        expect(
+          Math.abs((lastLive.teams[team] ?? 0) - (exact[team] ?? 0)),
+          `seed ${String(seed)}`,
+        ).toBeLessThanOrEqual(2);
+      }
     }
   });
 });

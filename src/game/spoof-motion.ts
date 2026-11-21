@@ -32,6 +32,28 @@ export const MAX_SPEED = MAX_SPEED_PER_SECOND * SECONDS_PER_FRAME;
 /** The largest a spoof can grow during a scrum, in court units. */
 export const MAX_BLOW_RADIUS = 40;
 
+/**
+ * Tuning for how lively a scrum is (#49). The owner found scrums slow: spoofs
+ * sat nearly still about half the time. These are set while watching scrums,
+ * on review-only sliders, then fixed.
+ */
+export interface Tuning {
+  /**
+   * How much faster than the prototype spoofs think. It scales the whole iq
+   * curve, so a smart spoof still thinks as many times more often as a dim one.
+   */
+  readonly thinkingPace: number;
+  /**
+   * The least share of its speed a spoof keeps when it skids at its goal,
+   * from 0 (the prototype: as little as 1%) toward 1. Grace still decides the
+   * rest, so a graceful spoof keeps less than a clumsy one.
+   */
+  readonly skidFloor: number;
+}
+
+/** Thinking twice the prototype's pace (the owner, on #49); skids as in the prototype. */
+export const DEFAULT_TUNING: Tuning = { thinkingPace: 2, skidFloor: 0 };
+
 /** Skills a scrum changes as a spoof tires. */
 export type ScrumSkills = Record<SkillName, number>;
 
@@ -57,9 +79,13 @@ function composite(skills: Skills, weights: Partial<Record<SkillName, number>>):
  * prototype's curve). As the clock runs down it thinks more often, more so
  * with high impact and constancy (the prototype's "urgency").
  */
-export function thoughtProbability(skills: Skills, secondsGone: number): number {
+export function thoughtProbability(
+  skills: Skills,
+  secondsGone: number,
+  pace = DEFAULT_TUNING.thinkingPace,
+): number {
   const iq = skills.iq;
-  const thoughtsPerSecond = 0.00047882 * iq * iq - 0.0121413 * iq + 0.4104679;
+  const thoughtsPerSecond = pace * (0.00047882 * iq * iq - 0.0121413 * iq + 0.4104679);
   const clutch = (skills.impact + skills.constancy) / 300;
   const urgency = clutch * (secondsGone / SCRUM_SECONDS);
   const probability = thoughtsPerSecond * SECONDS_PER_FRAME * (1 + urgency);
@@ -104,12 +130,19 @@ export function grace(skills: Skills): number {
 
 /**
  * Skidding, when a spoof reaches its goal: it keeps a random 1% to
- * (100 − grace)% of its speed, and turns by up to ±(100 − grace) degrees.
+ * (100 − grace)% of its speed (raised by the tuning's skid floor), and turns
+ * by up to ±(100 − grace) degrees.
  * So the more graceful the spoof, the less it drifts and turns.
  */
-export function skid(velocity: Vec, skills: Skills, random: Random): Vec {
+export function skid(
+  velocity: Vec,
+  skills: Skills,
+  random: Random,
+  floor = DEFAULT_TUNING.skidFloor,
+): Vec {
   const clumsiness = 100 - grace(skills);
-  const keep = random.int(1, Math.max(1, clumsiness)) * 0.01;
+  const prototypeKeep = random.int(1, Math.max(1, clumsiness)) * 0.01;
+  const keep = floor + (1 - floor) * prototypeKeep;
   const degrees = random.int(-clumsiness, clumsiness);
   return rotate(scale(velocity, keep), (degrees * Math.PI) / 180);
 }

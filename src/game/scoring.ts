@@ -17,11 +17,12 @@ import type { ScrumFrame, SpoofFrame } from './scrum';
 export const SCORING_COEFFICIENT = 0.002;
 
 /**
- * The live scoreboard's grid spacing, in court units (the prototype's 12).
- * The final score walks every whole-number point; the live estimate only
- * these, each standing for a 12 × 12 patch.
+ * The live scoreboard's grid spacing, in court units. The final score walks
+ * every whole-number point; the live estimate only these, each standing for
+ * a 4 × 4 patch. (The prototype used 12, and one spoof a frame; see
+ * `liveScores`.)
  */
-export const LIVE_GRID_SPACING = 12;
+export const LIVE_GRID_SPACING = 4;
 
 function covers(spoof: SpoofFrame, x: number, y: number): boolean {
   const dx = x - spoof.x;
@@ -95,17 +96,18 @@ export function finalScores(frame: ScrumFrame): Scores {
 }
 
 /**
- * The live scoreboard for every frame, as in the prototype: each frame
- * re-estimates one spoof, in turn, and keeps every other spoof's latest
- * estimate. The final frame's live total can differ slightly from
- * `finalScores`, which is the score that counts.
+ * The live scoreboard for every frame: every spoof estimated on the 4-unit
+ * grid. The prototype estimated one spoof a frame, in turn, on a 12-unit grid,
+ * to save server time; its estimates were up to 6 frames stale, and a team's
+ * live score could end 8 points off the final one, so the scoreboard jumped
+ * at the whistle. This ends within about 2 points of `finalScores`, which is
+ * the score that counts, for about 6 ms of work a scrum (#49).
  */
 export function liveScores(frames: readonly ScrumFrame[]): Scores[] {
   const latest: Record<string, number> = {};
   const result: Scores[] = [];
-  frames.forEach((frame, i) => {
-    const turn = frame.spoofs[i % Math.max(1, frame.spoofs.length)];
-    if (turn) latest[turn.id] = estimatedScore(turn, frame.spoofs);
+  frames.forEach((frame) => {
+    for (const s of frame.spoofs) latest[s.id] = estimatedScore(s, frame.spoofs);
     const spoofs = { ...latest };
     result.push({ spoofs, teams: teamTotals(frame, spoofs) });
   });

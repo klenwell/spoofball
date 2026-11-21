@@ -315,6 +315,10 @@ body {
   flex: 1;
 }
 
+.review-name {
+  min-width: 9rem;
+}
+
 .review-value {
   font-family: var(--font-numeric);
 }

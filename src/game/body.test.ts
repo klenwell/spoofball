@@ -82,8 +82,8 @@ describe('impact', () => {
 });
 
 describe('resolveCollision', () => {
-  it("defaults to the prototype's shove until the owner chooses (#38)", () => {
-    expect(DEFAULT_COLLISION_RULE).toEqual(PROTOTYPE_SHOVE);
+  it('defaults to a bit of bounce, 0.4, in the range the owner liked on #49', () => {
+    expect(DEFAULT_COLLISION_RULE).toEqual(impact(0.4));
   });
 
   describe.each([
