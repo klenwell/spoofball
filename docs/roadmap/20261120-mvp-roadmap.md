@@ -99,7 +99,7 @@ What a player gets: **create and draft your own team, play scrums, and see stats
 
 - **Epic 3, `expansion`:**
   - create a team (name, color, emoji logo);
-  - draft 6 spoofs from a generated pool of 18–24;
+  - draft 6 spoofs from a generated pool of 18–24 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Scrum epic's simulation;
   - save locally;
   - scrum your team against a generated opponent.
 - **Epic 4, `stats`:** record team and spoof stats for each scrum. A stats screen shows the team record and a line for each spoof. History survives a reload.
@@ -108,7 +108,7 @@ What a player gets: **create and draft your own team, play scrums, and see stats
 
 What a player gets: **manage the roster.**
 
-- **Epic 5, `pharm`:** a roster view and spoof cards with skills and stats. Replace one spoof from a new draft pool, or re-draft the whole team (Decision 2).
+- **Epic 5, `pharm`:** a roster view and spoof cards showing outcomes, never skills. Scout a spoof with drills, replace one from a small combine pool, or re-draft the whole team (Decision 2).
 
 ### MVP (`v1.0.0`)
 
