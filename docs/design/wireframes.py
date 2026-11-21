@@ -82,14 +82,14 @@ class Frame:
         """Court (apron, mosh, crush, diagonals) and optional benches, as gray shapes."""
         if benches:
             for sign in (-1, 1):
-                a0, a1 = (-math.pi / 2 - 0.75, -math.pi / 2 + 0.75) if sign < 0 else (math.pi / 2 - 0.75, math.pi / 2 + 0.75)
+                a0, a1 = (-math.pi / 2 - 0.6, -math.pi / 2 + 0.6) if sign < 0 else (math.pi / 2 - 0.6, math.pi / 2 + 0.6)
                 br = r * 1.27
                 x0, y0 = cx + br * math.cos(a0), cy + br * math.sin(a0)
                 x1, y1 = cx + br * math.cos(a1), cy + br * math.sin(a1)
                 self.add(f'<path d="M{x0:.1f},{y0:.1f} A{br:.1f},{br:.1f} 0 0 1 {x1:.1f},{y1:.1f}" '
                          f'fill="none" stroke="{FILL}" stroke-width="{r * 0.34:.1f}" stroke-linecap="round"/>')
-                for i in range(6):
-                    a = a0 + (a1 - a0) * i / 5
+                for i in range(5):
+                    a = a0 + (a1 - a0) * i / 4
                     self.circle(cx + br * math.cos(a), cy + br * math.sin(a), r * 0.12, fill='#ffffff', stroke=LIGHT)
         self.circle(cx, cy, r, fill=FILL, stroke=LIGHT)                 # apron
         self.circle(cx, cy, r * 2 / 3, fill='#ffffff', stroke=MID)      # mosh
@@ -139,11 +139,11 @@ def expansion():
     a.button(16, 540, W - 32, 'Next: the combine')
 
     b = Frame('2 · Combine: warm-ups')
-    b.header('Combine', 'Watch them move. Pick 6.')
-    b.text(W - 16, 36, '2 / 6', size=16, anchor='end', weight=700)
-    cols, rows, r = 4, 5, 26
+    b.header('Combine', 'Watch them move. Pick 5.')
+    b.text(W - 16, 36, '2 / 5', size=16, anchor='end', weight=700)
+    cols, rows, r = 3, 5, 26
     for i in range(cols * rows):
-        cx = 42 + (i % cols) * 72
+        cx = 78 + (i % cols) * 72
         cy = 98 + (i // cols) * 66
         picked = i in (2, 9)
         b.circle(cx, cy, r, fill='#ffffff', stroke=ACCENT if picked else LIGHT, width=3 if picked else 1)
@@ -152,10 +152,10 @@ def expansion():
         b.line(sx - 12 * math.cos(ang), sy - 12 * math.sin(ang), sx, sy, color=LIGHT, width=2, dash=True)
         b.spoof(sx, sy, 5 + (i % 4), solid=True)
     b.note(446, 'each cell: one candidate moving on its own (no numbers)')
-    b.note(461, 'tap a cell for drills · 18 candidates, scroll if needed')
-    for i in range(6):
-        b.circle(36 + i * 46, 498, 15, fill=FILL if i > 1 else INK, stroke=LIGHT if i > 1 else INK, dash=i > 1)
-    b.button(16, 534, W - 32, 'Done (needs 6)', primary=False)
+    b.note(461, 'tap a cell for drills · 15 candidates')
+    for i in range(5):
+        b.circle(58 + i * 46, 498, 15, fill=FILL if i > 1 else INK, stroke=LIGHT if i > 1 else INK, dash=i > 1)
+    b.button(16, 534, W - 32, 'Done (needs 5)', primary=False)
 
     c = Frame('3 · Combine: drills')
     c.header('Drills', '< Back to warm-ups')
@@ -224,11 +224,11 @@ def match():
         c.text(160, y, 'You' if i == 0 else ['', '14', '18', '15'][i], size=11, color=MID if i == 0 else INK, anchor='end')
         c.text(260, y, 'Rival' if i == 0 else ['', '12', '11', '15'][i], size=11, color=MID if i == 0 else INK, anchor='end')
     c.text(16, 192, 'Your spoofs', size=11, color=MID)
-    for i in range(6):
+    for i in range(5):
         y = 208 + i * 34
         c.spoof(30, y + 10, 9, solid=True)
         c.box(48, y, 150, 22, fill=FILL, stroke=FILL)
-        c.text(W - 16, y + 15, f'{[12, 10, 9, 8, 5, 3][i]} pts', size=11, anchor='end')
+        c.text(W - 16, y + 15, f'{[14, 12, 10, 7, 4][i]} pts', size=11, anchor='end')
     c.note(424, 'outcomes only: points, scrums played (never skills)')
     c.button(16, 444, W - 32, 'Play another match')
     c.button(16, 490, W - 32, 'Go to Pharm', primary=False)
@@ -251,17 +251,17 @@ def pharm():
     a.circle(36, 40, 20, fill=FILL, stroke=INK, width=2)
     a.text(64, 36, 'Comets', size=18, weight=700)
     a.text(64, 54, '3–2–1 · 6 matches', size=11, color=MID)
-    for i in range(6):
+    for i in range(5):
         y = 84 + i * 56
         a.box(12, y, W - 24, 48, fill='#ffffff')
         a.circle(42, y + 24, 16, fill='#ffffff', stroke=LIGHT)
         a.spoof(42 + (i % 3) - 1, y + 24, 8, solid=True)
         a.box(68, y + 10, 110, 12, fill=FILL, stroke=FILL)
-        a.text(68, y + 38, f'{[6, 6, 5, 6, 4, 6][i]} matches · {[7.8, 7.1, 6.4, 5.9, 4.2, 3.5][i]} pts/scrum', size=10, color=MID)
+        a.text(68, y + 38, f'6 matches · {[5.8, 5.6, 5.0, 5.0, 3.8][i]} pts/scrum', size=10, color=MID)
         a.text(W - 24, y + 30, '›', size=18, color=MID, anchor='end')
-    a.note(432, 'each spoof moves in its cell, as in the combine')
-    a.note(447, 're-draft resets the record and stats (with a warning)')
-    a.button(16, 462, W - 32, 'Re-draft the team', primary=False)
+    a.note(376, 'each spoof moves in its cell, as in the combine')
+    a.note(391, 're-draft resets the record and stats (with a warning)')
+    a.button(16, 406, W - 32, 'Re-draft the team', primary=False)
     a.tabs('Pharm')
 
     b = Frame('2 · Spoof card')
@@ -270,7 +270,7 @@ def pharm():
     b.line(W / 2 - 30, 152, W / 2 + 6, 132, color=LIGHT, width=2, dash=True)
     b.spoof(W / 2 + 10, 130, 14, solid=True)
     b.note(222, 'warm-up: it moves; no skill numbers anywhere')
-    stats = [('Matches', '6'), ('Scrums', '14'), ('Pts / scrum', '7.8'), ('+/− / scrum', '+2.1')]
+    stats = [('Matches', '6'), ('Scrums', '12'), ('Pts / scrum', '5.8'), ('+/− / scrum', '+1.9')]
     for i, (k, v) in enumerate(stats):
         x = 16 + (i % 2) * 138
         y = 240 + (i // 2) * 58
@@ -330,8 +330,10 @@ def stats():
     xs = [30, 92, 132, 178, 228, 278]
     for x, h in zip(xs, cols):
         b.text(x, 90, h, size=10, color=MID, anchor='middle')
-    rows = [(6, 14, 109, 7.8, '+2.1'), (6, 15, 107, 7.1, '+1.6'), (5, 11, 70, 6.4, '+0.8'),
-            (6, 13, 77, 5.9, '+0.3'), (4, 8, 34, 4.2, '−0.9'), (6, 12, 42, 3.5, '−1.4')]
+    # 6 matches × 3 scrums × 3 spoofs = 54 spoof-scrums, about 11 each; the
+    # points add up to the team's 275 in the match log.
+    rows = [(6, 12, 70, 5.8, '+1.9'), (6, 11, 62, 5.6, '+1.2'), (6, 11, 55, 5.0, '+0.6'),
+            (6, 10, 50, 5.0, '+0.1'), (6, 10, 38, 3.8, '−1.0')]
     for i, row in enumerate(rows):
         y = 112 + i * 40
         b.line(12, y - 16, W - 12, y - 16, color=FILL)
@@ -349,7 +351,7 @@ def main(out):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     sheet(expansion(), out / 'wireframe-expansion.svg',
-          'Expansion: create your team, then draft 6 spoofs through the combine. Phone layout. Solid discs are yours.')
+          'Expansion: create your team, then draft 5 spoofs through the combine. Phone layout. Solid discs are yours.')
     sheet(match(), out / 'wireframe-match.svg',
           'Match: place spoofs (the mise), watch the scrum, see the result. Solid discs are yours, hollow discs the visitor.')
     sheet(pharm(), out / 'wireframe-pharm.svg',

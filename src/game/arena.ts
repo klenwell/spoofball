@@ -9,7 +9,7 @@ import { MAX_SPOOF_RADIUS } from './spoof-types';
 
 export type BenchSide = 'home' | 'visitor';
 
-export const SEATS_PER_BENCH = 6;
+export const SEATS_PER_BENCH = 5;
 /** Room for the largest spoof. */
 export const SEAT_RADIUS = MAX_SPOOF_RADIUS + 1;
 /** Distance from the court's center to each seat's center. */

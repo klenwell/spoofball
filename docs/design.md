@@ -23,7 +23,7 @@ These were chosen by the owner from a set of mockup comparisons.
      | **Crush** | 0–25    | red center spot (`--color-crush`), like a hockey face-off spot, inside a thin red ring whose outer edge is the crush's edge, with a 1-unit white gap between them (as in the prototype; owner, #22) | ×3    |
 
    - **Diagonals:** two blue lines (`--color-court-line`) cross the whole court and split it into quarters. They're decorative, a sporty touch, and the owner kept them after review (#19).
-   - **Benches** curve around the court as in the prototype's arena mockup: the visitor's above, yours (home) below. Each has 6 seats, one per spoof, spaced 17° apart as in the prototype.
+   - **Benches** curve around the court as in the prototype's arena mockup: the visitor's above, yours (home) below. Each has 5 seats, one per spoof, spaced 17° apart and centered on its side of the court, as in the prototype (#44; the first version had 6).
    - **The arena is taller than wide,** so it suits a phone in portrait.
    - **The apron is lighter than the prototype's `#CCCCCC`** (`#D9DCE1`), so every disc's trim keeps at least 3:1 contrast on it.
    - **A gray edge** (`--color-court-edge`, 3:1 on the page) shows where the court ends, because the apron is close to the light page's color (#30).
@@ -93,7 +93,7 @@ Low-fidelity phone sketches (#20), to guide the epics that build each screen. Th
 ![Expansion wireframes](design/wireframe-expansion.svg)
 
 1. **Your team:** a name (up to 16 characters, as in the prototype), one of the 8 colors, and an emoji logo, with a preview.
-2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell. Picked cells are outlined, and a strip at the bottom fills to 6.
+2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell. Picked cells are outlined, and a strip at the bottom fills to 5.
 3. **Drills:** sprint, blow and hold tabs on a small court. "Draft this spoof" or "Next candidate".
 
 There's no tab bar until the team exists. On desktop, the warm-up grid widens to more columns and the drill court opens beside it.
@@ -112,7 +112,7 @@ On desktop, the arena sits in the center with the scoreboard above it.
 
 ![Pharm wireframes](design/wireframe-pharm.svg)
 
-1. **Roster:** your team and its record, then 6 rows, each with a moving spoof and its outcomes. "Re-draft the team" runs a full combine.
+1. **Roster:** your team and its record, then 5 rows, each with a moving spoof and its outcomes. "Re-draft the team" runs a full combine.
 2. **Spoof card:** the spoof warming up in its cell, its outcomes, then "Scout: run drills" and "Replace this spoof".
 3. **Replace:** 3 prospects, for one draft pick. Tap a cell for drills, then pick one and swap it in. Your picks show as 3 dots.
 
@@ -133,6 +133,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - The **host** places last (turn 6). For now the host is picked at random each match, separately from kits and benches.
   - The other team places on turn 4 or 5, at random. The remaining turns are random, except that a team can't take its last turn while the other team hasn't taken its first. The order is new every scrum.
   - **Placement rule:** of each team's 3, at least 2 go on the apron and at most 1 anywhere on the court.
+- **A team has 5 spoofs** (the owner, on #43, 2026-11-21), as in the prototype; the pitch's 6 had carried through by mistake. With 3 on the court each scrum, only 2 can rest, so at least one spoof plays two scrums in a row. Who plays tired, and who gets the full rest from sitting out, is a coaching decision.
 - **Fatigue carries across a match's scrums.** Between scrums every spoof recovers part of the way (up to 66%), and a spoof that sat out a scrum can recover fully. Recovery depends on hidden stamina and impact, plus some randomness. Fatigue resets each match.
 - **A scrum lasts 8 seconds.** The prototype simulated 300 frames a scrum. That number isn't fixed: the Match epic picks a frame rate that serves gameplay and performance (the owner, on #27).
 - **Ties stand.** A match can end in a tie, and records are win–loss–tie. The prototype had overtime but had turned it off.
@@ -143,7 +144,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 
 - **Spoofs have names.** It's its own story, #28.
 - **The team logo comes from a curated set of emoji,** shown as a grid. Computer teams draw from the same set.
-- **The combine has 18 candidates** (3 per pick), drawn with the prototype's type odds.
+- **The combine has 15 candidates** (3 per pick), drawn with the prototype's type odds. It was 18 for a 6-spoof team; #44 made teams 5. (The prototype never used its type odds in play: it drew types evenly. See #43.)
 - **Three drills:** _sprint_ (hints at burst and stamina), _blow_ (growth and size) and _hold_ (mass and constancy). Each takes about 3 seconds, can be rerun, and varies a little each time. Iq, vision, charisma and cooperation show only in matches.
 
 ### Pharm
@@ -152,7 +153,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - A team starts with 3 picks and can hold at most 3. It gets one back after each loss.
   - Replacing happens between matches. You choose from **3 prospects**, scouted with the same warm-ups and drills, and prospects you pass on stay for next time.
   - Keep the prototype's balance rules: a prospect's skill total is based on your weakest spoof, and a team holds at most 1 royal (king or queen) and 2 of each face type (rook, bishop, knight).
-- **Re-drafting** runs a full 18-spoof combine. It keeps the team's name, color and logo, but **resets its record and stats, after a clear warning.**
+- **Re-drafting** runs a full 15-spoof combine. It keeps the team's name, color and logo, but **resets its record and stats, after a clear warning.**
 
 ### Stats
 
@@ -173,7 +174,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 
 | Term             | Meaning                                                                                                                                                                                  |
 | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Spoof**        | A player: a 2D disc. A team has 6. (The prototype called them "rooks".)                                                                                                                  |
+| **Spoof**        | A player: a 2D disc. A team has 5. (The prototype called them "rooks".)                                                                                                                  |
 | **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry       |
 | **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                               |
 | **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a match                                                                                       |
@@ -186,10 +187,10 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 | **Mosh**         | The court's large white circle. Scores ×1                                                                                                                                                |
 | **Crush**        | The red spot at the center of the mosh. Scores ×3                                                                                                                                        |
 | **Bench**        | A team's curved row of seats beside the court: the visitor's above, yours below                                                                                                          |
-| **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 6                                                                                                  |
+| **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 5                                                                                                  |
 | **Kit**          | How a team's discs look in a match: **home** (filled with the team color) or **away** (white, trimmed in the team color). Your team always wears home, and the visitor always wears away |
 | **Expansion**    | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                                     |
-| **Draft**        | Picking your 6 spoofs from a generated pool of 18                                                                                                                                        |
+| **Draft**        | Picking your 5 spoofs from a generated pool of 15                                                                                                                                        |
 | **Combine**      | How you draft: candidate spoofs show their abilities by moving, in warm-ups and drills, like the NFL Scouting Combine                                                                    |
 | **Warm-up**      | A candidate moving on its own in a small round cell, so you can compare a whole pool at a glance                                                                                         |
 | **Drill**        | A short exercise on a small court (sprint, blow, hold) that shows one or two of a spoof's traits, without numbers                                                                        |

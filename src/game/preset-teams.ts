@@ -7,7 +7,7 @@ import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Lineup, type Spoof, type Tea
  * Two preset teams for the Match screen's static court (#22), until the
  * Expansion epic lets you build your own. The lineups show the moment a scrum
  * starts: each team has placed 3 spoofs on the court, following the mise
- * rule (at least 2 on the apron, at most 1 anywhere), and 3 wait on its bench.
+ * rule (at least 2 on the apron, at most 1 anywhere), and 2 wait on its bench.
  * Positions are in court units (court radius 150, y down).
  */
 
@@ -39,7 +39,6 @@ export const COMETS: Team = {
     presetSpoof('c3', 'bishop', 103),
     presetSpoof('c4', 'pawn-basic', 104),
     presetSpoof('c5', 'pawn-noble', 105),
-    presetSpoof('c6', 'pawn-angry', 106),
   ],
 };
 
@@ -52,7 +51,6 @@ export const EMBERS: Team = {
     presetSpoof('e3', 'knight', 203),
     presetSpoof('e4', 'rook', 204),
     presetSpoof('e5', 'pawn-basic', 205),
-    presetSpoof('e6', 'pawn-basic', 206),
   ],
 };
 
@@ -66,7 +64,6 @@ export const PRESET_HOME: Lineup = {
     c3: { x: 120, y: 50 }, // apron
     c4: { seat: 1 },
     c5: { seat: 3 },
-    c6: { seat: 4 },
   },
 };
 
@@ -78,8 +75,7 @@ export const PRESET_VISITOR: Lineup = {
     e1: { x: 35, y: -40 }, // the king: placed anywhere, here in the mosh
     e2: { x: 70, y: -110 }, // apron
     e4: { x: -125, y: -30 }, // apron
-    e3: { seat: 0 },
-    e5: { seat: 2 },
-    e6: { seat: 5 },
+    e3: { seat: 1 },
+    e5: { seat: 3 },
   },
 };

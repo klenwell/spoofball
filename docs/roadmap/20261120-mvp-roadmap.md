@@ -4,7 +4,7 @@ Written: 2026-11-20 · **Status: approved** (2026-11-20). Based on [pitch.md](..
 
 ## Why
 
-Spoofball is a simple one-player 2D sports simulation for the browser. You draft a team of six discs ("spoofs"), place them on the court, and watch them play a match of 3 scrums on their own against a computer team. It rebuilds the backgammon-chrome / blowrook prototype as a static site on GitHub Pages.
+Spoofball is a simple one-player 2D sports simulation for the browser. You draft a team of five discs ("spoofs"), place them on the court, and watch them play a match of 3 scrums on their own against a computer team. It rebuilds the backgammon-chrome / blowrook prototype as a static site on GitHub Pages.
 
 The project has two goals: **ship the game**, and **document openly how it's built**.
 
@@ -99,7 +99,7 @@ What a player gets: **create and draft your own team, play matches, and see stat
 
 - **Epic 3, `expansion`:**
   - create a team (name, color, emoji logo);
-  - draft 6 spoofs from a generated pool of 18 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Match epic's simulation;
+  - draft 5 spoofs from a generated pool of 15 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Match epic's simulation;
   - save locally;
   - play your team against a generated opponent.
 - **Epic 4, `stats`:** record team and spoof stats for each match. A stats screen shows the team record and a line for each spoof. History survives a reload.
