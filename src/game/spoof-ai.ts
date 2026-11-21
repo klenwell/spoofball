@@ -68,6 +68,20 @@ export function opponentsAt(self: SpoofView, spot: Vec, scrum: ScrumView): numbe
   return count;
 }
 
+/** How much nearer spots are preferred: 1 at the spoof, down to 0.5 at the edge of its vision. */
+function nearness(self: SpoofView, spot: Vec, range: number): number {
+  return 1 - DISTANCE_DISCOUNT * (distance(spot, self.position) / range);
+}
+
+/**
+ * How appealing a spot is to a spoof that judges perfectly: its value,
+ * discounted by distance. The brain picks the most appealing spot, misjudged
+ * by its smarts.
+ */
+export function spotAppeal(self: SpoofView, spot: Vec, scrum: ScrumView): number {
+  return spotValue(self, spot, scrum) * nearness(self, spot, visionRadius(self));
+}
+
 /**
  * The prototype's "fudge": a spoof misjudges a spot by up to ±10% at smarts
  * 0, and not at all at smarts 100.
@@ -146,8 +160,7 @@ export function spoofBrain(
   for (const spot of surveySpots(self)) {
     const raw = spotValue(self, spot, scrum);
     if (raw === 0) continue;
-    const near = 1 - DISTANCE_DISCOUNT * (distance(spot, self.position) / range);
-    const value = misjudge(raw * near, smarts, random);
+    const value = misjudge(raw * nearness(self, spot, range), smarts, random);
     if (value > bestValue) {
       best = spot;
       bestValue = value;

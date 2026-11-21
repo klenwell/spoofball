@@ -16,6 +16,7 @@ import {
   opponentsAt,
   persuasion,
   spoofBrain,
+  spotAppeal,
   spotValue,
   surveySpots,
   visionRadius,
@@ -141,6 +142,37 @@ describe('spoofBrain', () => {
     const goal = spoofBrain(me, scrum, random(), null);
     expect(goal.kind).toBe('crash');
     expect(goal.expires).toBe(CRASH_SECONDS);
+  });
+
+  it('charges only at 2 or more opponents: a best spot with 1 is an ordinary goal', () => {
+    const me = spoof('me', 'home', vec(60, 0), { vision: 80, iq: 99 });
+    const scrum = scrumOf(me, spoof('r1', 'visitor', vec(0, 0), {}, 30));
+    expect(spoofBrain(me, scrum, random(), null).kind).toBe('goto');
+  });
+
+  describe('misjudging by smarts', () => {
+    // From (12, -60) in the mosh, two crush spots are in sight about 3.7% apart
+    // in appeal. Smarts comes from iq and vision (comps): iq 1 gives smarts 21,
+    // misjudging by up to ±7.9%; iq 99 gives 86, at most ±1.4%.
+    const shortfall = (iq: number) => {
+      const me = spoof('me', 'home', vec(12, -60), { vision: 60, iq });
+      const scrum = scrumOf(me);
+      const best = Math.max(...surveySpots(me).map((s) => spotAppeal(me, s, scrum)));
+      const shortfalls: number[] = [];
+      for (let seed = 0; seed < 60; seed += 1) {
+        const goal = spoofBrain(me, scrum, createRandom(seed), null);
+        shortfalls.push(1 - spotAppeal(me, goal.point, scrum) / best);
+      }
+      return shortfalls;
+    };
+
+    it('sometimes picks a less appealing spot with low smarts', () => {
+      expect(shortfall(1).some((s) => s > 0.03)).toBe(true);
+    });
+
+    it('picks the most appealing spot, or within a hair of it, with high smarts', () => {
+      for (const s of shortfall(99)) expect(s).toBeLessThan(0.03);
+    });
   });
 
   it('gropes toward the center when it can see nothing of value', () => {

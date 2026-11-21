@@ -194,6 +194,156 @@ describe('simulateScrum', () => {
     });
   });
 
+  describe('rules, one at a time', () => {
+    // Small scrums of 2 or 3 spoofs, with a brain that controls each one.
+    const base = presetScrumEntries()[0];
+    if (!base) throw new Error('no entries');
+    const entry = (
+      id: string,
+      team: string,
+      position: { x: number; y: number },
+      skills: Partial<typeof base.spoof.skills> = {},
+    ): ScrumEntry => ({
+      spoof: { ...base.spoof, id, skills: { ...base.spoof.skills, ...skills } },
+      team,
+      position,
+      fatigue: 0,
+    });
+    const hold: Brain = (self, _scrum, _random, current) =>
+      current ?? { kind: 'hold', point: self.position, weight: 1, expires: null };
+    const statsOf = (r: ReturnType<typeof simulateScrum>, id: string) => {
+      const f = r.finish.find((x) => x.id === id);
+      if (!f) throw new Error(`no ${id}`);
+      return f.stats;
+    };
+
+    it('gives the ding to the spoof that moves into a still opponent, and the dong to the one it hits', () => {
+      const brain: Brain = (self, scrum, random, current) =>
+        self.id === 'mover'
+          ? (current ?? { kind: 'goto', point: { x: 0, y: 0 }, weight: 1, expires: null })
+          : hold(self, scrum, random, current);
+      const r = simulateScrum(
+        [entry('mover', 'home', { x: 0, y: -80 }), entry('still', 'visitor', { x: 0, y: 0 })],
+        { random: createRandom(TEST_SEED), brain },
+      );
+      expect(statsOf(r, 'mover').dings).toBeGreaterThan(0);
+      expect(statsOf(r, 'mover').dongs).toBe(0);
+      expect(statsOf(r, 'still').dongs).toBeGreaterThan(0);
+      expect(statsOf(r, 'still').dings).toBe(0);
+    });
+
+    it('counts one hit when contact starts, not one for every frame two spoofs stay pressed together', () => {
+      // The mover pushes on toward a spot beyond a heavy opponent, so with the
+      // prototype shove they stay in contact for most of the scrum.
+      const brain: Brain = (self, scrum, random, current) =>
+        self.id === 'mover'
+          ? (current ?? { kind: 'goto', point: { x: 0, y: 60 }, weight: 1, expires: null })
+          : hold(self, scrum, random, current);
+      const r = simulateScrum(
+        [
+          entry('mover', 'home', { x: 0, y: -60 }, { mass: 1 }),
+          entry('wall', 'visitor', { x: 0, y: 0 }, { mass: 99 }),
+        ],
+        { random: createRandom(TEST_SEED), brain, collision: PROTOTYPE_SHOVE },
+      );
+      const inContact = r.frames.filter((f) => {
+        const [a, b] = f.spoofs;
+        return a && b && Math.hypot(a.x - b.x, a.y - b.y) <= a.radius + b.radius + 0.5;
+      }).length;
+      expect(inContact).toBeGreaterThan(100);
+      expect(statsOf(r, 'mover').dings).toBeLessThan(5);
+    });
+
+    it('adds a dove, not a tree, for a frame overlapping exactly 1 teammate', () => {
+      const r = simulateScrum(
+        [entry('a', 'home', { x: -5, y: 0 }), entry('b', 'home', { x: 5, y: 0 })],
+        { random: createRandom(TEST_SEED), brain: hold },
+      );
+      expect(statsOf(r, 'a').doves).toBe(FRAMES_PER_SCRUM);
+      expect(statsOf(r, 'a').trees).toBe(0);
+    });
+
+    it('adds a tree, not a dove, for a frame overlapping 2 teammates', () => {
+      const r = simulateScrum(
+        [
+          entry('a', 'home', { x: -5, y: 0 }),
+          entry('b', 'home', { x: 5, y: 0 }),
+          entry('c', 'home', { x: 0, y: 6 }),
+        ],
+        { random: createRandom(TEST_SEED), brain: hold },
+      );
+      expect(statsOf(r, 'a').trees).toBe(FRAMES_PER_SCRUM);
+      expect(statsOf(r, 'a').doves).toBe(0);
+    });
+
+    it('ends a charge when it hits, so the next thought picks a new goal', () => {
+      // The charge never expires on its own, so only a hit can end it. The
+      // brain counts how often the charger has no goal when it thinks.
+      let freshStarts = 0;
+      const brain: Brain = (self, scrum, random, current) => {
+        if (self.id !== 'charger') return hold(self, scrum, random, current);
+        if (current) return current;
+        freshStarts += 1;
+        const target = scrum.spoofs.find((s) => s.id === 'target');
+        return {
+          kind: 'crash',
+          point: target?.position ?? { x: 0, y: 0 },
+          weight: 1,
+          expires: 1000,
+        };
+      };
+      simulateScrum(
+        [entry('charger', 'home', { x: 0, y: -80 }), entry('target', 'visitor', { x: 0, y: 0 })],
+        { random: createRandom(TEST_SEED), brain, collision: impact(1) },
+      );
+      expect(freshStarts).toBeGreaterThan(1);
+    });
+
+    describe('when a teammate sends a message', () => {
+      // A leader (charisma 80, and impact and iq 99 so it messages often)
+      // sends its goal to a receiver that otherwise holds.
+      const exchange = (cooperation: number, seed: number, seen?: number[]) => {
+        const brain: Brain = (self, _scrum, _random, current) => {
+          if (self.id === 'leader') {
+            return current ?? { kind: 'goto', point: { x: 0, y: 90 }, weight: 1, expires: null };
+          }
+          if (current && current.weight !== 1) seen?.push(current.weight);
+          return current ?? { kind: 'hold', point: self.position, weight: 1, expires: null };
+        };
+        return simulateScrum(
+          [
+            entry('leader', 'home', { x: -60, y: 0 }, { charisma: 80, impact: 99, iq: 99 }),
+            entry('receiver', 'home', { x: 60, y: 0 }, { cooperation }),
+          ],
+          { random: createRandom(seed), brain },
+        );
+      };
+
+      it("passes the goal on with the sender's persuasion: charisma × 0.015", () => {
+        const seen: number[] = [];
+        for (let seed = 0; seed < 10; seed += 1) exchange(99, seed, seen);
+        expect(seen.length).toBeGreaterThan(0);
+        for (const weight of seen) expect(weight).toBeCloseTo(80 * 0.015);
+      });
+
+      it('is followed far more by a cooperative receiver: twice charisma × cooperation', () => {
+        const followRate = (cooperation: number) => {
+          let heeds = 0;
+          let pongs = 0;
+          for (let seed = 0; seed < 20; seed += 1) {
+            const s = statsOf(exchange(cooperation, seed), 'receiver');
+            heeds += s.heeds;
+            pongs += s.pongs;
+          }
+          return heeds / pongs;
+        };
+        // 2 × 0.80 × 0.99 is over 1; 2 × 0.80 × 0.01 is 0.016.
+        expect(followRate(99)).toBeGreaterThan(0.95);
+        expect(followRate(1)).toBeLessThan(0.1);
+      });
+    });
+  });
+
   describe("a teammate's message", () => {
     // A leader messages its goal (a spot at the bottom of the mosh) to a
     // teammate that otherwise just holds its spot. The teammate always
