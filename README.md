@@ -4,7 +4,7 @@ A simple one-player 2D sports simulation for the browser. Draft a team of six di
 
 **Play:** https://klenwell.com/spoofball/ (updated on every merge to `main`)
 
-**Status:** v0.1.0. Nothing playable yet. The first playable match is coming in v0.2.0.
+**Status:** v0.2.0-alpha.1. The app shell, the light design and a static court with two preset teams. Nothing moves yet: the first playable match is coming in v0.2.0.
 
 ## Docs
 
