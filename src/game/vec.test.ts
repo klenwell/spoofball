@@ -14,19 +14,40 @@ import {
 } from './vec';
 
 describe('vec', () => {
-  it('adds and subtracts', () => {
-    expect(add(vec(1, 2), vec(3, -5))).toEqual(vec(4, -3));
-    expect(subtract(vec(1, 2), vec(3, -5))).toEqual(vec(-2, 7));
+  describe('add', () => {
+    it('adds the components', () => {
+      expect(add(vec(1, 2), vec(3, -5))).toEqual(vec(4, -3));
+    });
   });
 
-  it('scales', () => {
-    expect(scale(vec(3, -4), 0.5)).toEqual(vec(1.5, -2));
+  describe('subtract', () => {
+    it('subtracts the second from the first', () => {
+      expect(subtract(vec(1, 2), vec(3, -5))).toEqual(vec(-2, 7));
+    });
   });
 
-  it('measures length, distance and the dot product', () => {
-    expect(length(vec(3, 4))).toBe(5);
-    expect(distance(vec(1, 1), vec(4, 5))).toBe(5);
-    expect(dot(vec(1, 2), vec(3, 4))).toBe(11);
+  describe('scale', () => {
+    it('multiplies both components by the factor', () => {
+      expect(scale(vec(3, -4), 0.5)).toEqual(vec(1.5, -2));
+    });
+  });
+
+  describe('dot', () => {
+    it('sums the products of the components', () => {
+      expect(dot(vec(1, 2), vec(3, 4))).toBe(11);
+    });
+  });
+
+  describe('length', () => {
+    it('measures how long the vector is', () => {
+      expect(length(vec(3, 4))).toBe(5);
+    });
+  });
+
+  describe('distance', () => {
+    it('measures the distance between two points', () => {
+      expect(distance(vec(1, 1), vec(4, 5))).toBe(5);
+    });
   });
 
   describe('normalize', () => {
