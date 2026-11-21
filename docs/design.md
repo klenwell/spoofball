@@ -139,6 +139,13 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **Spoofs only grow during a scrum.** Tiring slows their growth, but nothing shrinks them.
   - **Grace sets how a spoof skids and turns** (burst, constancy and stamina). Mass only matters in collisions, where the heavier spoof is pushed less.
   - Shrinking on hits, and mass in turning, are ideas for later: #47.
+- **The spoof AI builds what the prototype meant, not how it played** (the owner, on #37, 2026-11-21). The prototype's AI had bugs: its spoofs mostly drifted toward the nearest group, ignoring the crush, and its charges at opponents never worked. Here:
+  - a spoof surveys the spots within its vision (range from vision, detail from iq), and values each by zone and by the teammates sharing it, the same overlap bonus scoring uses;
+  - it prefers nearer spots a little, and misjudges more with low smarts;
+  - it holds its spot when nothing it sees is worth more;
+  - it charges a spot crowded with 2 or more opponents, until it hits one;
+  - goals expire in game time: 3 seconds, or 1.5 for a charge;
+  - teammates share goals as in the prototype: sent by leadership, followed by charisma and cooperation.
 - **A scrum lasts 8 seconds.** The prototype simulated 300 frames a scrum. That number isn't fixed: the Match epic picks a frame rate that serves gameplay and performance (the owner, on #27).
 - **Ties stand.** A match can end in a tie, and records are win–loss–tie. The prototype had overtime but had turned it off.
 - **Scoring follows the prototype** (`scorekeeper.py`). A scrum scores a snapshot of where the spoofs end up: the court area each covers, × 0.002, × the zone multiplier, × **how many teammates cover the same spot**, the spoof itself included. So 2 overlapping teammates score 4× for the team where they overlap, and 3 score 9×: overlapping teammates is part of the game. Opponents on the same spot don't change it. A match usually totals 10–100 points. (Corrected on #34: the first version of this line left out the teammate bonus.)
