@@ -101,7 +101,7 @@ export function arenaSection(
 
   return section(
     'Arena',
-    'The court and both benches, with sample spoofs mid-scrum. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. Pick the same color for both teams to see the visitor switch to the away kit. Draft for review in #19.',
+    'The court and both benches, with sample spoofs mid-scrum. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. The visitor always wears the away kit, so solid discs are yours and white discs are theirs, even when both teams share a color. Draft for review in #19.',
     [pickers, legend(), stage],
   );
 }

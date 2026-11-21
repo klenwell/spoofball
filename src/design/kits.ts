@@ -1,10 +1,11 @@
 import { palette, teamColors, type TeamColorName } from './tokens';
 
 /**
- * Home and away kits, like sports uniforms. Teams pick from only 8 colors,
- * so two teams in a scrum can share one. When they do, the visitor wears
- * the away kit (a white disc trimmed in its color's deep shade) so the teams stay
- * distinguishable on the court.
+ * Home and away kits, like sports uniforms. In a scrum the home team (always
+ * the player's) wears home, a disc in its color, and the visitor always
+ * wears away, a white disc trimmed in its color's deep shade. So the rule
+ * the player learns is constant: solid discs are mine, white discs are theirs.
+ * It also keeps two teams of the same color apart.
  */
 
 export type KitStyle = 'home' | 'away';
@@ -34,11 +35,10 @@ export interface ScrumKits {
   visitor: Kit;
 }
 
-/** The kits two teams wear in a scrum, given each team's color. */
+/** The kits two teams wear in a scrum: home in home, the visitor always in away. */
 export function scrumKits(homeColor: TeamColorName, visitorColor: TeamColorName): ScrumKits {
-  const clash = homeColor === visitorColor;
   return {
     home: kit(homeColor, 'home'),
-    visitor: kit(visitorColor, clash ? 'away' : 'home'),
+    visitor: kit(visitorColor, 'away'),
   };
 }

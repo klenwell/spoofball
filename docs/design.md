@@ -46,8 +46,11 @@ These were chosen by the owner from a set of mockup comparisons.
    - **Cost of the white court:** the light colors had to deepen. Gold is now an olive-leaning `#A98921`, because a bright gold is only about 2:1 on white. Refining colors is part of #19.
    - **Home kit:** a disc filled with the team color (`base`), trimmed in its `deep` shade, with a white mark.
    - **Away kit:** a white disc trimmed and marked in the team color's `deep` shade. The trim uses `deep` rather than `base` so it stays clear on the gray apron. On the light court, the trim and a light drop shadow on every disc are what separate it from the court.
-   - **Clash rule:** when both teams in a scrum have the same color, the visitor wears away. Otherwise both teams wear home. See `scrumKits()` in `src/design/kits.ts`. The Scrum epic decides which team is home.
-   - **Why kits:** there are only 8 colors, so two teams will sometimes share one. This was the owner's revision on #17, modeled on home and visitor uniforms.
+   - **In a scrum, your team is always home and the visitor always wears away** (the owner's decision on #19, 2026-11-20, replacing an earlier "away only when the colors clash" rule).
+     - **Why:** you mostly watch a scrum play itself, so you need one constant rule for telling the teams apart: **solid discs are yours, white discs are theirs.** It works whatever the colors, including two teams of the same color. Many sports do the same, with road teams always in white.
+     - **Cost:** the opponent's color shows only in its trim, and white discs on the white mosh are quieter, relying on their trim and shadow.
+     - See `scrumKits()` in `src/design/kits.ts`.
+   - **Why kits:** the owner proposed them on #17, modeled on home and visitor uniforms, because there are only 8 colors and two teams will sometimes share one.
    - **Checked by unit tests:**
      - every disc's trim, in either kit, has at least 3:1 contrast on the mosh and on the apron;
      - every `base` color has at least 3:1 contrast on the white mosh;
@@ -76,23 +79,23 @@ These were chosen by the owner from a set of mockup comparisons.
 
 ## Glossary
 
-| Term             | Meaning                                                                                                                                                                            |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Spoof**        | A player: a 2D disc. A team has 6. (The prototype called them "rooks".)                                                                                                            |
-| **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry |
-| **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                         |
-| **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a scrum                                                                                 |
-| **Scrum**        | A match against one other team, played over 3 rounds                                                                                                                               |
-| **Round**        | One period of a scrum. Spoofs are placed, then play on their own for a fixed time                                                                                                  |
-| **Arena**        | The whole playing area: the court and both benches                                                                                                                                 |
-| **Court**        | The circular playing area, made of the apron, the mosh and the crush. Where a spoof is on the court sets its score                                                                 |
-| **Apron**        | The court's gray outer ring. Scores nothing (×0). Spoofs start a scrum here                                                                                                        |
-| **Mosh**         | The court's large white circle. Scores ×1                                                                                                                                          |
-| **Crush**        | The red spot at the center of the mosh. Scores ×3                                                                                                                                  |
-| **Bench**        | A team's curved row of seats beside the court: the visitor's above, yours below                                                                                                    |
-| **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 6                                                                                            |
-| **Kit**          | How a team's discs look in a scrum: **home** (filled with the team color) or **away** (white, trimmed in the team color)                                                           |
-| **Expansion**    | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                               |
-| **Draft**        | Picking your 6 spoofs from a generated pool of 18–24                                                                                                                               |
-| **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                |
-| **Stats**        | Your team's record and each spoof's numbers across scrums                                                                                                                          |
+| Term             | Meaning                                                                                                                                                                                  |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Spoof**        | A player: a 2D disc. A team has 6. (The prototype called them "rooks".)                                                                                                                  |
+| **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry       |
+| **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                               |
+| **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a scrum                                                                                       |
+| **Scrum**        | A match against one other team, played over 3 rounds                                                                                                                                     |
+| **Round**        | One period of a scrum. Spoofs are placed, then play on their own for a fixed time                                                                                                        |
+| **Arena**        | The whole playing area: the court and both benches                                                                                                                                       |
+| **Court**        | The circular playing area, made of the apron, the mosh and the crush. Where a spoof is on the court sets its score                                                                       |
+| **Apron**        | The court's gray outer ring. Scores nothing (×0). Spoofs start a scrum here                                                                                                              |
+| **Mosh**         | The court's large white circle. Scores ×1                                                                                                                                                |
+| **Crush**        | The red spot at the center of the mosh. Scores ×3                                                                                                                                        |
+| **Bench**        | A team's curved row of seats beside the court: the visitor's above, yours below                                                                                                          |
+| **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 6                                                                                                  |
+| **Kit**          | How a team's discs look in a scrum: **home** (filled with the team color) or **away** (white, trimmed in the team color). Your team always wears home, and the visitor always wears away |
+| **Expansion**    | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                                     |
+| **Draft**        | Picking your 6 spoofs from a generated pool of 18–24                                                                                                                                     |
+| **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                      |
+| **Stats**        | Your team's record and each spoof's numbers across scrums                                                                                                                                |

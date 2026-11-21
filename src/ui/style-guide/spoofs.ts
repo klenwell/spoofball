@@ -78,7 +78,7 @@ function stateStrip(title: string, discs: (SpoofDisc & { caption: string })[]): 
 
 function states(color: TeamColorName): HTMLElement[] {
   const home = kit(color, 'home');
-  const clash = scrumKits(color, color);
+  const scrum = scrumKits(color, color);
   return [
     stateStrip(
       'Fatigue: fades as it tires, never below 30%',
@@ -116,11 +116,11 @@ function states(color: TeamColorName): HTMLElement[] {
         caption: 'away',
       },
     ]),
-    stateStrip('Same color in a scrum: home vs visitor', [
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: clash.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: clash.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: clash.visitor, caption: 'visitor' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: clash.visitor, caption: 'visitor' },
+    stateStrip('In a scrum, the visitor always wears away (even in the same color)', [
+      { x: 0, y: 0, radius: 16, type: 'knight', kit: scrum.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, type: 'bishop', kit: scrum.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, type: 'knight', kit: scrum.visitor, caption: 'visitor' },
+      { x: 0, y: 0, radius: 16, type: 'bishop', kit: scrum.visitor, caption: 'visitor' },
     ]),
   ];
 }

@@ -30,24 +30,22 @@ describe('kit', () => {
 });
 
 describe('scrumKits', () => {
-  describe('when the teams have different colors', () => {
-    it('puts both teams in their home kits', () => {
-      const kits = scrumKits('blue', 'orange');
+  it('puts the home team in home and the visitor in away', () => {
+    const kits = scrumKits('blue', 'orange');
 
-      expect(kits.home.style).toBe('home');
-      expect(kits.visitor.style).toBe('home');
-      expect(kits.visitor.color).toBe('orange');
-    });
+    expect(kits.home).toEqual(kit('blue', 'home'));
+    expect(kits.visitor).toEqual(kit('orange', 'away'));
+  });
+
+  it('puts the visitor in away whatever the two colors', () => {
+    for (const home of teamColorNames) {
+      for (const visitor of teamColorNames) {
+        expect(scrumKits(home, visitor).visitor.style, `${home} vs ${visitor}`).toBe('away');
+      }
+    }
   });
 
   describe('when the teams have the same color', () => {
-    it('keeps the home team in home and puts the visitor in away', () => {
-      const kits = scrumKits('teal', 'teal');
-
-      expect(kits.home.style).toBe('home');
-      expect(kits.visitor.style).toBe('away');
-    });
-
     it('gives the two teams different disc fills', () => {
       for (const color of teamColorNames) {
         const kits = scrumKits(color, color);
