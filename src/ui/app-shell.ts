@@ -1,4 +1,5 @@
 import { appInfo } from '../app-info';
+import { createMatchPreview } from './match-preview';
 import { hashFor, isCanonicalHash, tabById, tabFromHash, tabs, type TabId } from './tabs';
 
 /**
@@ -10,6 +11,11 @@ import { hashFor, isCanonicalHash, tabById, tabFromHash, tabs, type TabId } from
  */
 
 const SOURCE_URL = 'https://github.com/klenwell/spoofball';
+
+/** Extra content a tab shows under its heading, built the first time the tab opens. */
+const panelBuilders: Partial<Record<TabId, () => HTMLElement>> = {
+  match: createMatchPreview,
+};
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -55,7 +61,20 @@ export function mountAppShell(root: HTMLElement): void {
   // Focusable from script only, so moving to a new tab can put focus on its heading.
   heading.tabIndex = -1;
   const body = el('p', 'screen-coming');
-  screen.append(heading, body);
+  const panel = el('div', 'screen-panel');
+  screen.append(heading, body, panel);
+  const builtPanels = new Map<TabId, HTMLElement>();
+
+  function panelFor(id: TabId): HTMLElement | undefined {
+    const build = panelBuilders[id];
+    if (!build) return undefined;
+    let built = builtPanels.get(id);
+    if (!built) {
+      built = build();
+      builtPanels.set(id, built);
+    }
+    return built;
+  }
 
   root.replaceChildren(header, screen, footer());
 
@@ -64,6 +83,9 @@ export function mountAppShell(root: HTMLElement): void {
     root.dataset.tab = id;
     heading.textContent = tab.title;
     body.textContent = tab.coming;
+    const content = panelFor(id);
+    if (content) panel.replaceChildren(content);
+    else panel.replaceChildren();
     document.title = `${tab.title} · Spoofball`;
     for (const link of links) {
       if (link.dataset.tab === id) link.setAttribute('aria-current', 'page');
