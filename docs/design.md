@@ -63,6 +63,7 @@ These were chosen by the owner from a set of mockup comparisons.
      3:1 is the WCAG minimum for meaningful graphics (WCAG 2.1, 1.4.11).
 5. **Navigation: a bottom tab bar on phones, a top bar on desktop.**
    - The tabs are **Match · Pharm · Stats** (renamed from Scrum on #20, 2026-11-20, when "match" became the whole contest).
+   - **Each tab has its own URL** (`#/match`, `#/pharm`, `#/stats`), so Back, Forward and reload behave as on any website (#21). A missing or unknown hash opens Match. The tabs are links in a `<nav>`, with `aria-current="page"` on the current one, and focus moves to the new screen's heading after a tab change. See `src/ui/tabs.ts`.
    - **Why:** it's the standard phone pattern. It's always visible, reachable with a thumb, and one tap from any screen. The prototype's circular hub was the alternative, but it adds a tap to every move.
 6. **Where the design lives:** the live style guide (`/spoofball/style/`) plus this document.
    - **Why:** the owner reviews the design on the real site, where it's rendered exactly as the game renders it.

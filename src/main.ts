@@ -1,10 +1,12 @@
-import { appInfo } from './app-info';
-import './style.css';
+import { installDesignTokens } from './design/install';
+import { mountAppShell } from './ui/app-shell';
+import './ui/app.css';
 
-const versionElement = document.querySelector<HTMLElement>('#version');
-if (!versionElement) {
-  throw new Error('Missing #version element in index.html');
+installDesignTokens();
+
+const root = document.querySelector<HTMLElement>('#app');
+if (!root) {
+  throw new Error('Missing #app element in index.html');
 }
 
-// textContent, not innerHTML, so the value is never parsed as HTML.
-versionElement.textContent = appInfo().version;
+mountAppShell(root);
