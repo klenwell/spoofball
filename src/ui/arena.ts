@@ -22,11 +22,15 @@ const BENCH_EDGE_WIDTH = 1.5;
 const COURT_EDGE_WIDTH = 2;
 
 /**
- * A thin ring around the crush, in its red, as in the prototype (radius 30,
- * 2 wide, in match.js). Decorative: the crush still ends at CRUSH_RADIUS.
+ * The crush is drawn as a red ring and a red spot inside it, as in the
+ * prototype (match.js). The ring's outer edge is the crush's edge,
+ * CRUSH_RADIUS, where the ×3 zone ends (the owner, #22). A thin white gap
+ * separates ring and spot: 1 unit, so it stays visible on a phone, where a
+ * court unit draws at under a pixel.
  */
-const CRUSH_RING_RADIUS = CRUSH_RADIUS + 5;
 const CRUSH_RING_WIDTH = 2;
+const CRUSH_GAP = 1;
+const CRUSH_SPOT_RADIUS = CRUSH_RADIUS - CRUSH_RING_WIDTH - CRUSH_GAP;
 
 function circle(ctx: CanvasRenderingContext2D, radius: number): void {
   ctx.beginPath();
@@ -89,11 +93,15 @@ function drawCourt(ctx: CanvasRenderingContext2D): void {
   ctx.strokeStyle = palette.moshLine;
   ctx.stroke();
 
-  // Crush: the red center spot.
+  // Crush: white inside, so the diagonals don't show in the gap, then the
+  // red spot and the ring whose outer edge is the crush's edge.
   circle(ctx, CRUSH_RADIUS);
+  ctx.fillStyle = palette.mosh;
+  ctx.fill();
+  circle(ctx, CRUSH_SPOT_RADIUS);
   ctx.fillStyle = palette.crush;
   ctx.fill();
-  circle(ctx, CRUSH_RING_RADIUS);
+  circle(ctx, CRUSH_RADIUS - CRUSH_RING_WIDTH / 2);
   ctx.lineWidth = CRUSH_RING_WIDTH;
   ctx.strokeStyle = palette.crush;
   ctx.stroke();
