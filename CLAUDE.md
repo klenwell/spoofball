@@ -86,16 +86,17 @@ src/
 
 ## Commands
 
-| Command                | What it does                                                    |
-| ---------------------- | --------------------------------------------------------------- |
-| `npm install`          | Install dependencies (CI uses `npm ci`)                         |
-| `npm run dev`          | Dev server at http://localhost:5173/spoofball/                  |
-| `npm run build`        | Production build into `dist/`                                   |
-| `npm run preview`      | Serve the built `dist/` locally                                 |
-| `npm test`             | Run the unit tests once (`npm run test:watch` to rerun on save) |
-| `npm run typecheck`    | Type-check with `tsc`                                           |
-| `npm run lint`         | ESLint (typescript-eslint strict and stylistic, type-checked)   |
-| `npm run format:check` | Check Prettier formatting (`npm run format` to fix)             |
+| Command                | What it does                                                     |
+| ---------------------- | ---------------------------------------------------------------- |
+| `npm install`          | Install dependencies (CI uses `npm ci`)                          |
+| `npm run dev`          | Dev server at http://localhost:5173/spoofball/                   |
+| `npm run build`        | Production build into `dist/`                                    |
+| `npm run preview`      | Serve the built `dist/` locally                                  |
+| `npm test`             | Run the unit tests once (`npm run test:watch` to rerun on save)  |
+| `npm run typecheck`    | Type-check with `tsc`                                            |
+| `npm run lint`         | ESLint (typescript-eslint strict and stylistic, type-checked)    |
+| `npm run format:check` | Check Prettier formatting (`npm run format` to fix)              |
+| `npm run perf:scrum`   | Time scrums in headless Chrome at 4× CPU slowdown (needs Chrome) |
 
 Before opening a PR, run `npm run lint && npm run typecheck && npm test && npm run format:check && npm run build`.
 

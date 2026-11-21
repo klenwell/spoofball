@@ -22,6 +22,20 @@ export default defineConfig(
     files: ['**/*.js'],
     extends: [tseslint.configs.disableTypeChecked],
   },
+  // Scripts in scripts/ run in Node 24. Name the few globals they use, rather
+  // than add the `globals` package for them.
+  {
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        setTimeout: 'readonly',
+        WebSocket: 'readonly',
+      },
+    },
+  },
   // Turn off rules that conflict with Prettier; Prettier owns formatting.
   prettier,
 );
