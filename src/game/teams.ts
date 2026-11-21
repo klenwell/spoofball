@@ -1,7 +1,7 @@
 import type { BenchSide } from './arena';
 import type { TeamColorName } from '../design/tokens';
 import type { Random } from './random';
-import { generateSkills, sizeToRadius, type Skills } from './skills';
+import { generateSkills, sizeToRadius, skillNames, type Skills } from './skills';
 import type { SpoofType } from './spoof-types';
 
 /**
@@ -26,10 +26,13 @@ export function createSpoof(id: string, type: SpoofType, skills: Skills): Spoof 
 }
 
 /**
- * A typical spoof's skill total when a new team is created: 48 points a skill
- * on average, the prototype's level for a new team (`NEW_TEAM_SKILL_PTS`).
+ * A new team's spoofs average 48 points a skill, the prototype's level for a
+ * new team (`NEW_TEAM_SKILL_PTS` in `models/team.py`: 5 × 11 × 48).
  */
-export const NEW_SPOOF_SKILL_TOTAL = 48 * 11;
+export const NEW_SPOOF_POINTS_PER_SKILL = 48;
+
+/** A typical spoof's skill total when a new team is created: 528. */
+export const NEW_SPOOF_SKILL_TOTAL = NEW_SPOOF_POINTS_PER_SKILL * skillNames.length;
 
 /** Generates a spoof of a type with this skill total, from a random source. */
 export function generateSpoof(id: string, type: SpoofType, total: number, random: Random): Spoof {

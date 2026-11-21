@@ -1,4 +1,5 @@
 import { createRandom } from './random';
+import { skillNames } from './skills';
 import type { SpoofType } from './spoof-types';
 import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Lineup, type Spoof, type Team } from './teams';
 
@@ -11,13 +12,21 @@ import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Lineup, type Spoof, type Tea
  */
 
 /**
+ * How far a preset spoof's skill total may stray from a new team's level:
+ * up to 2 points a skill either way, so ±22. Chosen here so the presets vary
+ * a little but stay close in strength. (The prototype varied new spoofs
+ * differently, by sharing out a team-wide pool: `distribute_team_points`.)
+ */
+const PRESET_SPREAD_PER_SKILL = 2;
+const PRESET_TOTAL_SPREAD = PRESET_SPREAD_PER_SKILL * skillNames.length;
+
+/**
  * Each preset spoof's hidden skills come from the generator with a fixed seed
- * (#35), so they're the same on every load and in every test. The skill total
- * varies a little around a new team's level, as in the prototype.
+ * (#35), so they're the same on every load and in every test.
  */
 function presetSpoof(id: string, type: SpoofType, seed: number): Spoof {
   const random = createRandom(seed);
-  const total = NEW_SPOOF_SKILL_TOTAL + random.int(-22, 22);
+  const total = NEW_SPOOF_SKILL_TOTAL + random.int(-PRESET_TOTAL_SPREAD, PRESET_TOTAL_SPREAD);
   return generateSpoof(id, type, total, random);
 }
 
