@@ -1,7 +1,7 @@
 import { palette, teamColors, type TeamColorName } from './tokens';
 
 /**
- * Home and away kits, like sports uniforms. In a scrum the home team (always
+ * Home and away kits, like sports uniforms. In a match the home team (always
  * the player's) wears home, a disc in its color, and the visitor always
  * wears away, a white disc trimmed in its color's deep shade. So the rule
  * the player learns is constant: solid discs are mine, white discs are theirs.
@@ -30,13 +30,13 @@ export function kit(color: TeamColorName, style: KitStyle): Kit {
   return { style, color, fill: palette.white, trim: deep, mark: deep };
 }
 
-export interface ScrumKits {
+export interface MatchKits {
   home: Kit;
   visitor: Kit;
 }
 
-/** The kits two teams wear in a scrum: home in home, the visitor always in away. */
-export function scrumKits(homeColor: TeamColorName, visitorColor: TeamColorName): ScrumKits {
+/** The kits two teams wear in a match: home in home, the visitor always in away. */
+export function matchKits(homeColor: TeamColorName, visitorColor: TeamColorName): MatchKits {
   return {
     home: kit(homeColor, 'home'),
     visitor: kit(visitorColor, 'away'),

@@ -9,7 +9,7 @@ export interface Sample {
   at: number | { x: number; y: number };
 }
 
-// One scrum, a round in: some spoofs on the bench, the rest spread across
+// One match, a scrum in: some spoofs on the bench, the rest spread across
 // the zones. Positions are in court units (court radius 150).
 export const SAMPLES: Sample[] = [
   { side: 'visitor', type: 'knight', radius: 15, at: 0 },

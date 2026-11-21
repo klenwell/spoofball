@@ -1,4 +1,4 @@
-import { kit, scrumKits } from '../../design/kits';
+import { kit, matchKits } from '../../design/kits';
 import { teamColorNames, type TeamColorName } from '../../design/tokens';
 import { avatars, type Avatar, type SpoofType } from '../../game/spoof-types';
 import { createCanvas } from '../canvas';
@@ -78,7 +78,7 @@ function stateStrip(title: string, discs: (SpoofDisc & { caption: string })[]): 
 
 function states(color: TeamColorName): HTMLElement[] {
   const home = kit(color, 'home');
-  const scrum = scrumKits(color, color);
+  const match = matchKits(color, color);
   return [
     stateStrip(
       'Fatigue: fades as it tires, never below 30%',
@@ -93,7 +93,7 @@ function states(color: TeamColorName): HTMLElement[] {
       })),
     ),
     stateStrip(
-      'Growth: grows during a round, radius 10 to 24',
+      'Base size: radius 10 to 24 (in a scrum a spoof can blow from 8 up to 40)',
       [10, 13, 16, 20, 24].map((radius) => ({
         x: 0,
         y: 0,
@@ -116,11 +116,11 @@ function states(color: TeamColorName): HTMLElement[] {
         caption: 'away',
       },
     ]),
-    stateStrip('In a scrum, the visitor always wears away (even in the same color)', [
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: scrum.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: scrum.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: scrum.visitor, caption: 'visitor' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: scrum.visitor, caption: 'visitor' },
+    stateStrip('In a match, the visitor always wears away (even in the same color)', [
+      { x: 0, y: 0, radius: 16, type: 'knight', kit: match.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, type: 'bishop', kit: match.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, type: 'knight', kit: match.visitor, caption: 'visitor' },
+      { x: 0, y: 0, radius: 16, type: 'bishop', kit: match.visitor, caption: 'visitor' },
     ]),
   ];
 }

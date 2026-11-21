@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { contrastRatio } from './color';
-import { kit, scrumKits } from './kits';
+import { kit, matchKits } from './kits';
 import { palette, teamColorNames, teamColors } from './tokens';
 
 describe('kit', () => {
@@ -29,9 +29,9 @@ describe('kit', () => {
   });
 });
 
-describe('scrumKits', () => {
+describe('matchKits', () => {
   it('puts the home team in home and the visitor in away', () => {
-    const kits = scrumKits('blue', 'orange');
+    const kits = matchKits('blue', 'orange');
 
     expect(kits.home).toEqual(kit('blue', 'home'));
     expect(kits.visitor).toEqual(kit('orange', 'away'));
@@ -40,7 +40,7 @@ describe('scrumKits', () => {
   it('puts the visitor in away whatever the two colors', () => {
     for (const home of teamColorNames) {
       for (const visitor of teamColorNames) {
-        expect(scrumKits(home, visitor).visitor.style, `${home} vs ${visitor}`).toBe('away');
+        expect(matchKits(home, visitor).visitor.style, `${home} vs ${visitor}`).toBe('away');
       }
     }
   });
@@ -48,7 +48,7 @@ describe('scrumKits', () => {
   describe('when the teams have the same color', () => {
     it('gives the two teams different disc fills', () => {
       for (const color of teamColorNames) {
-        const kits = scrumKits(color, color);
+        const kits = matchKits(color, color);
         expect(kits.home.fill, color).not.toBe(kits.visitor.fill);
       }
     });

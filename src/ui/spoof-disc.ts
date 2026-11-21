@@ -5,14 +5,14 @@ import { avatarOf, type SpoofType } from '../game/spoof-types';
 
 /**
  * Draws a spoof as a disc: filled and trimmed per its kit, with its type's
- * mark. The Scrum epic reuses this to animate spoofs, so it takes plain
+ * mark. The Match epic reuses this to animate spoofs, so it takes plain
  * values and a canvas context, and keeps no state.
  */
 
 export interface SpoofDisc {
   x: number;
   y: number;
-  /** Disc radius in CSS pixels. Grows during a round. */
+  /** Disc radius in CSS pixels. Grows and shrinks during a scrum. */
   radius: number;
   type: SpoofType;
   kit: Kit;

@@ -22,9 +22,9 @@ npm run test:watch   # rerun on save while developing
 - **The names should read as a sentence:** "formatVersion rejects a version that is not semver".
 
 ```ts
-describe('Scrum', () => {
+describe('Match', () => {
   describe('when both teams have placed all their spoofs', () => {
-    it('starts the round', () => {
+    it('starts the first scrum', () => {
       /* … */
     });
   });
@@ -56,7 +56,7 @@ describe('Scrum', () => {
 
 ## Randomness and time
 
-- **Anything random takes a seeded random source as an input,** never `Math.random()` directly. Tests pass a fixed seed and get the same result every run. This also lets a whole scrum be replayed from its seed.
+- **Anything random takes a seeded random source as an input,** never `Math.random()` directly. Tests pass a fixed seed and get the same result every run. This also lets a whole match be replayed from its seed.
 - **Anything time-based takes the time or a clock as an input.** Use Vitest's fake timers (`vi.useFakeTimers()`) only at the edges, such as the animation loop.
 
 ## Keep tests fast and isolated

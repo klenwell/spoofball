@@ -94,7 +94,7 @@ function teamColorsSection(): HTMLElement {
   });
   return section(
     'Team colors and kits',
-    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. In a scrum your team (home) wears home and the visitor always wears away: solid discs are yours, white discs are theirs. Every disc trim is at least 3:1 against both the white mosh and the gray apron, and every deep shade at least 4.5:1 on white. A light shadow lifts discs off the court. The real marks are in the Spoofs section below.',
+    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. In a match your team (home) wears home and the visitor always wears away: solid discs are yours, white discs are theirs. Every disc trim is at least 3:1 against both the white mosh and the gray apron, and every deep shade at least 4.5:1 on white. A light shadow lifts discs off the court. The real marks are in the Spoofs section below.',
     [h('div', { className: 'sg-teams' }, rows)],
   );
 }

@@ -1,4 +1,4 @@
-import { scrumKits } from '../../design/kits';
+import { matchKits } from '../../design/kits';
 import { palette, teamColorNames, type TeamColorName } from '../../design/tokens';
 import { arenaBounds, benchSeats } from '../../game/arena';
 import { zoneMultiplier, type Zone } from '../../game/court';
@@ -73,7 +73,7 @@ export function arenaSection(
     const view = fitArena(bounds, width, height);
     drawArena(ctx, view);
 
-    const kits = scrumKits(homeSelect.value as TeamColorName, visitorSelect.value as TeamColorName);
+    const kits = matchKits(homeSelect.value as TeamColorName, visitorSelect.value as TeamColorName);
     for (const sample of SAMPLES) {
       const seat = typeof sample.at === 'number' ? benchSeats(sample.side)[sample.at] : sample.at;
       if (!seat) continue;
@@ -101,7 +101,7 @@ export function arenaSection(
 
   return section(
     'Arena',
-    'The court and both benches, with sample spoofs mid-scrum. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. The visitor always wears the away kit, so solid discs are yours and white discs are theirs, even when both teams share a color. Draft for review in #19.',
+    'The court and both benches, with sample spoofs mid-match. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. The visitor always wears the away kit, so solid discs are yours and white discs are theirs, even when both teams share a color. Draft for review in #19.',
     [pickers, legend(), stage],
   );
 }

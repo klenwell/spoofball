@@ -67,15 +67,15 @@ As agreed on PR #7, folders are added when their first code arrives.
 src/
   main.ts          app entry point
   design/          design tokens, color math, kits (docs/design.md)
-  game/            pure game logic: spoofs, draft, scrum simulation, scoring, stats
+  game/            pure game logic: spoofs, draft, match simulation, scoring, stats
   ui/              screens and canvas drawing (DOM code stays thin)
   storage/         saving and loading in localStorage
   test-support/    factories and seeded random sources, for tests only
 ```
 
-- **Game logic never touches the DOM,** so it stays fast to test in Node, and a scrum can be replayed from its seed.
+- **Game logic never touches the DOM,** so it stays fast to test in Node, and a match can be replayed from its seed.
 - **Tests sit next to the code they test,** as `*.test.ts` files.
-- **Use the game's own words** for names in code and docs: spoof, scrum, expansion, pharm, kit and so on. They're defined in the [glossary](docs/design.md#glossary).
+- **Use the game's own words** for names in code and docs: spoof, match, scrum, expansion, pharm, kit and so on. They're defined in the [glossary](docs/design.md#glossary).
 
 ## Environment
 

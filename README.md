@@ -1,10 +1,10 @@
 # Spoofball
 
-A simple one-player 2D sports simulation for the browser. Draft a team of six discs ("spoofs"), place them on the court, and watch them play a three-round scrum against a computer-managed team.
+A simple one-player 2D sports simulation for the browser. Draft a team of six discs ("spoofs"), place them on the court, and watch them play a three-scrum match against a computer-managed team.
 
 **Play:** https://klenwell.com/spoofball/ (updated on every merge to `main`)
 
-**Status:** v0.1.0. Nothing playable yet. The first playable scrum is coming in v0.2.0.
+**Status:** v0.1.0. Nothing playable yet. The first playable match is coming in v0.2.0.
 
 ## Docs
 

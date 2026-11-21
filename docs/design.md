@@ -37,7 +37,7 @@ These were chosen by the owner from a set of mockup comparisons.
      - knight: a spade (♠);
      - pawn: a dot.
    - **Playing-card suits for the rook, bishop and knight** (the owner's idea in #18). The heart (♥) is unused.
-   - **Pawn subtypes are hidden.** There are 8 spoof types but 6 avatars: basic, noble and angry pawns all show the same pawn mark. A subtype shows only through how the pawn plays in a scrum (the owner's decision on #18, 2026-11-20). The prototype did the same, sending only "pawn" to the browser. In code, `avatarOf(type)` maps a spoof type to what the player sees.
+   - **Pawn subtypes are hidden.** There are 8 spoof types but 6 avatars: basic, noble and angry pawns all show the same pawn mark. A subtype shows only through how the pawn plays in a match (the owner's decision on #18, 2026-11-20). The prototype did the same, sending only "pawn" to the browser. In code, `avatarOf(type)` maps a spoof type to what the player sees.
    - **Why geometric marks:** they look the same on every device and stay readable on a 10 px disc. Chess glyphs blur at that size, and emoji vary by device and get muddy.
    - **Status:** the owner is refining them in #18.
 4. **Team colors: 8 named colors, re-tuned for the light court, with home and away kits.**
@@ -46,10 +46,10 @@ These were chosen by the owner from a set of mockup comparisons.
    - **Cost of the white court:** the light colors had to deepen. Gold is now an olive-leaning `#A98921`, because a bright gold is only about 2:1 on white. Refining colors is part of #19.
    - **Home kit:** a disc filled with the team color (`base`), trimmed in its `deep` shade, with a white mark.
    - **Away kit:** a white disc trimmed and marked in the team color's `deep` shade. The trim uses `deep` rather than `base` so it stays clear on the gray apron. On the light court, the trim and a light drop shadow on every disc are what separate it from the court.
-   - **In a scrum, your team is always home and the visitor always wears away** (the owner's decision on #19, 2026-11-20, replacing an earlier "away only when the colors clash" rule).
-     - **Why:** you mostly watch a scrum play itself, so you need one constant rule for telling the teams apart: **solid discs are yours, white discs are theirs.** It works whatever the colors, including two teams of the same color. Many sports do the same, with road teams always in white.
+   - **In a match, your team is always home and the visitor always wears away** (the owner's decision on #19, 2026-11-20, replacing an earlier "away only when the colors clash" rule).
+     - **Why:** you mostly watch a match play itself, so you need one constant rule for telling the teams apart: **solid discs are yours, white discs are theirs.** It works whatever the colors, including two teams of the same color. Many sports do the same, with road teams always in white.
      - **Cost:** the opponent's color shows only in its trim, and white discs on the white mosh are quieter, relying on their trim and shadow.
-     - See `scrumKits()` in `src/design/kits.ts`.
+     - See `matchKits()` in `src/design/kits.ts`.
    - **Why kits:** the owner proposed them on #17, modeled on home and visitor uniforms, because there are only 8 colors and two teams will sometimes share one.
    - **Checked by unit tests:**
      - every disc's trim, in either kit, has at least 3:1 contrast on the mosh and on the apron;
@@ -62,10 +62,97 @@ These were chosen by the owner from a set of mockup comparisons.
 
      3:1 is the WCAG minimum for meaningful graphics (WCAG 2.1, 1.4.11).
 5. **Navigation: a bottom tab bar on phones, a top bar on desktop.**
-   - The tabs are **Scrum · Pharm · Stats**.
+   - The tabs are **Match · Pharm · Stats** (renamed from Scrum on #20, 2026-11-20, when "match" became the whole contest).
    - **Why:** it's the standard phone pattern. It's always visible, reachable with a thumb, and one tap from any screen. The prototype's circular hub was the alternative, but it adds a tap to every move.
 6. **Where the design lives:** the live style guide (`/spoofball/style/`) plus this document.
    - **Why:** the owner reviews the design on the real site, where it's rendered exactly as the game renders it.
+
+7. **A spoof's abilities are hidden. Players infer them from how it moves** (the owner's decision on #20, 2026-11-20).
+   - No screen shows a spoof's **skills** (11), **comps** (5) or **pawn subtype**: not the draft, not Pharm, not Stats.
+   - **This is stricter than the prototype.** The prototype never showed skills, but its Pharm roster showed each spoof's 5 comps as "spangles": a circle per comp, sized and colored from red to green by its value, with an icon (`CompSpangle` in `public/js/app/models/rook.js`). There were no numbers, but you could read them at a glance.
+   - Spoof cards and stats show only the avatar and **outcomes**: matches and scrums played, points, points per scrum, and +/− per scrum (team points minus opponent points while that spoof played, from the prototype's stats page).
+   - **Why:** the game should reward intuition and watching, not number-crunching.
+8. **The draft is a combine,** modeled on the NFL Scouting Combine (the owner's idea on #20).
+   - **Warm-ups:** every candidate moves on its own in a small round cell, so you can scan the pool like a scout.
+   - **Drills:** tap a spoof to open a small drill court with 2–3 short drills, such as _sprint_ (dash across and back), _blow_ (grow from its smallest size) and _hold_ (stay in the mosh while a dummy pushes). Each is a few seconds, with no numbers.
+   - **Some randomness,** like a real combine: a spoof shows its traits, but not a perfectly repeatable test.
+   - **The combine reuses the match simulation,** so a spoof behaves in drills exactly as it will in a match. So Expansion, which builds the combine, depends on the Match epic.
+   - **Scouting in Pharm:** you can run drills on your own spoofs before replacing one. Replacing uses a small pool of 3 prospects. The prototype's pharm had this idea, but felt clunky, so the owner wants it **clean and easy to use**.
+
+## Wireframes
+
+Low-fidelity phone sketches (#20), to guide the epics that build each screen. They're gray boxes and labels, not designs. Solid discs are yours (home kit) and hollow discs the visitor's (away kit). Regenerate them with `python3 docs/design/wireframes.py docs/design`.
+
+### Expansion
+
+![Expansion wireframes](design/wireframe-expansion.svg)
+
+1. **Your team:** a name (up to 16 characters, as in the prototype), one of the 8 colors, and an emoji logo, with a preview.
+2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell. Picked cells are outlined, and a strip at the bottom fills to 6.
+3. **Drills:** sprint, blow and hold tabs on a small court. "Draft this spoof" or "Next candidate".
+
+There's no tab bar until the team exists. On desktop, the warm-up grid widens to more columns and the drill court opens beside it.
+
+### Match
+
+![Match wireframes](design/wireframe-match.svg)
+
+1. **Mise:** the scoreboard on top, then the arena. Tap a spoof on your bench (below), then tap the apron to place it.
+2. **Scrum in play:** a clock bar under the scoreboard. The spoofs play on their own while you watch, and you can pause.
+3. **Result:** the final score, the score by scrum, and each of your spoofs' points.
+
+On desktop, the arena sits in the center with the scoreboard above it.
+
+### Pharm
+
+![Pharm wireframes](design/wireframe-pharm.svg)
+
+1. **Roster:** your team and its record, then 6 rows, each with a moving spoof and its outcomes. "Re-draft the team" runs a full combine.
+2. **Spoof card:** the spoof warming up in its cell, its outcomes, then "Scout: run drills" and "Replace this spoof".
+3. **Replace:** 3 prospects, for one draft pick. Tap a cell for drills, then pick one and swap it in. Your picks show as 3 dots.
+
+### Stats
+
+![Stats wireframes](design/wireframe-stats.svg)
+
+1. **Team:** record, matches played, points per match, best score, and a match log.
+2. **Spoof lines:** a row per spoof with matches, scrums, points, points per scrum and +/− per scrum. Tap a row to open its card in Pharm.
+
+## Decisions for later epics (2026-11-20)
+
+The owner settled these while reviewing the wireframes on #20. Each epic still refines the details when it's planned.
+
+### Match
+
+- **The mise follows the prototype** (`mise.py`). Each team places 3 spoofs before every scrum, in 6 turns.
+  - The **host** places last (turn 6). For now the host is picked at random each match, separately from kits and benches.
+  - The other team places on turn 4 or 5, at random. The remaining turns are random, except that a team can't take its last turn while the other team hasn't taken its first. The order is new every scrum.
+  - **Placement rule:** of each team's 3, at least 2 go on the apron and at most 1 anywhere on the court.
+- **Fatigue carries across a match's scrums.** Between scrums every spoof recovers part of the way (up to 66%), and a spoof that sat out a scrum can recover fully. Recovery depends on hidden stamina and impact, plus some randomness. Fatigue resets each match.
+- **A scrum lasts 8 seconds.** The prototype simulated 300 frames a scrum. That number isn't fixed: the Match epic picks a frame rate that serves gameplay and performance (the owner, on #27).
+- **Ties stand.** A match can end in a tie, and records are win–loss–tie. The prototype had overtime but had turned it off.
+- **Scoring follows the prototype** (`scorekeeper.py`). A scrum scores a snapshot of where the spoofs end up: the court area each covers, × 0.002, × the zone multiplier. A match usually totals 10–100 points.
+- **Watching controls: pause only.** Tap to pause and resume. Speed controls and replays wait until after the MVP. Replays are possible because a match can be replayed from its seed.
+
+### Expansion
+
+- **Spoofs have names.** It's its own story, #28.
+- **The team logo comes from a curated set of emoji,** shown as a grid. Computer teams draw from the same set.
+- **The combine has 18 candidates** (3 per pick), drawn with the prototype's type odds.
+- **Three drills:** _sprint_ (hints at burst and stamina), _blow_ (growth and size) and _hold_ (mass and constancy). Each takes about 3 seconds, can be rerun, and varies a little each time. Iq, vision, charisma and cooperation show only in matches.
+
+### Pharm
+
+- **Replacing a spoof costs a draft pick,** as in the prototype (`models/team.py`).
+  - A team starts with 3 picks and can hold at most 3. It gets one back after each loss.
+  - Replacing happens between matches. You choose from **3 prospects**, scouted with the same warm-ups and drills, and prospects you pass on stay for next time.
+  - Keep the prototype's balance rules: a prospect's skill total is based on your weakest spoof, and a team holds at most 1 royal (king or queen) and 2 of each face type (rook, bishop, knight).
+- **Re-drafting** runs a full 18-spoof combine. It keeps the team's name, color and logo, but **resets its record and stats, after a clear warning.**
+
+### Stats
+
+- **The MVP shows outcomes only:** record, matches, scrums, points, points per scrum and +/− per scrum.
+- **The simulation still records the prototype's behavior stats,** without showing them: imps (decisions), pings and pongs (messages sent and received), heeds and jecks (messages followed and ignored), dings and dongs (hits given and taken), and doves and trees (frames overlapping 1 or 2 teammates). Showing a few, such as dings and dongs as result-screen highlights, is a post-MVP idea. Some of them, like heeds against jecks, would come close to revealing hidden skills.
 
 ## Tokens at a glance
 
@@ -84,18 +171,25 @@ These were chosen by the owner from a set of mockup comparisons.
 | **Spoof**        | A player: a 2D disc. A team has 6. (The prototype called them "rooks".)                                                                                                                  |
 | **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry       |
 | **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                               |
-| **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a scrum                                                                                       |
-| **Scrum**        | A match against one other team, played over 3 rounds                                                                                                                                     |
-| **Round**        | One period of a scrum. Spoofs are placed, then play on their own for a fixed time                                                                                                        |
+| **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a match                                                                                       |
+| **Match**        | A whole contest against one other team, played over 3 scrums                                                                                                                             |
+| **Scrum**        | One period of a match: the mise, then 8 seconds of the spoofs playing on their own. (The prototype called it a round)                                                                    |
+| **Mise**         | Placing spoofs before a scrum, the teams taking turns. The prototype's term                                                                                                              |
 | **Arena**        | The whole playing area: the court and both benches                                                                                                                                       |
 | **Court**        | The circular playing area, made of the apron, the mosh and the crush. Where a spoof is on the court sets its score                                                                       |
-| **Apron**        | The court's gray outer ring. Scores nothing (×0). Spoofs start a scrum here                                                                                                              |
+| **Apron**        | The court's gray outer ring. Scores nothing (×0). Spoofs start each scrum here                                                                                                           |
 | **Mosh**         | The court's large white circle. Scores ×1                                                                                                                                                |
 | **Crush**        | The red spot at the center of the mosh. Scores ×3                                                                                                                                        |
 | **Bench**        | A team's curved row of seats beside the court: the visitor's above, yours below                                                                                                          |
 | **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 6                                                                                                  |
-| **Kit**          | How a team's discs look in a scrum: **home** (filled with the team color) or **away** (white, trimmed in the team color). Your team always wears home, and the visitor always wears away |
+| **Kit**          | How a team's discs look in a match: **home** (filled with the team color) or **away** (white, trimmed in the team color). Your team always wears home, and the visitor always wears away |
 | **Expansion**    | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                                     |
-| **Draft**        | Picking your 6 spoofs from a generated pool of 18–24                                                                                                                                     |
+| **Draft**        | Picking your 6 spoofs from a generated pool of 18                                                                                                                                        |
+| **Combine**      | How you draft: candidate spoofs show their abilities by moving, in warm-ups and drills, like the NFL Scouting Combine                                                                    |
+| **Warm-up**      | A candidate moving on its own in a small round cell, so you can compare a whole pool at a glance                                                                                         |
+| **Drill**        | A short exercise on a small court (sprint, blow, hold) that shows one or two of a spoof's traits, without numbers                                                                        |
 | **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                      |
-| **Stats**        | Your team's record and each spoof's numbers across scrums                                                                                                                                |
+| **Draft pick**   | What replacing a spoof costs. A team holds up to 3 and gets one back after each loss                                                                                                     |
+| **Prospect**     | A candidate to replace a spoof in Pharm. You choose from 3                                                                                                                               |
+| **Host**         | The team that places last in each mise. For now picked at random each match                                                                                                              |
+| **Stats**        | Your team's record and each spoof's numbers across matches                                                                                                                               |
