@@ -29,3 +29,13 @@ export function zoneAt(x: number, y: number): Zone {
   if (distance <= COURT_RADIUS) return 'apron';
   return 'off';
 }
+
+/**
+ * Whether a whole disc is on the court. Spoofs in play always are: the
+ * prototype bounced any disc that crossed the edge back inside
+ * (`enforce_boundaries` in court.py). Only while placing (the mise) can a
+ * spoof be partly off the court.
+ */
+export function isOnCourt(x: number, y: number, radius: number): boolean {
+  return Math.hypot(x, y) + radius <= COURT_RADIUS;
+}
