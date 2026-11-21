@@ -1,8 +1,16 @@
 /**
- * The court, in court units: a circle of radius 150 centered on (0, 0),
- * following the prototype (court.py and MatchMosh in match.js). Positions
- * in the game are always in court units; only drawing converts them to
- * screen pixels.
+ * The court, in **court units**, not pixels: a circle of radius 150 centered
+ * on (0, 0), with y pointing down.
+ *
+ * Every position, size and (later) speed in the game is in court units:
+ * zones here, seats in arena.ts, spoof radii in spoof-types.ts. Only drawing
+ * converts to pixels. `fitArena` (ui/arena-view.ts) picks a scale for the
+ * canvas size, and `createCanvas` (ui/canvas.ts) multiplies by the screen's
+ * pixel ratio, so the arena scales cleanly to any screen and stays crisp.
+ * The game logic never knows the screen size.
+ *
+ * The numbers match the prototype (court.py, and MatchMosh in match.js),
+ * where 1 unit was 1 pixel on a 300 px court, so its tuning carries over.
  */
 
 export const COURT_RADIUS = 150;
