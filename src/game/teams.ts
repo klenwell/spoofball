@@ -1,19 +1,39 @@
 import type { BenchSide } from './arena';
 import type { TeamColorName } from '../design/tokens';
+import type { Random } from './random';
+import { generateSkills, sizeToRadius, type Skills } from './skills';
 import type { SpoofType } from './spoof-types';
 
 /**
- * The spoof and team model, kept minimal for now (#22): a spoof's type and
- * size, and a team's name, color and 6 spoofs. The Expansion epic adds names
- * (#28) and the hidden skills; the Match epic adds positions and fatigue.
+ * The spoof and team model: a spoof's type, hidden skills (#35) and size, and
+ * a team's name, color and 6 spoofs. Names come later (#28); the Match epic
+ * adds positions and fatigue during play.
  */
 
 export interface Spoof {
   /** Unique within its team. */
-  id: string;
-  type: SpoofType;
-  /** Base radius in court units, between MIN_SPOOF_RADIUS and MAX_SPOOF_RADIUS. */
-  radius: number;
+  readonly id: string;
+  readonly type: SpoofType;
+  /** Hidden: never shown on screen (docs/design.md, Decision 7). */
+  readonly skills: Skills;
+  /** Base radius in court units, from the size skill (`sizeToRadius`), 10 to 24. */
+  readonly radius: number;
+}
+
+/** A spoof with its radius worked out from its size skill. */
+export function createSpoof(id: string, type: SpoofType, skills: Skills): Spoof {
+  return { id, type, skills, radius: sizeToRadius(skills.size) };
+}
+
+/**
+ * A typical spoof's skill total when a new team is created: 48 points a skill
+ * on average, the prototype's level for a new team (`NEW_TEAM_SKILL_PTS`).
+ */
+export const NEW_SPOOF_SKILL_TOTAL = 48 * 11;
+
+/** Generates a spoof of a type with this skill total, from a random source. */
+export function generateSpoof(id: string, type: SpoofType, total: number, random: Random): Spoof {
+  return createSpoof(id, type, generateSkills(type, total, random));
 }
 
 export interface Team {

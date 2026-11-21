@@ -1,4 +1,6 @@
-import type { Lineup, Team } from './teams';
+import { createRandom } from './random';
+import type { SpoofType } from './spoof-types';
+import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Lineup, type Spoof, type Team } from './teams';
 
 /**
  * Two preset teams for the Match screen's static court (#22), until the
@@ -8,16 +10,27 @@ import type { Lineup, Team } from './teams';
  * Positions are in court units (court radius 150, y down).
  */
 
+/**
+ * Each preset spoof's hidden skills come from the generator with a fixed seed
+ * (#35), so they're the same on every load and in every test. The skill total
+ * varies a little around a new team's level, as in the prototype.
+ */
+function presetSpoof(id: string, type: SpoofType, seed: number): Spoof {
+  const random = createRandom(seed);
+  const total = NEW_SPOOF_SKILL_TOTAL + random.int(-22, 22);
+  return generateSpoof(id, type, total, random);
+}
+
 export const COMETS: Team = {
   name: 'Comets',
   color: 'blue',
   spoofs: [
-    { id: 'c1', type: 'queen', radius: 18 },
-    { id: 'c2', type: 'rook', radius: 17 },
-    { id: 'c3', type: 'bishop', radius: 15 },
-    { id: 'c4', type: 'pawn-basic', radius: 13 },
-    { id: 'c5', type: 'pawn-noble', radius: 12 },
-    { id: 'c6', type: 'pawn-angry', radius: 14 },
+    presetSpoof('c1', 'queen', 101),
+    presetSpoof('c2', 'rook', 102),
+    presetSpoof('c3', 'bishop', 103),
+    presetSpoof('c4', 'pawn-basic', 104),
+    presetSpoof('c5', 'pawn-noble', 105),
+    presetSpoof('c6', 'pawn-angry', 106),
   ],
 };
 
@@ -25,12 +38,12 @@ export const EMBERS: Team = {
   name: 'Embers',
   color: 'orange',
   spoofs: [
-    { id: 'e1', type: 'king', radius: 19 },
-    { id: 'e2', type: 'knight', radius: 16 },
-    { id: 'e3', type: 'knight', radius: 15 },
-    { id: 'e4', type: 'rook', radius: 14 },
-    { id: 'e5', type: 'pawn-basic', radius: 12 },
-    { id: 'e6', type: 'pawn-basic', radius: 13 },
+    presetSpoof('e1', 'king', 201),
+    presetSpoof('e2', 'knight', 202),
+    presetSpoof('e3', 'knight', 203),
+    presetSpoof('e4', 'rook', 204),
+    presetSpoof('e5', 'pawn-basic', 205),
+    presetSpoof('e6', 'pawn-basic', 206),
   ],
 };
 
