@@ -4,7 +4,7 @@ Written: 2026-11-20 · **Status: approved** (2026-11-20). Based on [pitch.md](..
 
 ## Why
 
-Spoofball is a simple one-player 2D sports simulation for the browser. You draft a team of six discs ("spoofs"), place them on the court, and watch them play a 3-round match ("scrum") on their own against a computer team. It rebuilds the backgammon-chrome / blowrook prototype as a static site on GitHub Pages.
+Spoofball is a simple one-player 2D sports simulation for the browser. You draft a team of six discs ("spoofs"), place them on the court, and watch them play a match of 3 scrums on their own against a computer team. It rebuilds the backgammon-chrome / blowrook prototype as a static site on GitHub Pages.
 
 The project has two goals: **ship the game**, and **document openly how it's built**.
 
@@ -12,10 +12,10 @@ The project has two goals: **ship the game**, and **document openly how it's bui
 
 The prototype is `~/projects/backgammon-chrome` (2014, Python 2.7 App Engine, Mercurial, KineticJS + jQuery). There, a spoof is a **rook**.
 
-- **The match ran on the server.** The Python in `lib/minrook/` (`rook_ai`, `scorekeeper`, `mise`, `teams`) simulated each round, and the browser replayed the frames. Pages has no server, so **the simulation moves to TypeScript and runs in the browser.**
-- **Round:** 300 frames over 8 seconds. Scoring rewards court position each frame (`scorekeeper.py`).
-- **Placement ("mise"):** teams take turns placing 3 rooks each per round, and the host places last (`mise.py`). You want to change these rules. That decision belongs to the Scrum epic.
-- **Spoof model:** 11 skills (size, mass, growth, burst, stamina, iq, vision, charisma, cooperation, impact, constancy). They roll up into 5 comps (force, zip, smarts, mesh, will). Each spoof also has an avatar, radius limits of 10–24 px, and fatigue.
+- **The match ran on the server.** The Python in `lib/minrook/` (`rook_ai`, `scorekeeper`, `mise`, `teams`) simulated each scrum (the prototype called it a round), and the browser replayed the frames. Pages has no server, so **the simulation moves to TypeScript and runs in the browser.**
+- **Scrum:** 300 frames over 8 seconds. Its score is a snapshot of where the spoofs are at the end: the court area each covers, weighted by zone (`scorekeeper.py`). A whole match usually totals 10–100 points.
+- **Placement ("mise"):** teams take turns placing 3 rooks each per scrum, and the host places last (`mise.py`). You want to change these rules. That decision belongs to the Match epic.
+- **Spoof model:** 11 skills (size, mass, growth, burst, stamina, iq, vision, charisma, cooperation, impact, constancy). They roll up into 5 comps (force, zip, smarts, mesh, will). Each spoof also has an avatar, a base radius of 10–24 (it can blow from 8 to 40 in play), and fatigue.
 - **Per-spoof stats** already exist: imps, pings, pongs, heeds, jecks, dings, dongs, doves, trees. These give the Stats epic a ready list.
 
 We use the prototype as **a spec, not code to port**. We carry over the behavior and the tuning numbers, rewritten as tested TypeScript.
@@ -23,14 +23,14 @@ We use the prototype as **a spec, not code to port**. We carry over the behavior
 ## Goals
 
 1. **Playable from the first epic on.** The game deployed at `klenwell.github.io/spoofball` is playable after every merged step, even if it's thin.
-2. **The four MVP parts:** Expansion (create and draft your team), Scrum, Pharm (manage your team), Stats. See the [glossary](../design.md#glossary).
+2. **The four MVP parts:** Expansion (create and draft your team), Match, Pharm (manage your team), Stats. See the [glossary](../design.md#glossary).
 3. **Works on phones** as well as desktop.
 4. **Transparent process.** Epics, tickets, PRs and short epic READMEs tell the story of how it was built.
 5. **Quality bar:** lint and tests run in CI on every PR, and the code is readable over clever.
 
 ## Scope
 
-**In:** the four parts above, one-off scrums against generated teams, one saved team per browser, and phone support.
+**In:** the four parts above, one-off matches against generated teams, one saved team per browser, and phone support.
 
 **Out (post-MVP):** trades and free agents, spoof progression, leagues and seasons, multiple saved teams, accounts and servers, sound.
 
@@ -76,7 +76,7 @@ What a player gets: **a live "Spoofball" page.**
 
 - **Epic 0, `foundation`:** repo `klenwell/spoofball`, the Project and labels, the Vite + TS skeleton, CI, the Pages deploy, `CLAUDE.md` and `docs/testing.md`.
 
-### First Scrum (`v0.2.0`)
+### First Match (`v0.2.0`)
 
 What a player gets: **a full, styled match between two preset teams.**
 
@@ -88,21 +88,21 @@ What a player gets: **a full, styled match between two preset teams.**
 
   Each later epic refines the design of its own screen.
 
-- **Epic 2, `scrum`:**
+- **Epic 2, `match`:**
   - the simulation in TS (physics, spoof AI, scoring, fatigue);
   - the new placement rules;
-  - 3 rounds, a scoreboard and a result screen, using two preset teams.
+  - 3 scrums, a scoreboard and a result screen, using two preset teams.
 
 ### Your Team (`v0.3.0`)
 
-What a player gets: **create and draft your own team, play scrums, and see stats that last.**
+What a player gets: **create and draft your own team, play matches, and see stats that last.**
 
 - **Epic 3, `expansion`:**
   - create a team (name, color, emoji logo);
-  - draft 6 spoofs from a generated pool of 18–24 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Scrum epic's simulation;
+  - draft 6 spoofs from a generated pool of 18–24 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Match epic's simulation;
   - save locally;
-  - scrum your team against a generated opponent.
-- **Epic 4, `stats`:** record team and spoof stats for each scrum. A stats screen shows the team record and a line for each spoof. History survives a reload.
+  - play your team against a generated opponent.
+- **Epic 4, `stats`:** record team and spoof stats for each match. A stats screen shows the team record and a line for each spoof. History survives a reload.
 
 ### Pharm (`v0.4.0`)
 
@@ -116,11 +116,11 @@ What a player gets: **the finished MVP, polished and tested on phones.**
 
 - **Epic 6, `mvp-release`:** a phone QA pass, accessibility basics, the README, the `v1.0.0` tag, and a retrospective.
 
-Scrum comes before Expansion because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
+Match comes before Expansion because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
 
 ## Decisions (2026-11-20)
 
-1. **Scrums are autonomous after placement.** You place spoofs, then the scrum plays itself. Who plays, and the placement rules, are decided at the scrum level. The new rules are settled when the Scrum epic is planned.
+1. **Matches are autonomous after placement.** You place spoofs, then each scrum plays itself. Who plays, and the placement rules, are decided at the match level. The new rules are settled when the Match epic is planned.
 2. **The Pharm screen can replace a spoof or re-draft the team.** Trades, free agents and progression come after the MVP.
 3. **A spoof's type is fixed when it's created, shapes its skill rolls, and sets its avatar.** This keeps the prototype's logic (`AVATAR_DIST` in `backgammon-chrome/.../models/rook.py`).
    - **Types:** king, queen, rook, bishop and knight (spelled "night" in the prototype's code), plus three pawn variants (basic, noble, angry).
@@ -130,9 +130,9 @@ Scrum comes before Expansion because it's the core of the game and its biggest r
      - draft odds. Pawns make up 65% of draws, and kings 2%.
    - **Visuals:** the Design Direction epic redesigns the avatars, which are chess glyphs today.
 4. **Semver, one minor version per milestone.**
-   - Each milestone ships the next minor version: Foundation is `v0.1.0`, First Scrum `v0.2.0`, Your Team `v0.3.0` and Pharm `v0.4.0`.
+   - Each milestone ships the next minor version: Foundation is `v0.1.0`, First Match `v0.2.0`, Your Team `v0.3.0` and Pharm `v0.4.0`.
    - **Each epic ships a version too.** An epic that isn't the last in its milestone ships a pre-release of the milestone's version, published as a GitHub pre-release.
-     - For example, Design Direction ships `v0.2.0-alpha.1`, then Scrum completes First Scrum as `v0.2.0`.
+     - For example, Design Direction ships `v0.2.0-alpha.1`, then Match completes First Match as `v0.2.0`.
      - The last epic in a milestone ships the milestone's version itself, so a single-epic milestone has no alpha.
    - Fixes are patch releases (`v0.2.1`).
    - The MVP milestone is `v1.0.0`.
@@ -147,12 +147,16 @@ Scrum comes before Expansion because it's the core of the game and its biggest r
    - **Pharm** replaces "GM screen". It comes from "farm system", as in the prototype.
    - The pitch keeps its original wording.
 
+7. **Match and scrum** (2026-11-20, on #20).
+   - A **match** is the whole contest between two teams. A **scrum** is one of its 3 periods (the prototype's "round"). "Round" is no longer a game term.
+   - The tab, the milestone (First Match) and epic 2 (`match`) are named to match.
+
 ## Open questions
 
 None at the moment. Questions that come up during planning are recorded in each epic.
 
 ## Done when
 
-- `klenwell.github.io/spoofball` lets you create a team, draft it, play scrums, see stats, and manage the roster, on desktop and phone.
+- `klenwell.github.io/spoofball` lets you create a team, draft it, play matches, see stats, and manage the roster, on desktop and phone.
 - Every milestone and epic is closed, with every step closed by a merged PR that passed CI.
 - The retrospective is written.
