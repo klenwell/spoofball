@@ -57,7 +57,9 @@ PR descriptions use the "Generated with Claude Code" footer instead, and commits
 
 - **Favor readability, security and reliability over cleverness or brevity.**
 - **Keep infrastructure minimal.** A dependency is added only when it earns its place, and the PR records why.
-- **The prototype is a spec, not code to port.** It is `~/projects/backgammon-chrome`, where a spoof is a "rook". Rewrite its behavior as tested TypeScript.
+- **The prototype is a reference, not a blueprint** (the owner, 2026-11-21). It is `~/projects/backgammon-chrome`, where a spoof is a "rook". It shows how the game should play. New code doesn't follow its design or implementation: where something can be simplified, corrected or improved, it should be.
+  - How the code is built is Claude's call. Anything that changes how the game plays (a rule, a skill, a behavior) is the owner's, so propose it first.
+  - Every PR lists where it departs from the prototype and why, including any prototype bugs it finds.
 
 ## Source layout
 
