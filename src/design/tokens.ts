@@ -5,10 +5,10 @@
  */
 
 export const palette = {
-  /** Page background: near-black, so the court and team colors carry the screen. */
-  background: '#111317',
-  /** Raised surfaces: cards, panels, seat rows. */
-  surface: '#1A1E24',
+  /** Page background: a light, cool off-white. The white court and cards sit on it. */
+  background: '#F5F6F8',
+  /** Raised surfaces: the top and tab bars, cards and panels. */
+  surface: '#FFFFFF',
   /** The mosh: the court's large white circle (×1). Team colors are checked against it. */
   mosh: '#FFFFFF',
   /**
@@ -16,26 +16,42 @@ export const palette = {
    * than the prototype's #CCCCCC so every disc's trim keeps 3:1 against it.
    */
   apron: '#D9DCE1',
+  /**
+   * The court's outer edge. The apron is close to the page's color, so this
+   * line (3:1 on the page) shows where the court ends.
+   */
+  courtEdge: '#878E99',
   /** The crush: the red center spot (×3), like a hockey face-off spot. */
   crush: '#D7263D',
   /** The mosh's outline, in the crush's red. */
   moshLine: '#D7263D',
   /** The two diagonal lines that quarter the court. Decorative. */
   courtLine: '#2F6FD6',
-  /** A bench: the curved band holding a team's seats. */
-  bench: '#262B33',
+  /**
+   * A bench: the curved band holding a team's seats. White, like the mosh,
+   * because no light gray keeps every team color at 3:1 (#30).
+   */
+  bench: '#FFFFFF',
+  /** The bench's outline, so the white band reads on the page. Decorative. */
+  benchEdge: '#D5D9E0',
   /** An empty seat on a bench. */
-  seat: '#353C47',
+  seat: '#ECEFF3',
   /** Labels drawn on the court. */
   courtText: '#5F6670',
-  text: '#E8EAED',
-  textMuted: '#8A919C',
-  line: '#2A2F37',
+  /** Body text: 15:1 on the page. */
+  text: '#1B1F24',
+  /** Secondary text: at least 4.5:1 on the page and on surfaces. */
+  textMuted: '#5F6672',
+  /** Hairlines between areas: borders and dividers. Decorative. */
+  line: '#E3E6EB',
+  /** The accent for graphics, such as the current tab's ring. 3:1 on the page. */
   accent: '#4A86E8',
+  /** The accent for text and links, such as the current tab's label. 4.5:1 on the page. */
+  accentText: '#1F63D1',
   /** The away kit's disc. */
   white: '#FFFFFF',
   /** The ring around a selected spoof. Dark, so it reads on the white court and on any team color. */
-  highlight: '#111317',
+  highlight: '#1B1F24',
 } as const;
 
 export const teamColorNames = [

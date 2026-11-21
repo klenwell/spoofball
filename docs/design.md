@@ -9,10 +9,11 @@ How Spoofball looks and why. The live [style guide](https://klenwell.com/spoofba
 
 These were chosen by the owner from a set of mockup comparisons.
 
-1. **Feel: dark, minimal, built from circles.**
-   - It refines the prototype's look: a near-black background (`--color-background`), calm surfaces, and geometric shapes.
-   - **Why:** the dark page frames the light court like an arena under lights, so the eye goes to the play. It also suits round discs on a round court.
-2. **Arena: a circular court with three scoring zones, and a bench for each team, on the dark page.**
+1. **Feel: light, flat, modern, built from circles** (the owner's decision on #30, 2026-11-21).
+   - An off-white page (`--color-background`, `#F5F6F8`), white bars and cards (`--color-surface`), dark text, hairline borders, and geometric shapes. No gradients.
+   - **Why:** it's clean and easy to read on a phone, and it suits the white court. It's mockup (b) from the first comparison.
+   - **History:** on 2026-11-20 the owner first chose (a), dark and minimal, refining the prototype's near-black look. Seeing the app shell (#21), they preferred (b), light, flat, modern. Since the court had already turned white (#17) and the wireframes were light, the switch was mostly a change of tokens (#30).
+2. **Arena: a circular court with three scoring zones, and a bench for each team.**
    - The owner set the names, colors and layout on #19 (2026-11-20), keeping the prototype's proportions (`court.py`, `match.js`). The positions are in court units (court radius 150) in `src/game/court.ts` and `src/game/arena.ts`.
 
      | Zone      | Radius  | Look                                                           | Score |
@@ -25,6 +26,8 @@ These were chosen by the owner from a set of mockup comparisons.
    - **Benches** curve around the court as in the prototype's arena mockup: the visitor's above, yours (home) below. Each has 6 seats, one per spoof, spaced 17° apart as in the prototype.
    - **The arena is taller than wide,** so it suits a phone in portrait.
    - **The apron is lighter than the prototype's `#CCCCCC`** (`#D9DCE1`), so every disc's trim keeps at least 3:1 contrast on it.
+   - **A gray edge** (`--color-court-edge`, 3:1 on the page) shows where the court ends, because the apron is close to the light page's color (#30).
+   - **The benches are white with a thin outline** (`--color-bench-edge`), and the seats light gray. A light gray bench would drop 5 of the 8 team colors below 3:1 (#30).
    - **History:** on #17 the owner chose a light court over the dark court in the first mockups.
    - **Why it matters:** scoring depends on which zone a spoof is in, so the court's markings are part of the game.
 
@@ -52,11 +55,12 @@ These were chosen by the owner from a set of mockup comparisons.
      - See `matchKits()` in `src/design/kits.ts`.
    - **Why kits:** the owner proposed them on #17, modeled on home and visitor uniforms, because there are only 8 colors and two teams will sometimes share one.
    - **Checked by unit tests:**
-     - every disc's trim, in either kit, has at least 3:1 contrast on the mosh and on the apron;
+     - every disc's trim, in either kit, has at least 3:1 contrast on the mosh, the apron, the benches and the seats;
      - every `base` color has at least 3:1 contrast on the white mosh;
      - every home mark (white) has at least 3:1 contrast on its disc;
      - every away mark (`deep`) has at least 4.5:1 contrast on white;
-     - every `base` color has at least 3:1 contrast on the dark benches.
+     - every `base` color has at least 3:1 contrast on the white benches;
+     - on the page and on surfaces, text and muted text have at least 4.5:1 contrast, the accent at least 3:1 (it's for graphics), and `--color-accent-text` at least 4.5:1 (for labels and links).
 
      **The crush is the exception.** The owner's red has about the same brightness as the trims, so a disc on the crush stands out by hue and shadow, not by brightness. A red home team on the crush is the weakest case (the visitor is always white). **The owner accepted this for now** (#19, 2026-11-20).
 
@@ -157,13 +161,13 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 
 ## Tokens at a glance
 
-| Group       | Tokens                                                                                                                                                                                    |
-| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Palette     | `background`, `surface`, `mosh`, `apron`, `crush`, `mosh-line`, `court-line`, `bench`, `seat`, `court-text`, `text`, `text-muted`, `line`, `accent`, `white`, `highlight`, as `--color-*` |
-| Team colors | `red`, `orange`, `gold`, `green`, `teal`, `blue`, `purple`, `pink`, as `--team-*` (base) and `--team-*-deep`                                                                              |
-| Type        | `--font-body` (system UI), `--font-numeric` (monospace, for scores). Sizes from `--text-xs` to `--text-display`, on a 1.25 scale                                                          |
-| Spacing     | `--space-1` to `--space-12`, on a 4 px grid                                                                                                                                               |
-| Radii       | `--radius-sm`, `-md`, `-lg`, `-pill`, `-circle`                                                                                                                                           |
+| Group       | Tokens                                                                                                                                                                                                                               |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Palette     | `background`, `surface`, `mosh`, `apron`, `court-edge`, `crush`, `mosh-line`, `court-line`, `bench`, `bench-edge`, `seat`, `court-text`, `text`, `text-muted`, `line`, `accent`, `accent-text`, `white`, `highlight`, as `--color-*` |
+| Team colors | `red`, `orange`, `gold`, `green`, `teal`, `blue`, `purple`, `pink`, as `--team-*` (base) and `--team-*-deep`                                                                                                                         |
+| Type        | `--font-body` (system UI), `--font-numeric` (monospace, for scores). Sizes from `--text-xs` to `--text-display`, on a 1.25 scale                                                                                                     |
+| Spacing     | `--space-1` to `--space-12`, on a 4 px grid                                                                                                                                                                                          |
+| Radii       | `--radius-sm`, `-md`, `-lg`, `-pill`, `-circle`                                                                                                                                                                                      |
 
 ## Glossary
 

@@ -298,7 +298,7 @@ body {
   width: 1rem;
   height: 1rem;
   border-radius: var(--radius-circle);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-court-edge);
 }
 
 .sg-arena {

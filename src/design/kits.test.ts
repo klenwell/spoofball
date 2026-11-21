@@ -64,6 +64,8 @@ describe('team colors in the arena', () => {
   describe.each([
     ['mosh', palette.mosh],
     ['apron', palette.apron],
+    ['bench', palette.bench],
+    ['seat', palette.seat],
   ])('on the %s', (_zone, surface) => {
     it.each(kits.map((k) => [label(k), k] as const))(
       '%s disc edge has at least 3:1 contrast',
@@ -90,7 +92,7 @@ describe('team colors in the arena', () => {
     expect(contrastRatio(away.mark, away.fill)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(teamColorNames)('%s has at least 3:1 contrast on the dark benches', (color) => {
+  it.each(teamColorNames)('%s has at least 3:1 contrast on the white benches', (color) => {
     expect(contrastRatio(teamColors[color].base, palette.bench)).toBeGreaterThanOrEqual(3);
   });
 });

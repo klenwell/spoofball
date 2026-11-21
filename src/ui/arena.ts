@@ -17,6 +17,10 @@ import { drawSpoofDisc, type SpoofDisc } from './spoof-disc';
  * the canvas.
  */
 
+/** Line widths in court units. */
+const BENCH_EDGE_WIDTH = 1.5;
+const COURT_EDGE_WIDTH = 2;
+
 function circle(ctx: CanvasRenderingContext2D, radius: number): void {
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -24,12 +28,19 @@ function circle(ctx: CanvasRenderingContext2D, radius: number): void {
 
 function drawBench(ctx: CanvasRenderingContext2D, side: BenchSide): void {
   const [start, end] = benchArc(side);
-  ctx.beginPath();
-  ctx.arc(0, 0, BENCH_RADIUS, start, end);
-  ctx.lineWidth = BENCH_HALF_WIDTH * 2;
+  // The band, drawn twice: a slightly wider pass in the edge color, then the
+  // bench color on top, leaving a thin outline so the white band reads on the page.
   ctx.lineCap = 'round';
-  ctx.strokeStyle = palette.bench;
-  ctx.stroke();
+  for (const [width, color] of [
+    [BENCH_HALF_WIDTH * 2 + BENCH_EDGE_WIDTH * 2, palette.benchEdge],
+    [BENCH_HALF_WIDTH * 2, palette.bench],
+  ] as const) {
+    ctx.beginPath();
+    ctx.arc(0, 0, BENCH_RADIUS, start, end);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  }
 
   for (const seat of benchSeats(side)) {
     ctx.beginPath();
@@ -75,6 +86,12 @@ function drawCourt(ctx: CanvasRenderingContext2D): void {
   circle(ctx, CRUSH_RADIUS);
   ctx.fillStyle = palette.crush;
   ctx.fill();
+
+  // The court's edge, so the light apron stands out from the light page.
+  circle(ctx, COURT_RADIUS);
+  ctx.lineWidth = COURT_EDGE_WIDTH;
+  ctx.strokeStyle = palette.courtEdge;
+  ctx.stroke();
 }
 
 export function drawArena(ctx: CanvasRenderingContext2D, view: ArenaView): void {

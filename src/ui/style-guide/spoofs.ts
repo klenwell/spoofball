@@ -116,6 +116,20 @@ function states(color: TeamColorName): HTMLElement[] {
         caption: 'away',
       },
     ]),
+    stateStrip('Shadow or flat: the owner is choosing (#30)', [
+      { x: 0, y: 0, radius: 16, type: 'rook', kit: home, caption: 'shadow' },
+      { x: 0, y: 0, radius: 16, type: 'rook', kit: kit(color, 'away'), caption: 'shadow' },
+      { x: 0, y: 0, radius: 16, type: 'rook', kit: home, shadow: false, caption: 'flat' },
+      {
+        x: 0,
+        y: 0,
+        radius: 16,
+        type: 'rook',
+        kit: kit(color, 'away'),
+        shadow: false,
+        caption: 'flat',
+      },
+    ]),
     stateStrip('In a match, the visitor always wears away (even in the same color)', [
       { x: 0, y: 0, radius: 16, type: 'knight', kit: match.home, caption: 'home' },
       { x: 0, y: 0, radius: 16, type: 'bishop', kit: match.home, caption: 'home' },

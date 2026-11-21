@@ -19,6 +19,11 @@ export interface SpoofDisc {
   /** 0 (fresh) to 100 (spent). The disc fades as it tires. */
   fatigue?: number;
   highlighted?: boolean;
+  /**
+   * A light drop shadow under the disc. On by default. Off gives a fully flat
+   * disc; the owner is choosing between the two on #30.
+   */
+  shadow?: boolean;
 }
 
 /** A spent spoof stays this visible, so it never vanishes from the court. */
@@ -71,16 +76,24 @@ const LAYER_PADDING = 0.45;
 let scratch: HTMLCanvasElement | null = null;
 
 /** Draws the disc body (fill, trim, shadow, mark) centered on (0, 0), at full opacity. */
-function drawBody(ctx: CanvasRenderingContext2D, radius: number, type: SpoofType, kit: Kit): void {
+function drawBody(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  type: SpoofType,
+  kit: Kit,
+  shadow: boolean,
+): void {
   const trim = trimWidth(radius);
   const inner = radius - trim;
 
-  // Disc, with a light shadow to lift it off the white court. The fill stops
-  // where the trim starts, so the two never overlap.
+  // Disc, optionally with a light shadow to lift it off the white court. The
+  // fill stops where the trim starts, so the two never overlap.
   ctx.save();
-  ctx.shadowColor = 'rgb(0 0 0 / 35%)';
-  ctx.shadowBlur = Math.max(1.5, radius * 0.15);
-  ctx.shadowOffsetY = Math.max(0.5, radius * 0.06);
+  if (shadow) {
+    ctx.shadowColor = 'rgb(0 0 0 / 35%)';
+    ctx.shadowBlur = Math.max(1.5, radius * 0.15);
+    ctx.shadowOffsetY = Math.max(0.5, radius * 0.06);
+  }
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
   ctx.fillStyle = kit.trim;
@@ -111,6 +124,7 @@ function drawFadedBody(
   radius: number,
   type: SpoofType,
   kit: Kit,
+  shadow: boolean,
   opacity: number,
 ): void {
   const transform = ctx.getTransform();
@@ -128,7 +142,7 @@ function drawFadedBody(
   layer.setTransform(1, 0, 0, 1, 0, 0);
   layer.clearRect(0, 0, size, size);
   layer.setTransform(scale, 0, 0, scale, size / 2, size / 2);
-  drawBody(layer, radius, type, kit);
+  drawBody(layer, radius, type, kit, shadow);
 
   ctx.save();
   ctx.globalAlpha = opacity;
@@ -139,12 +153,13 @@ function drawFadedBody(
 export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): void {
   const { x, y, radius, type, kit } = disc;
   const opacity = fatigueOpacity(disc.fatigue ?? 0);
+  const shadow = disc.shadow ?? true;
 
   ctx.save();
   ctx.translate(x, y);
 
-  if (opacity < 1) drawFadedBody(ctx, radius, type, kit, opacity);
-  else drawBody(ctx, radius, type, kit);
+  if (opacity < 1) drawFadedBody(ctx, radius, type, kit, shadow, opacity);
+  else drawBody(ctx, radius, type, kit, shadow);
 
   // Highlight: a dark ring just outside the disc, never faded.
   if (disc.highlighted) {
