@@ -10,7 +10,7 @@ How Spoofball looks and why. The live [style guide](https://klenwell.com/spoofba
 These were chosen by the owner from a set of mockup comparisons.
 
 1. **Feel: light, flat, modern, built from circles** (the owner's decision on #30, 2026-11-21).
-   - An off-white page (`--color-background`, `#F5F6F8`), white bars and cards (`--color-surface`), dark text, hairline borders, and geometric shapes. No gradients.
+   - An off-white page (`--color-background`, `#F5F6F8`), white bars and cards (`--color-surface`), dark text, hairline borders, and geometric shapes. No gradients, and **flat discs with no shadow** (the owner's pick on #30, after comparing both).
    - **Why:** it's clean and easy to read on a phone, and it suits the white court. It's mockup (b) from the first comparison.
    - **History:** on 2026-11-20 the owner first chose (a), dark and minimal, refining the prototype's near-black look. Seeing the app shell (#21), they preferred (b), light, flat, modern. Since the court had already turned white (#17) and the wireframes were light, the switch was mostly a change of tokens (#30).
 2. **Arena: a circular court with three scoring zones, and a bench for each team.**
@@ -62,7 +62,7 @@ These were chosen by the owner from a set of mockup comparisons.
      - every `base` color has at least 3:1 contrast on the white benches;
      - on the page and on surfaces, text and muted text have at least 4.5:1 contrast, the accent at least 3:1 (it's for graphics), and `--color-accent-text` at least 4.5:1 (for labels and links).
 
-     **The crush is the exception.** The owner's red has about the same brightness as the trims, so a disc on the crush stands out by hue and shadow, not by brightness. A red home team on the crush is the weakest case (the visitor is always white). **The owner accepted this for now** (#19, 2026-11-20).
+     **The crush is the exception.** The owner's red has about the same brightness as the trims, so a disc on the crush stands out by hue alone, not by brightness. (Until #30 a light shadow helped too; the discs are flat now.) A red home team on the crush is the weakest case (the visitor is always white). **The owner accepted this for now** (#19, 2026-11-20).
 
      3:1 is the WCAG minimum for meaningful graphics (WCAG 2.1, 1.4.11).
 5. **Navigation: a bottom tab bar on phones, a top bar on desktop.**

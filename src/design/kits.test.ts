@@ -76,7 +76,7 @@ describe('team colors in the arena', () => {
   });
 
   // The crush is excluded on purpose: the owner chose a red that matches the
-  // trims' brightness, so discs there stand out by hue and shadow. See #19.
+  // trims' brightness, so discs there stand out by hue (they're flat, #30). See #19.
 
   it.each(teamColorNames)('%s home fill has at least 3:1 contrast on the white mosh', (color) => {
     expect(contrastRatio(teamColors[color].base, palette.mosh)).toBeGreaterThanOrEqual(3);

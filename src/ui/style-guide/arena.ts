@@ -56,24 +56,9 @@ export function arenaSection(
 ): HTMLElement {
   const [homeLabel, homeSelect] = picker('Home (your bench, below)', 'blue');
   const [visitorLabel, visitorSelect] = picker('Visitor (above)', 'orange');
-  // Shadow or flat discs: the owner is choosing on #30.
-  const discLabel = document.createElement('label');
-  discLabel.className = 'sg-picker';
-  discLabel.append('Discs ');
-  const discSelect = document.createElement('select');
-  for (const [value, text] of [
-    ['shadow', 'with shadow'],
-    ['flat', 'flat'],
-  ] as const) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = text;
-    discSelect.append(option);
-  }
-  discLabel.append(discSelect);
   const pickers = document.createElement('div');
   pickers.className = 'sg-pickers';
-  pickers.append(homeLabel, visitorLabel, discLabel);
+  pickers.append(homeLabel, visitorLabel);
 
   const stage = document.createElement('div');
   stage.className = 'sg-arena';
@@ -98,7 +83,6 @@ export function arenaSection(
         radius: sample.radius,
         type: sample.type,
         kit: sample.side === 'home' ? kits.home : kits.visitor,
-        shadow: discSelect.value === 'shadow',
       });
     }
     stage.replaceChildren(canvas);
@@ -106,7 +90,6 @@ export function arenaSection(
 
   homeSelect.addEventListener('change', render);
   visitorSelect.addEventListener('change', render);
-  discSelect.addEventListener('change', render);
   // Redraw when the available width changes. Replacing the canvas changes the
   // stage's height, so watching height too would redraw in a loop.
   let lastWidth = -1;
@@ -118,7 +101,7 @@ export function arenaSection(
 
   return section(
     'Arena',
-    'The court and both benches, with sample spoofs mid-match. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. A gray edge shows where the court ends on the light page, and the white benches have a thin outline. The visitor always wears the away kit, so solid discs are yours and white discs are theirs, even when both teams share a color. Switch the discs between a light shadow and flat to compare them (#30).',
+    'The court and both benches, with sample spoofs mid-match. The apron scores nothing, the mosh ×1 and the crush ×3. The blue diagonals are decorative. A gray edge shows where the court ends on the light page, and the white benches have a thin outline. The visitor always wears the away kit, so solid discs are yours and white discs are theirs, even when both teams share a color. Discs are flat (#30).',
     [pickers, legend(), stage],
   );
 }
