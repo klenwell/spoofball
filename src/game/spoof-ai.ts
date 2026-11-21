@@ -22,9 +22,11 @@ export const MAX_VISION_RANGE = 144;
 export const FINEST_LOOK = 6;
 export const COARSEST_LOOK = 24;
 
-/** How long a goal lasts before the spoof gives up on it, in seconds of game time. */
-export const GOAL_SECONDS = 3;
-/** A charge at opponents gives up sooner: the prototype's 1.5 seconds. */
+/**
+ * How long a charge at opponents lasts before the spoof gives up, in seconds
+ * of game time (the prototype's 1.5). Other goals don't expire: they're
+ * re-valued every time the spoof thinks (the owner, on #48).
+ */
 export const CRASH_SECONDS = 1.5;
 
 /** How much a far spot is discounted against a near one: up to half, at the edge of vision. */
@@ -108,14 +110,31 @@ function gropeForward(self: SpoofView, random: Random): Vec {
 }
 
 /**
+ * What a goal the spoof already has is worth now, judged on the court as it
+ * is, not as it was when the goal was picked. A goal followed from a
+ * teammate's message is weighted by how persuasive that teammate was.
+ */
+export function currentValue(self: SpoofView, goal: Goal, scrum: ScrumView): number {
+  const spot = goal.kind === 'hold' ? self.position : goal.point;
+  return spotValue(self, spot, scrum) * goal.weight;
+}
+
+/**
  * The spoof AI's brain. It surveys the spots it can see and picks the most
- * valuable, discounting far ones a little and misjudging by its smarts:
- * - if none is truly worth more than where it is, it holds its spot;
+ * valuable, discounting far ones a little and misjudging by its smarts. It
+ * keeps its current goal if that's still truly worth as much as the best new
+ * spot. Otherwise:
+ * - if no spot is truly worth more than where it is, it holds its spot;
  * - if the best spot is crowded with 2 or more opponents, it charges them
  *   (a crash goal, the prototype's idea);
  * - if it sees nothing of value, it gropes toward the center.
  */
-export function spoofBrain(self: SpoofView, scrum: ScrumView, random: Random): Goal {
+export function spoofBrain(
+  self: SpoofView,
+  scrum: ScrumView,
+  random: Random,
+  current: Goal | null,
+): Goal {
   const now = scrum.secondsGone;
   const { smarts } = comps(self.skills);
   const range = visionRadius(self);
@@ -136,23 +155,22 @@ export function spoofBrain(self: SpoofView, scrum: ScrumView, random: Random): G
     }
   }
 
-  if (!best) {
-    return {
-      kind: 'goto',
-      point: gropeForward(self, random),
-      value: 0,
-      expires: now + GOAL_SECONDS,
-    };
+  // Keep, hold and charge by true values, so misjudging an equal spot nearby
+  // doesn't send it wandering off a good one.
+  if (current) {
+    const worth = currentValue(self, current, scrum);
+    if (worth > 0 && worth >= Math.max(bestRaw, here)) return current;
   }
-  // Hold by true values, so misjudging an equal spot nearby doesn't send it
-  // wandering off a good one.
+  if (!best) {
+    return { kind: 'goto', point: gropeForward(self, random), weight: 1, expires: null };
+  }
   if (here > 0 && here >= bestRaw) {
-    return { kind: 'hold', point: self.position, value: here, expires: now + GOAL_SECONDS };
+    return { kind: 'hold', point: self.position, weight: 1, expires: null };
   }
   if (opponentsAt(self, best, scrum) >= 2) {
-    return { kind: 'crash', point: best, value: bestRaw, expires: now + CRASH_SECONDS };
+    return { kind: 'crash', point: best, weight: 1, expires: now + CRASH_SECONDS };
   }
-  return { kind: 'goto', point: best, value: bestRaw, expires: now + GOAL_SECONDS };
+  return { kind: 'goto', point: best, weight: 1, expires: null };
 }
 
 /**
@@ -192,7 +210,11 @@ export function messageDelayFrames(senderBurst: number): number {
   return Math.max(1, Math.ceil(seconds / SECONDS_PER_FRAME));
 }
 
-/** A shared goal's value: scaled by the sender's charisma, up to 1.5× (the prototype's rule). */
-export function sharedValue(goal: Goal, senderCharisma: number): number {
-  return goal.value * senderCharisma * 0.015;
+/**
+ * How persuasive a teammate's suggestion is: the sender's charisma × 0.015,
+ * so up to 1.5 (the prototype's rule). A followed goal's value is multiplied
+ * by it each time it's re-valued, so a charismatic teammate's idea sticks.
+ */
+export function persuasion(senderCharisma: number): number {
+  return senderCharisma * 0.015;
 }

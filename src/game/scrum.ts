@@ -10,9 +10,8 @@ import {
   heedProbability,
   messageDelayFrames,
   messageProbability,
-  sharedValue,
+  persuasion,
   spoofBrain,
-  GOAL_SECONDS,
 } from './spoof-ai';
 import {
   FRAMES_PER_SCRUM,
@@ -69,10 +68,16 @@ export interface ScrumEntry {
 export interface Goal {
   readonly kind: 'goto' | 'hold' | 'crash';
   readonly point: Vec;
-  /** How much the spoof thinks the goal is worth, to weigh it against a new one. */
-  readonly value: number;
-  /** When the spoof gives up on it, in seconds since the scrum started. */
-  readonly expires: number;
+  /**
+   * Multiplies the goal's value each time it's re-valued: 1 for the spoof's
+   * own idea, or the sender's persuasion for a teammate's (up to 1.5).
+   */
+  readonly weight: number;
+  /**
+   * When the spoof gives up on it, in seconds since the scrum started. Only
+   * charges expire; null means it lasts until reached or replaced.
+   */
+  readonly expires: number | null;
 }
 
 /** What a spoof's brain can see when it thinks. */
@@ -91,16 +96,21 @@ export interface ScrumView {
   readonly secondsGone: number;
 }
 
-/** Picks a spoof's next goal when it thinks, or null to keep going as it is. */
-export type Brain = (self: SpoofView, scrum: ScrumView, random: Random) => Goal | null;
+/**
+ * Picks a spoof's goal when it thinks. It's given the spoof's current goal,
+ * and returns that same goal to keep it, a new one to switch, or null to
+ * keep going as it is.
+ */
+export type Brain = (
+  self: SpoofView,
+  scrum: ScrumView,
+  random: Random,
+  current: Goal | null,
+) => Goal | null;
 
 /** A simple brain, for tests: always head for the crush. */
-export const headForCrush: Brain = (_self, scrum) => ({
-  kind: 'goto',
-  point: ZERO,
-  value: 1,
-  expires: scrum.secondsGone + GOAL_SECONDS,
-});
+export const headForCrush: Brain = (_self, _scrum, _random, current) =>
+  current ?? { kind: 'goto', point: ZERO, weight: 1, expires: null };
 
 export interface ScrumOptions {
   readonly random: Random;
@@ -275,7 +285,7 @@ function adopt(runner: Runner, goal: Goal): void {
 function reassess(runner: Runner, secondsGone: number, random: Random): void {
   const goal = runner.goal;
   if (!goal) return;
-  if (secondsGone >= goal.expires) {
+  if (goal.expires !== null && secondsGone >= goal.expires) {
     runner.goal = null;
   } else if (goal.kind === 'crash') {
     if (runner.justHit) runner.goal = null;
@@ -340,18 +350,18 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
       if (random.chance(thoughtProbability(runner.skills, secondsGone))) {
         runner.stats.imps += 1;
         const scrum: ScrumView = { spoofs: runners.map(view), secondsGone };
-        const idea = brain(view(runner), scrum, random);
-        // Keep the current goal if it's still worth more than the new idea.
-        if (idea && !(runner.goal && runner.goal.value > idea.value)) adopt(runner, idea);
+        const idea = brain(view(runner), scrum, random, runner.goal);
+        if (idea && idea !== runner.goal) adopt(runner, idea);
       } else {
         runner.radius += runner.radius * runner.blowRate;
       }
 
       if (runner.goal && random.chance(messageProbability(view(runner), secondsGone))) {
         const shared: Goal = {
-          ...runner.goal,
           kind: 'goto',
-          value: sharedValue(runner.goal, runner.skills.charisma),
+          point: runner.goal.kind === 'hold' ? runner.position : runner.goal.point,
+          weight: persuasion(runner.skills.charisma),
+          expires: null,
         };
         for (const mate of runners) {
           if (mate === runner || mate.team !== runner.team) continue;

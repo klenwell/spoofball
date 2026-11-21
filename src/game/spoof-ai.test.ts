@@ -6,7 +6,7 @@ import { skillNames, type Skills } from './skills';
 import type { ScrumView, SpoofView } from './scrum';
 import {
   CRASH_SECONDS,
-  GOAL_SECONDS,
+  currentValue,
   MAX_VISION_RANGE,
   heedProbability,
   leadership,
@@ -14,7 +14,7 @@ import {
   messageDelayFrames,
   messageProbability,
   opponentsAt,
-  sharedValue,
+  persuasion,
   spoofBrain,
   spotValue,
   surveySpots,
@@ -110,22 +110,22 @@ describe('spoofBrain', () => {
 
   it('heads for the crush when it can see it from the mosh', () => {
     const me = spoof('me', 'home', vec(60, 0), { vision: 80, iq: 80 });
-    const goal = spoofBrain(me, scrumOf(me), random());
+    const goal = spoofBrain(me, scrumOf(me), random(), null);
     expect(goal.kind).toBe('goto');
     expect(zoneAt(goal.point.x, goal.point.y)).toBe('crush');
-    expect(goal.expires).toBe(GOAL_SECONDS);
+    expect(goal.expires).toBeNull();
   });
 
   it('heads for a teammate in the mosh over an empty mosh spot, for the overlap bonus', () => {
     const me = spoof('me', 'home', vec(-70, 0), { vision: 30 });
     const mate = spoof('m', 'home', vec(-50, 0), {}, 20);
-    const goal = spoofBrain(me, scrumOf(me, mate), random());
+    const goal = spoofBrain(me, scrumOf(me, mate), random(), null);
     expect(distance(goal.point, mate.position)).toBeLessThanOrEqual(mate.radius);
   });
 
   it('holds its spot when nothing it can see beats where it is', () => {
     const me = spoof('me', 'home', vec(0, 0), { vision: 40 });
-    const goal = spoofBrain(me, scrumOf(me), random());
+    const goal = spoofBrain(me, scrumOf(me), random(), null);
     expect(goal.kind).toBe('hold');
     expect(goal.point).toEqual(me.position);
   });
@@ -138,17 +138,48 @@ describe('spoofBrain', () => {
       spoof('r1', 'visitor', vec(0, 0), {}, 30),
       spoof('r2', 'visitor', vec(2, 2), {}, 30),
     );
-    const goal = spoofBrain(me, scrum, random());
+    const goal = spoofBrain(me, scrum, random(), null);
     expect(goal.kind).toBe('crash');
     expect(goal.expires).toBe(CRASH_SECONDS);
   });
 
   it('gropes toward the center when it can see nothing of value', () => {
     const me = spoof('me', 'home', vec(0, 140), { vision: 1 }, 10);
-    const goal = spoofBrain(me, scrumOf(me), random());
+    const goal = spoofBrain(me, scrumOf(me), random(), null);
     expect(goal.kind).toBe('goto');
-    expect(goal.value).toBe(0);
     expect(length(goal.point)).toBeLessThan(length(me.position));
+  });
+});
+
+describe('re-valuing the current goal', () => {
+  const random = () => createRandom(TEST_SEED);
+
+  it('values a goal on the court as it is now', () => {
+    const me = spoof('me', 'home', vec(60, 0));
+    const goal = { kind: 'goto' as const, point: vec(0, 0), weight: 1, expires: null };
+    expect(currentValue(me, goal, scrumOf(me))).toBe(3);
+  });
+
+  it("weights a teammate's suggestion by its persuasion", () => {
+    const me = spoof('me', 'home', vec(60, 0));
+    const followed = { kind: 'goto' as const, point: vec(60, 0), weight: 1.5, expires: null };
+    expect(currentValue(me, followed, scrumOf(me))).toBe(1.5);
+  });
+
+  it('keeps a goal that is still worth as much as anything it sees', () => {
+    const me = spoof('me', 'home', vec(60, 0), { vision: 80 });
+    const current = { kind: 'goto' as const, point: vec(0, 0), weight: 1, expires: null };
+    expect(spoofBrain(me, scrumOf(me), random(), current)).toBe(current);
+  });
+
+  it('leaves a hold whose teammates have gone, for a better spot it can see', () => {
+    // It was holding a mosh spot shared with a teammate. The teammate has
+    // left, so the spot is worth ×1 again, and the crush (×3) is in sight.
+    const me = spoof('me', 'home', vec(40, 0), { vision: 80 });
+    const holding = { kind: 'hold' as const, point: vec(40, 0), weight: 1, expires: null };
+    const next = spoofBrain(me, scrumOf(me), random(), holding);
+    expect(next).not.toBe(holding);
+    expect(zoneAt(next.point.x, next.point.y)).toBe('crush');
   });
 });
 
@@ -172,9 +203,8 @@ describe('messages', () => {
     expect(messageDelayFrames(100)).toBe(1);
   });
 
-  it("pass a goal on at up to 1.5 times its value, by the sender's charisma", () => {
-    const goal = { kind: 'goto' as const, point: vec(0, 0), value: 2, expires: 3 };
-    expect(sharedValue(goal, 100)).toBeCloseTo(3);
-    expect(sharedValue(goal, 50)).toBeCloseTo(1.5);
+  it("persuade by the sender's charisma: up to 1.5 times a goal's value", () => {
+    expect(persuasion(100)).toBeCloseTo(1.5);
+    expect(persuasion(50)).toBeCloseTo(0.75);
   });
 });

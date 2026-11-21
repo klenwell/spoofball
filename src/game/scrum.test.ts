@@ -113,12 +113,8 @@ describe('simulateScrum', () => {
     const entries = presetScrumEntries();
     const result2 = simulateScrum(entries, {
       random: createRandom(TEST_SEED),
-      brain: (_self, scrum) => ({
-        kind: 'goto',
-        point: corner,
-        value: 1,
-        expires: scrum.secondsGone + 3,
-      }),
+      brain: (_self, _scrum, _random, current) =>
+        current ?? { kind: 'goto', point: corner, weight: 1, expires: null },
     });
     const end = result2.frames[result2.frames.length - 1];
     const meanY = (end?.spoofs.reduce((sum, s) => sum + s.y, 0) ?? 0) / entries.length;
@@ -198,18 +194,20 @@ describe('simulateScrum', () => {
   });
 
   describe('goals', () => {
-    it('are given up when they expire, so a weaker new idea can take over', () => {
-      // First idea: a far spot, worth a lot, given up after half a second.
-      // Every idea after: the opposite side, worth little.
+    it('as a charge are given up when they expire', () => {
+      // The first idea: charge a far spot, given up after half a second. The
+      // brain keeps whatever goal it has, so only expiry can end the charge.
+      // After it: the opposite side.
       let calls = 0;
-      const brain: Brain = (_self, scrum) => {
+      const brain: Brain = (_self, _scrum, _random, current) => {
+        if (current) return current;
         calls += 1;
         return calls === 1
-          ? { kind: 'goto', point: { x: 0, y: -120 }, value: 100, expires: 0.5 }
-          : { kind: 'goto', point: { x: 0, y: 120 }, value: 1, expires: scrum.secondsGone + 3 };
+          ? { kind: 'crash', point: { x: 0, y: -120 }, weight: 1, expires: 0.5 }
+          : { kind: 'goto', point: { x: 0, y: 120 }, weight: 1, expires: null };
       };
-      const [one, two] = presetScrumEntries();
-      if (!one || !two) throw new Error('no entries');
+      const [one] = presetScrumEntries();
+      if (!one) throw new Error('no entries');
       const alone = [{ ...one, position: { x: 0, y: 0 } }];
       const end = simulateScrum(alone, { random: createRandom(TEST_SEED), brain }).frames[
         FRAMES_PER_SCRUM - 1
@@ -221,7 +219,7 @@ describe('simulateScrum', () => {
       const charge: Brain = (self, scrum) => {
         const target = scrum.spoofs.find((s) => s.team !== self.team);
         return target
-          ? { kind: 'crash', point: target.position, value: 5, expires: scrum.secondsGone + 1.5 }
+          ? { kind: 'crash', point: target.position, weight: 1, expires: scrum.secondsGone + 1.5 }
           : null;
       };
       const r = simulateScrum(presetScrumEntries(), {

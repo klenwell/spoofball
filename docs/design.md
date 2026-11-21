@@ -144,8 +144,8 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - it prefers nearer spots a little, and misjudges more with low smarts;
   - it holds its spot when nothing it sees is worth more;
   - it charges a spot crowded with 2 or more opponents, until it hits one;
-  - goals expire in game time: 3 seconds, or 1.5 for a charge;
-  - teammates share goals as in the prototype: sent by leadership, followed by charisma and cooperation.
+  - each time it thinks, it re-values its current goal on the court as it is now, and keeps it only if nothing it sees is worth more. Only charges expire, after 1.5 seconds of game time, so a spoof doesn't chase a spot it can't reach (the owner, on #48);
+  - teammates share goals as in the prototype: sent by leadership, followed by charisma and cooperation. A followed goal keeps the sender's persuasion (charisma × 0.015, up to 1.5) as a weight on its value.
 - **A scrum lasts 8 seconds.** The prototype simulated 300 frames a scrum. That number isn't fixed: the Match epic picks a frame rate that serves gameplay and performance (the owner, on #27).
 - **Ties stand.** A match can end in a tie, and records are win–loss–tie. The prototype had overtime but had turned it off.
 - **Scoring follows the prototype** (`scorekeeper.py`). A scrum scores a snapshot of where the spoofs end up: the court area each covers, × 0.002, × the zone multiplier, × **how many teammates cover the same spot**, the spoof itself included. So 2 overlapping teammates score 4× for the team where they overlap, and 3 score 9×: overlapping teammates is part of the game. Opponents on the same spot don't change it. A match usually totals 10–100 points. (Corrected on #34: the first version of this line left out the teammate bonus.)
