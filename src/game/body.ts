@@ -23,26 +23,38 @@ export interface Body {
 }
 
 /**
- * How opponents collide. Which one the game uses is the owner's call, to be
- * made while watching scrums (#38).
+ * How opponents collide. Which rule the game uses is the owner's call, made
+ * on a bounciness slider while watching scrums (#38).
  *
- * - **`shove`**: push apart only, keeping both velocities. Spoofs that keep
- *   steering into each other keep pushing, and the heavier one wins. This is
- *   how the prototype actually played. It meant to bounce, but a bug (see
- *   `resolveCollision`) meant its bounce never changed a velocity.
- * - **`bounce`**: push apart, then a perfectly elastic bounce along the line
- *   between the centers. This is what the prototype's code was written to do.
+ * - **An impact with a bounciness** (restitution) from 0 to 1. Both bodies
+ *   are pushed apart, then their velocities change as in a real collision,
+ *   keeping momentum. At 0 they thud and lose their closing speed: the
+ *   heavier one carries on and their own steering does the pushing, like
+ *   players in a scrum. At 1 they rebound with all their speed, like
+ *   billiard balls. In between, a little rebound and mostly pushing.
+ * - **`prototype-shove`**: push apart only, keeping both velocities, as the
+ *   prototype actually played. Its code meant to bounce (restitution 1), but
+ *   a bug (see `resolveCollision`) meant no collision ever changed a
+ *   velocity. Kept for comparison on the slider.
  */
-export type CollisionStyle = 'shove' | 'bounce';
+export type CollisionRule = { kind: 'prototype-shove' } | { kind: 'impact'; bounciness: number };
 
-/** The prototype's behavior as it actually played, until the owner chooses. */
-export const DEFAULT_COLLISION_STYLE: CollisionStyle = 'shove';
+export const PROTOTYPE_SHOVE: CollisionRule = { kind: 'prototype-shove' };
 
-/**
- * How much speed survives a bounce, from 0 (none) to 1 (all of it). The
- * prototype's code used 1, perfectly elastic.
- */
-export const RESTITUTION = 1;
+function checkBounciness(bounciness: number): void {
+  if (!(bounciness >= 0 && bounciness <= 1)) {
+    throw new RangeError(`Bounciness must be from 0 to 1, got ${String(bounciness)}`);
+  }
+}
+
+/** An impact rule with this bounciness, from 0 (thud) to 1 (full rebound). */
+export function impact(bounciness: number): CollisionRule {
+  checkBounciness(bounciness);
+  return { kind: 'impact', bounciness };
+}
+
+/** How the prototype actually played, until the owner chooses on #38. */
+export const DEFAULT_COLLISION_RULE: CollisionRule = PROTOTYPE_SHOVE;
 
 /** True when two circles overlap. Circles that only touch don't. */
 export function overlaps(a: Body, b: Body): boolean {
@@ -79,16 +91,17 @@ function checkMass(body: Body): void {
  * then `reflect_colliding_bodies` called `minimum_translation_vector` again.
  * By then the bodies only touched, so the normal was the zero vector, the
  * impulse was 0, and no collision ever changed a velocity. That's why the
- * prototype shoved instead of bouncing, and why `shove` is kept as a style.
+ * prototype shoved instead of bouncing, and why `PROTOTYPE_SHOVE` is kept.
  */
 export function resolveCollision(
   a: Body,
   b: Body,
-  style: CollisionStyle = DEFAULT_COLLISION_STYLE,
+  rule: CollisionRule = DEFAULT_COLLISION_RULE,
 ): [Body, Body] {
   if (!collides(a, b)) return [a, b];
   checkMass(a);
   checkMass(b);
+  if (rule.kind === 'impact') checkBounciness(rule.bounciness);
 
   const normal = contactNormal(a, b);
   const overlap = a.radius + b.radius - distance(a.position, b.position);
@@ -100,16 +113,16 @@ export function resolveCollision(
   const positionA = add(a.position, scale(normal, (overlap * inverseA) / inverseTotal));
   const positionB = subtract(b.position, scale(normal, (overlap * inverseB) / inverseTotal));
 
-  // Bounce: only when the style says so, and only when the bodies are moving
+  // The impact: only for the impact rule, and only when the bodies are moving
   // toward each other along the normal.
   const closingSpeed = dot(subtract(a.velocity, b.velocity), normal);
-  if (style === 'shove' || closingSpeed >= 0) {
+  if (rule.kind === 'prototype-shove' || closingSpeed >= 0) {
     return [
       { ...a, position: positionA },
       { ...b, position: positionB },
     ];
   }
-  const impulse = (-(1 + RESTITUTION) * closingSpeed) / inverseTotal;
+  const impulse = (-(1 + rule.bounciness) * closingSpeed) / inverseTotal;
   return [
     { ...a, position: positionA, velocity: add(a.velocity, scale(normal, impulse * inverseA)) },
     {
