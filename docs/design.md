@@ -21,7 +21,7 @@ These were chosen by the owner from a set of mockup comparisons.
      | **Mosh**  | 0–100   | white circle (`--color-mosh`) with a red outline               | ×1    |
      | **Crush** | 0–25    | red center spot (`--color-crush`), like a hockey face-off spot | ×3    |
 
-   - **Diagonals:** two blue lines (`--color-court-line`) cross the whole court and split it into quarters. They're decorative, a sporty touch.
+   - **Diagonals:** two blue lines (`--color-court-line`) cross the whole court and split it into quarters. They're decorative, a sporty touch, and the owner kept them after review (#19).
    - **Benches** curve around the court as in the prototype's arena mockup: the visitor's above, yours (home) below. Each has 6 seats, one per spoof, spaced 17° apart as in the prototype.
    - **The arena is taller than wide,** so it suits a phone in portrait.
    - **The apron is lighter than the prototype's `#CCCCCC`** (`#D9DCE1`), so every disc's trim keeps at least 3:1 contrast on it.
@@ -58,7 +58,7 @@ These were chosen by the owner from a set of mockup comparisons.
      - every away mark (`deep`) has at least 4.5:1 contrast on white;
      - every `base` color has at least 3:1 contrast on the dark benches.
 
-     **The crush is the exception.** The owner's red has about the same brightness as the trims, so a disc on the crush stands out by hue and shadow, not by brightness. A red team on the crush is the weakest case.
+     **The crush is the exception.** The owner's red has about the same brightness as the trims, so a disc on the crush stands out by hue and shadow, not by brightness. A red home team on the crush is the weakest case (the visitor is always white). **The owner accepted this for now** (#19, 2026-11-20).
 
      3:1 is the WCAG minimum for meaningful graphics (WCAG 2.1, 1.4.11).
 5. **Navigation: a bottom tab bar on phones, a top bar on desktop.**
