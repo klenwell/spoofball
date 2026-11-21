@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { TEST_SEED } from '../test-support/random';
 import { presetScrumEntries } from '../test-support/scrum';
 import { PROTOTYPE_SHOVE, impact } from './body';
+import { generateSpoof } from './teams';
 import { COURT_RADIUS, zoneAt, zoneMultiplier } from './court';
 import { createRandom } from './random';
 import { headForCrush, simulateScrum, type Brain, type ScrumEntry, type ScrumFrame } from './scrum';
@@ -193,6 +194,51 @@ describe('simulateScrum', () => {
     });
   });
 
+  describe("a teammate's message", () => {
+    // A leader messages its goal (a spot at the bottom of the mosh) to a
+    // teammate that otherwise just holds its spot. The teammate always
+    // follows (charisma and cooperation 99), but only steers there at its
+    // next thought, so a quick thinker moves off sooner than a slow one.
+    const firstMove = (receiverIq: number, seed: number) => {
+      const [leaderBase, receiverBase] = presetScrumEntries();
+      if (!leaderBase || !receiverBase) throw new Error('no entries');
+      const leaderSpoof = {
+        ...leaderBase.spoof,
+        id: 'leader',
+        skills: { ...leaderBase.spoof.skills, charisma: 99, impact: 99, iq: 99 },
+      };
+      const receiverSpoof = {
+        ...receiverBase.spoof,
+        id: 'receiver',
+        skills: { ...receiverBase.spoof.skills, cooperation: 99, iq: receiverIq },
+      };
+      const entries: ScrumEntry[] = [
+        { spoof: leaderSpoof, team: 'home', position: { x: -60, y: 0 }, fatigue: 0 },
+        { spoof: receiverSpoof, team: 'home', position: { x: 60, y: 0 }, fatigue: 0 },
+      ];
+      const brain: Brain = (self, _scrum, _random, current) =>
+        current ??
+        (self.id === 'leader'
+          ? { kind: 'goto', point: { x: 0, y: 90 }, weight: 1, expires: null }
+          : { kind: 'hold', point: self.position, weight: 1, expires: null });
+      const r = simulateScrum(entries, { random: createRandom(seed), brain });
+      const index = r.frames.findIndex((f) => {
+        const s = f.spoofs[1];
+        return s !== undefined && Math.hypot(s.x - 60, s.y) > 2;
+      });
+      return index === -1 ? FRAMES_PER_SCRUM : index;
+    };
+    const average = (iq: number) => {
+      let sum = 0;
+      for (let seed = 0; seed < 30; seed += 1) sum += firstMove(iq, seed);
+      return sum / 30;
+    };
+
+    it('is acted on at the next thought, so a quick thinker moves off sooner', () => {
+      expect(average(1)).toBeGreaterThan(average(99) + 30);
+    });
+  });
+
   describe('goals', () => {
     it('as a charge are given up when they expire', () => {
       // The first idea: charge a far spot, given up after half a second. The
@@ -213,6 +259,40 @@ describe('simulateScrum', () => {
         FRAMES_PER_SCRUM - 1
       ];
       expect(end?.spoofs[0]?.y).toBeGreaterThan(40);
+    });
+
+    it('are re-aimed at every thought, so a spoof knocked off course heads back', () => {
+      // A spoof heads for the crush, past a heavy opponent that holds its spot
+      // and knocks it aside with a full bounce. Re-aiming at each thought
+      // brings it back toward the crush.
+      const runner = presetScrumEntries()[0];
+      if (!runner) throw new Error('no entries');
+      const wall = generateSpoof('wall', 'rook', 600, createRandom(5));
+      const heavyWall = { ...wall, skills: { ...wall.skills, mass: 99 } };
+      const keepGoing: Brain = (self, _scrum, _random, current) =>
+        current ??
+        (self.id === 'wall'
+          ? { kind: 'hold', point: self.position, weight: 1, expires: null }
+          : { kind: 'goto', point: { x: 0, y: 0 }, weight: 1, expires: null });
+      let total = 0;
+      for (let seed = 0; seed < 20; seed += 1) {
+        const entries: ScrumEntry[] = [
+          { ...runner, position: { x: 15, y: -110 } },
+          { spoof: heavyWall, team: 'visitor', position: { x: 0, y: -60 }, fatigue: 0 },
+        ];
+        const r = simulateScrum(entries, {
+          random: createRandom(seed),
+          brain: keepGoing,
+          collision: impact(1),
+        });
+        let near = 0;
+        for (const frame of r.frames) {
+          const s = frame.spoofs[0];
+          if (s && Math.hypot(s.x, s.y) < 50) near += 1;
+        }
+        total += near / r.frames.length;
+      }
+      expect(total / 20).toBeGreaterThan(0.3);
     });
 
     it('as a charge at an opponent lead to hits', () => {

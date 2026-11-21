@@ -40,10 +40,12 @@ import { distance, dot, subtract, ZERO, type Vec } from './vec';
  * played back (the plan's default 1, #33).
  *
  * Each frame, in order, as in the prototype's `MatchRound.sim_frame`:
- * 1. messages due this frame are delivered, and each is followed or ignored;
+ * 1. messages due this frame are delivered, and each is followed (taken on as
+ *    the spoof's goal, to steer for at its next thought) or ignored;
  * 2. every spoof, in entry order: drops a goal it has reached or given up on
- *    (skidding at a goal it reached), then thinks (picks a goal and steers)
- *    or else grows, may message its teammates, moves, and may tire;
+ *    (skidding at a goal it reached), then thinks (keeps or picks a goal,
+ *    and aims for it) or else grows, may message its teammates, moves, and
+ *    may tire;
  * 3. collisions between every pair of opponents, counting new hits;
  * 4. every spoof is kept on the court, its speed and size within limits;
  * 5. teammate overlaps are counted, and the clock ticks.
@@ -272,7 +274,7 @@ function checkEntries(entries: readonly ScrumEntry[]): void {
   }
 }
 
-/** Takes up a goal: it steers there now (or stops, to hold its spot). */
+/** Takes up a goal and steers there now (or stops, to hold its spot). */
 function adopt(runner: Runner, goal: Goal): void {
   runner.goal = goal;
   runner.velocity =
@@ -335,8 +337,10 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
       if (!to) continue;
       to.stats.pongs += 1;
       if (random.chance(heedProbability(message.senderCharisma, to.skills.cooperation))) {
+        // It takes the goal on now, but only steers there at its next thought,
+        // as in the prototype: a quick-thinking spoof acts on advice sooner.
         to.stats.heeds += 1;
-        adopt(to, message.goal);
+        to.goal = message.goal;
       } else {
         to.stats.jecks += 1;
       }
@@ -350,8 +354,10 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
       if (random.chance(thoughtProbability(runner.skills, secondsGone))) {
         runner.stats.imps += 1;
         const scrum: ScrumView = { spoofs: runners.map(view), secondsGone };
+        // Re-aim at every thought, at whatever goal it keeps or picks, as in
+        // the prototype, so a spoof knocked off course heads back.
         const idea = brain(view(runner), scrum, random, runner.goal);
-        if (idea && idea !== runner.goal) adopt(runner, idea);
+        if (idea) adopt(runner, idea);
       } else {
         runner.radius += runner.radius * runner.blowRate;
       }
