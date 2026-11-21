@@ -16,11 +16,11 @@ These were chosen by the owner from a set of mockup comparisons.
 2. **Arena: a circular court with three scoring zones, and a bench for each team.**
    - The owner set the names, colors and layout on #19 (2026-11-20), keeping the prototype's proportions (`court.py`, `match.js`). The positions are in court units (court radius 150) in `src/game/court.ts` and `src/game/arena.ts`.
 
-     | Zone      | Radius  | Look                                                           | Score |
-     | --------- | ------- | -------------------------------------------------------------- | ----- |
-     | **Apron** | 100–150 | gray outer ring (`--color-apron`)                              | ×0    |
-     | **Mosh**  | 0–100   | white circle (`--color-mosh`) with a red outline               | ×1    |
-     | **Crush** | 0–25    | red center spot (`--color-crush`), like a hockey face-off spot | ×3    |
+     | Zone      | Radius  | Look                                                                                                                                                      | Score |
+     | --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+     | **Apron** | 100–150 | gray outer ring (`--color-apron`)                                                                                                                         | ×0    |
+     | **Mosh**  | 0–100   | white circle (`--color-mosh`) with a red outline                                                                                                          | ×1    |
+     | **Crush** | 0–25    | red center spot (`--color-crush`), like a hockey face-off spot, with a thin red ring around it at radius 30 (decorative, as in the prototype; owner, #22) | ×3    |
 
    - **Diagonals:** two blue lines (`--color-court-line`) cross the whole court and split it into quarters. They're decorative, a sporty touch, and the owner kept them after review (#19).
    - **Benches** curve around the court as in the prototype's arena mockup: the visitor's above, yours (home) below. Each has 6 seats, one per spoof, spaced 17° apart as in the prototype.

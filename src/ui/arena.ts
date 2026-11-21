@@ -21,6 +21,13 @@ import { drawSpoofDisc, type SpoofDisc } from './spoof-disc';
 const BENCH_EDGE_WIDTH = 1.5;
 const COURT_EDGE_WIDTH = 2;
 
+/**
+ * A thin ring around the crush, in its red, as in the prototype (radius 30,
+ * 2 wide, in match.js). Decorative: the crush still ends at CRUSH_RADIUS.
+ */
+const CRUSH_RING_RADIUS = CRUSH_RADIUS + 5;
+const CRUSH_RING_WIDTH = 2;
+
 function circle(ctx: CanvasRenderingContext2D, radius: number): void {
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
@@ -86,6 +93,10 @@ function drawCourt(ctx: CanvasRenderingContext2D): void {
   circle(ctx, CRUSH_RADIUS);
   ctx.fillStyle = palette.crush;
   ctx.fill();
+  circle(ctx, CRUSH_RING_RADIUS);
+  ctx.lineWidth = CRUSH_RING_WIDTH;
+  ctx.strokeStyle = palette.crush;
+  ctx.stroke();
 
   // The court's edge, so the light apron stands out from the light page.
   circle(ctx, COURT_RADIUS);
