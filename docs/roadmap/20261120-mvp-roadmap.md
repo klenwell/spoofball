@@ -13,9 +13,9 @@ The project has two goals: **ship the game**, and **document openly how it's bui
 The prototype is `~/projects/backgammon-chrome` (2014, Python 2.7 App Engine, Mercurial, KineticJS + jQuery). There, a spoof is a **rook**.
 
 - **The match ran on the server.** The Python in `lib/minrook/` (`rook_ai`, `scorekeeper`, `mise`, `teams`) simulated each scrum (the prototype called it a round), and the browser replayed the frames. Pages has no server, so **the simulation moves to TypeScript and runs in the browser.**
-- **Scrum:** 300 frames over 8 seconds. Its score is a snapshot of where the spoofs are at the end: the court area each covers, weighted by zone (`scorekeeper.py`). A whole match usually totals 10–100 points.
+- **Scrum:** 8 seconds. The prototype simulated 300 frames a scrum, but that isn't fixed: the Match epic picks a frame rate that serves gameplay and performance (the owner, on #27). Its score is a snapshot of where the spoofs are at the end: the court area each covers, weighted by zone (`scorekeeper.py`). A whole match usually totals 10–100 points.
 - **Placement ("mise"):** teams take turns placing 3 rooks each per scrum, and the host places last (`mise.py`). You want to change these rules. That decision belongs to the Match epic.
-- **Spoof model:** 11 skills (size, mass, growth, burst, stamina, iq, vision, charisma, cooperation, impact, constancy). They roll up into 5 comps (force, zip, smarts, mesh, will). Each spoof also has an avatar, a base radius of 10–24 (it can blow from 8 to 40 in play), and fatigue.
+- **Spoof model:** 11 skills (size, mass, growth, burst, stamina, iq, vision, charisma, cooperation, impact, constancy). They roll up into 5 comps (force, zip, smarts, mesh, will). The prototype's Pharm roster showed the comps without numbers, as "spangles": a circle per comp, sized and colored by its value. Spoofball hides them (see [design](../design.md), Decision 7). Each spoof also has an avatar, a base radius of 10–24 (it can blow from 8 to 40 in play), and fatigue.
 - **Per-spoof stats** already exist: imps, pings, pongs, heeds, jecks, dings, dongs, doves, trees. These give the Stats epic a ready list.
 
 We use the prototype as **a spec, not code to port**. We carry over the behavior and the tuning numbers, rewritten as tested TypeScript.

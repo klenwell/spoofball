@@ -69,6 +69,7 @@ These were chosen by the owner from a set of mockup comparisons.
 
 7. **A spoof's abilities are hidden. Players infer them from how it moves** (the owner's decision on #20, 2026-11-20).
    - No screen shows a spoof's **skills** (11), **comps** (5) or **pawn subtype**: not the draft, not Pharm, not Stats.
+   - **This is stricter than the prototype.** The prototype never showed skills, but its Pharm roster showed each spoof's 5 comps as "spangles": a circle per comp, sized and colored from red to green by its value, with an icon (`CompSpangle` in `public/js/app/models/rook.js`). There were no numbers, but you could read them at a glance.
    - Spoof cards and stats show only the avatar and **outcomes**: matches and scrums played, points, points per scrum, and +/− per scrum (team points minus opponent points while that spoof played, from the prototype's stats page).
    - **Why:** the game should reward intuition and watching, not number-crunching.
 8. **The draft is a combine,** modeled on the NFL Scouting Combine (the owner's idea on #20).
@@ -128,7 +129,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - The other team places on turn 4 or 5, at random. The remaining turns are random, except that a team can't take its last turn while the other team hasn't taken its first. The order is new every scrum.
   - **Placement rule:** of each team's 3, at least 2 go on the apron and at most 1 anywhere on the court.
 - **Fatigue carries across a match's scrums.** Between scrums every spoof recovers part of the way (up to 66%), and a spoof that sat out a scrum can recover fully. Recovery depends on hidden stamina and impact, plus some randomness. Fatigue resets each match.
-- **A scrum lasts 8 seconds** (300 frames, as in the prototype).
+- **A scrum lasts 8 seconds.** The prototype simulated 300 frames a scrum. That number isn't fixed: the Match epic picks a frame rate that serves gameplay and performance (the owner, on #27).
 - **Ties stand.** A match can end in a tie, and records are win–loss–tie. The prototype had overtime but had turned it off.
 - **Scoring follows the prototype** (`scorekeeper.py`). A scrum scores a snapshot of where the spoofs end up: the court area each covers, × 0.002, × the zone multiplier. A match usually totals 10–100 points.
 - **Watching controls: pause only.** Tap to pause and resume. Speed controls and replays wait until after the MVP. Replays are possible because a match can be replayed from its seed.
