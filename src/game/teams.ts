@@ -1,4 +1,5 @@
 import type { BenchSide } from './arena';
+import type { ScrumEntry } from './scrum';
 import type { TeamColorName } from '../design/tokens';
 import type { Random } from './random';
 import { generateSkills, sizeToRadius, skillNames, type Skills } from './skills';
@@ -65,3 +66,13 @@ export interface Lineup {
 export const ROYAL_TYPES: readonly SpoofType[] = ['king', 'queen'];
 /** Face types (rook, bishop, knight): at most 2 of each per team. */
 export const FACE_TYPES: readonly SpoofType[] = ['rook', 'bishop', 'knight'];
+
+/** The spoofs a lineup has placed on the court, as scrum entries. Benched spoofs sit out. */
+export function lineupEntries(lineup: Lineup): ScrumEntry[] {
+  return lineup.team.spoofs.flatMap((spoof) => {
+    const spot = lineup.spots[spoof.id];
+    return spot && 'x' in spot
+      ? [{ spoof, team: lineup.side, position: { x: spot.x, y: spot.y }, fatigue: 0 }]
+      : [];
+  });
+}
