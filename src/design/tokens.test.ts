@@ -10,7 +10,7 @@ describe('teamColors', () => {
 
 describe('cssVariables', () => {
   it('exposes palette colors in kebab case', () => {
-    expect(cssVariables()['--color-court']).toBe(palette.court);
+    expect(cssVariables()['--color-mosh']).toBe(palette.mosh);
     expect(cssVariables()['--color-text-muted']).toBe(palette.textMuted);
   });
 
@@ -35,7 +35,7 @@ describe('cssVariablesRule', () => {
     const rule = cssVariablesRule();
 
     expect(rule.startsWith(':root {\n')).toBe(true);
-    expect(rule).toContain(`  --color-court: ${palette.court};`);
+    expect(rule).toContain(`  --color-mosh: ${palette.mosh};`);
     expect(rule.endsWith('\n}')).toBe(true);
   });
 });

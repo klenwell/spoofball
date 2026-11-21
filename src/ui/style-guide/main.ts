@@ -11,6 +11,7 @@ import {
   type TeamColorName,
 } from '../../design/tokens';
 import { appInfo } from '../../app-info';
+import { arenaSection } from './arena';
 import { spoofsSection } from './spoofs';
 import './style-guide.css';
 
@@ -83,17 +84,17 @@ function teamColorsSection(): HTMLElement {
       ]),
       h('dl', { className: 'sg-team-values' }, [
         h('dt', { text: 'base' }),
-        h('dd', { text: `${base} · ${ratio(base, palette.court)} on court` }),
+        h('dd', { text: `${base} · ${ratio(base, palette.mosh)} on mosh` }),
         h('dt', { text: 'deep' }),
         h('dd', { text: `${deep} · ${ratio(deep, palette.white)} on white` }),
-        h('dt', { text: 'seats' }),
-        h('dd', { text: `${ratio(base, palette.surface)} on the dark seat rows` }),
+        h('dt', { text: 'bench' }),
+        h('dd', { text: `${ratio(base, palette.bench)} on the dark benches` }),
       ]),
     ]);
   });
   return section(
     'Team colors and kits',
-    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. When two teams share a color, the visitor wears away. The court is white, so every color (and so every away trim) is at least 3:1 against it, and every deep shade at least 4.5:1. A light shadow lifts discs off the court. The real marks are in the Spoofs section below.',
+    'Home kit: a disc in the team color. Away kit: a white disc trimmed in the team color. When two teams share a color, the visitor wears away. Every disc trim is at least 3:1 against both the white mosh and the gray apron, and every deep shade at least 4.5:1 on white. A light shadow lifts discs off the court. The real marks are in the Spoofs section below.',
     [h('div', { className: 'sg-teams' }, rows)],
   );
 }
@@ -154,6 +155,7 @@ root.replaceChildren(
   paletteSection(),
   teamColorsSection(),
   spoofsSection(section),
+  arenaSection(section),
   typeSection(),
   spaceAndRadiusSection(),
 );

@@ -17,12 +17,12 @@ describe('kit', () => {
   });
 
   describe('away', () => {
-    it('makes the disc white, trimmed in the team color and marked in its deep shade', () => {
+    it('makes the disc white, trimmed and marked in the deep shade of the team color', () => {
       expect(kit('gold', 'away')).toEqual({
         style: 'away',
         color: 'gold',
         fill: palette.white,
-        trim: teamColors.gold.base,
+        trim: teamColors.gold.deep,
         mark: teamColors.gold.deep,
       });
     });
@@ -57,19 +57,29 @@ describe('scrumKits', () => {
   });
 });
 
-describe('team colors on the court', () => {
-  it.each(teamColorNames)('%s has at least 3:1 contrast against the court', (color) => {
-    expect(contrastRatio(teamColors[color].base, palette.court)).toBeGreaterThanOrEqual(3);
+describe('team colors in the arena', () => {
+  const kits = teamColorNames.flatMap((color) =>
+    (['home', 'away'] as const).map((style) => kit(color, style)),
+  );
+  const label = (k: ReturnType<typeof kit>) => `${k.color} ${k.style}`;
+
+  describe.each([
+    ['mosh', palette.mosh],
+    ['apron', palette.apron],
+  ])('on the %s', (_zone, surface) => {
+    it.each(kits.map((k) => [label(k), k] as const))(
+      '%s disc edge has at least 3:1 contrast',
+      (_name, k) => {
+        expect(contrastRatio(k.trim, surface)).toBeGreaterThanOrEqual(3);
+      },
+    );
   });
 
-  it.each(teamColorNames)('%s away mark has at least 4.5:1 contrast on the white disc', (color) => {
-    const away = kit(color, 'away');
-    expect(contrastRatio(away.mark, away.fill)).toBeGreaterThanOrEqual(4.5);
-  });
+  // The crush is excluded on purpose: the owner chose a red that matches the
+  // trims' brightness, so discs there stand out by hue and shadow. See #19.
 
-  it.each(teamColorNames)('%s away trim has at least 3:1 contrast against the court', (color) => {
-    // The away disc is white on a white court, so its trim is what separates it.
-    expect(contrastRatio(kit(color, 'away').trim, palette.court)).toBeGreaterThanOrEqual(3);
+  it.each(teamColorNames)('%s home fill has at least 3:1 contrast on the white mosh', (color) => {
+    expect(contrastRatio(teamColors[color].base, palette.mosh)).toBeGreaterThanOrEqual(3);
   });
 
   it.each(teamColorNames)('%s home mark has at least 3:1 contrast on its disc', (color) => {
@@ -77,8 +87,12 @@ describe('team colors on the court', () => {
     expect(contrastRatio(home.mark, home.fill)).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(teamColorNames)('%s has at least 3:1 contrast on the seat rows', (color) => {
-    // Seats sit on the dark page surface, off the court.
-    expect(contrastRatio(teamColors[color].base, palette.surface)).toBeGreaterThanOrEqual(3);
+  it.each(teamColorNames)('%s away mark has at least 4.5:1 contrast on the white disc', (color) => {
+    const away = kit(color, 'away');
+    expect(contrastRatio(away.mark, away.fill)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(teamColorNames)('%s has at least 3:1 contrast on the dark benches', (color) => {
+    expect(contrastRatio(teamColors[color].base, palette.bench)).toBeGreaterThanOrEqual(3);
   });
 });

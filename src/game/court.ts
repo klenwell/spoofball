@@ -1,0 +1,31 @@
+/**
+ * The court, in court units: a circle of radius 150 centered on (0, 0),
+ * following the prototype (court.py and MatchMosh in match.js). Positions
+ * in the game are always in court units; only drawing converts them to
+ * screen pixels.
+ */
+
+export const COURT_RADIUS = 150;
+/** The mosh, the large white circle. Everything outside it is apron. */
+export const MOSH_RADIUS = 100;
+/** The crush, the red center spot. The prototype's "gooch" (court.py). */
+export const CRUSH_RADIUS = 25;
+
+export type Zone = 'crush' | 'mosh' | 'apron' | 'off';
+
+/** Score multiplier for each zone. The apron scores nothing. */
+export const zoneMultiplier: Record<Zone, number> = {
+  crush: 3,
+  mosh: 1,
+  apron: 0,
+  off: 0,
+};
+
+/** The zone a point falls in. A point on a boundary belongs to the inner zone. */
+export function zoneAt(x: number, y: number): Zone {
+  const distance = Math.hypot(x, y);
+  if (distance <= CRUSH_RADIUS) return 'crush';
+  if (distance <= MOSH_RADIUS) return 'mosh';
+  if (distance <= COURT_RADIUS) return 'apron';
+  return 'off';
+}
