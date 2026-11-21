@@ -104,7 +104,7 @@
     <line x1="256.0979811312788" y1="359.6800163313013" x2="263.7060566061636" y2="368.959951006096" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
     <circle cx="263.7060566061636" cy="368.959951006096" r="8" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
     <text x="150.0" y="446" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">each cell: one candidate moving on its own (no numbers)</text>
-    <text x="150.0" y="461" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">tap a cell for drills · 18–24 candidates, scroll if needed</text>
+    <text x="150.0" y="461" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">tap a cell for drills · 18 candidates, scroll if needed</text>
     <circle cx="36" cy="498" r="15" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
     <circle cx="82" cy="498" r="15" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
     <circle cx="128" cy="498" r="15" fill="#eef0f3" stroke="#d5d9e0" stroke-width="1" stroke-dasharray="3 3"/>

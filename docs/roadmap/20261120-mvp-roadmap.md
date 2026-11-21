@@ -99,7 +99,7 @@ What a player gets: **create and draft your own team, play matches, and see stat
 
 - **Epic 3, `expansion`:**
   - create a team (name, color, emoji logo);
-  - draft 6 spoofs from a generated pool of 18–24 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Match epic's simulation;
+  - draft 6 spoofs from a generated pool of 18 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Match epic's simulation;
   - save locally;
   - play your team against a generated opponent.
 - **Epic 4, `stats`:** record team and spoof stats for each match. A stats screen shows the team record and a line for each spoof. History survives a reload.
@@ -108,7 +108,7 @@ What a player gets: **create and draft your own team, play matches, and see stat
 
 What a player gets: **manage the roster.**
 
-- **Epic 5, `pharm`:** a roster view and spoof cards showing outcomes, never skills. Scout a spoof with drills, replace one from a small combine pool, or re-draft the whole team (Decision 2).
+- **Epic 5, `pharm`:** a roster view and spoof cards showing outcomes, never skills. Scout a spoof with drills, replace one for a draft pick (from 3 prospects), or re-draft the whole team (Decision 2).
 
 ### MVP (`v1.0.0`)
 

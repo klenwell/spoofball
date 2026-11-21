@@ -76,7 +76,7 @@ These were chosen by the owner from a set of mockup comparisons.
    - **Drills:** tap a spoof to open a small drill court with 2–3 short drills, such as _sprint_ (dash across and back), _blow_ (grow from its smallest size) and _hold_ (stay in the mosh while a dummy pushes). Each is a few seconds, with no numbers.
    - **Some randomness,** like a real combine: a spoof shows its traits, but not a perfectly repeatable test.
    - **The combine reuses the match simulation,** so a spoof behaves in drills exactly as it will in a match. So Expansion, which builds the combine, depends on the Match epic.
-   - **Scouting in Pharm:** you can run drills on your own spoofs before replacing one. Replacing uses a small combine pool. The prototype's pharm had this idea, but felt clunky, so the owner wants it **clean and easy to use**.
+   - **Scouting in Pharm:** you can run drills on your own spoofs before replacing one. Replacing uses a small pool of 3 prospects. The prototype's pharm had this idea, but felt clunky, so the owner wants it **clean and easy to use**.
 
 ## Wireframes
 
@@ -97,7 +97,7 @@ There's no tab bar until the team exists. On desktop, the warm-up grid widens to
 ![Match wireframes](design/wireframe-match.svg)
 
 1. **Mise:** the scoreboard on top, then the arena. Tap a spoof on your bench (below), then tap the apron to place it.
-2. **Scrum in play:** a clock bar under the scoreboard. The spoofs play on their own while you watch.
+2. **Scrum in play:** a clock bar under the scoreboard. The spoofs play on their own while you watch, and you can pause.
 3. **Result:** the final score, the score by scrum, and each of your spoofs' points.
 
 On desktop, the arena sits in the center with the scoreboard above it.
@@ -108,7 +108,7 @@ On desktop, the arena sits in the center with the scoreboard above it.
 
 1. **Roster:** your team and its record, then 6 rows, each with a moving spoof and its outcomes. "Re-draft the team" runs a full combine.
 2. **Spoof card:** the spoof warming up in its cell, its outcomes, then "Scout: run drills" and "Replace this spoof".
-3. **Replace:** a small combine pool of about 8. Tap a cell for drills, then pick one and swap it in.
+3. **Replace:** 3 prospects, for one draft pick. Tap a cell for drills, then pick one and swap it in. Your picks show as 3 dots.
 
 ### Stats
 
@@ -117,22 +117,41 @@ On desktop, the arena sits in the center with the scoreboard above it.
 1. **Team:** record, matches played, points per match, best score, and a match log.
 2. **Spoof lines:** a row per spoof with matches, scrums, points, points per scrum and +/− per scrum. Tap a row to open its card in Pharm.
 
-## Open questions, by epic
+## Decisions for later epics (2026-11-20)
 
-These came up while sketching. Each is settled when its epic is planned.
+The owner settled these while reviewing the wireframes on #20. Each epic still refines the details when it's planned.
 
-- **Match**
-  - **Placement rule:** the owner's current idea is that at the start, 2 spoofs must be on the apron and 1 may be on the court. How many spoofs play each scrum (the prototype placed 3 per team), and who places first? The prototype alternated turns, with the host placing last.
-  - **Scrum length:** the prototype used 8 seconds. Is there overtime on a tie (the prototype tracked an OT period)?
-  - **Watching controls:** pause and speed-up while a scrum plays?
-- **Expansion**
-  - **Do spoofs have names?** The rows in the wireframes leave a gray bar for one.
-  - **Emoji logo:** any emoji, or a curated set?
-  - **Combine pool:** how many candidates (18–24), how many drills, and which ones?
-- **Pharm**
-  - **When can you replace or re-draft?** Any time between matches, or limited, and does it cost anything?
-- **Stats**
-  - **Which outcomes to show:** the prototype also counted behavior such as hits given and taken ("dings" and "dongs"). These describe what happened, not abilities. Should any appear?
+### Match
+
+- **The mise follows the prototype** (`mise.py`). Each team places 3 spoofs before every scrum, in 6 turns.
+  - The **host** places last (turn 6). For now the host is picked at random each match, separately from kits and benches.
+  - The other team places on turn 4 or 5, at random. The remaining turns are random, except that a team can't take its last turn while the other team hasn't taken its first. The order is new every scrum.
+  - **Placement rule:** of each team's 3, at least 2 go on the apron and at most 1 anywhere on the court.
+- **Fatigue carries across a match's scrums.** Between scrums every spoof recovers part of the way (up to 66%), and a spoof that sat out a scrum can recover fully. Recovery depends on hidden stamina and impact, plus some randomness. Fatigue resets each match.
+- **A scrum lasts 8 seconds** (300 frames, as in the prototype).
+- **Ties stand.** A match can end in a tie, and records are win–loss–tie. The prototype had overtime but had turned it off.
+- **Scoring follows the prototype** (`scorekeeper.py`). A scrum scores a snapshot of where the spoofs end up: the court area each covers, × 0.002, × the zone multiplier. A match usually totals 10–100 points.
+- **Watching controls: pause only.** Tap to pause and resume. Speed controls and replays wait until after the MVP. Replays are possible because a match can be replayed from its seed.
+
+### Expansion
+
+- **Spoofs have names.** It's its own story, #28.
+- **The team logo comes from a curated set of emoji,** shown as a grid. Computer teams draw from the same set.
+- **The combine has 18 candidates** (3 per pick), drawn with the prototype's type odds.
+- **Three drills:** _sprint_ (hints at burst and stamina), _blow_ (growth and size) and _hold_ (mass and constancy). Each takes about 3 seconds, can be rerun, and varies a little each time. Iq, vision, charisma and cooperation show only in matches.
+
+### Pharm
+
+- **Replacing a spoof costs a draft pick,** as in the prototype (`models/team.py`).
+  - A team starts with 3 picks and can hold at most 3. It gets one back after each loss.
+  - Replacing happens between matches. You choose from **3 prospects**, scouted with the same warm-ups and drills, and prospects you pass on stay for next time.
+  - Keep the prototype's balance rules: a prospect's skill total is based on your weakest spoof, and a team holds at most 1 royal (king or queen) and 2 of each face type (rook, bishop, knight).
+- **Re-drafting** runs a full 18-spoof combine. It keeps the team's name, color and logo, but **resets its record and stats, after a clear warning.**
+
+### Stats
+
+- **The MVP shows outcomes only:** record, matches, scrums, points, points per scrum and +/− per scrum.
+- **The simulation still records the prototype's behavior stats,** without showing them: imps (decisions), pings and pongs (messages sent and received), heeds and jecks (messages followed and ignored), dings and dongs (hits given and taken), and doves and trees (frames overlapping 1 or 2 teammates). Showing a few, such as dings and dongs as result-screen highlights, is a post-MVP idea. Some of them, like heeds against jecks, would come close to revealing hidden skills.
 
 ## Tokens at a glance
 
@@ -164,9 +183,12 @@ These came up while sketching. Each is settled when its epic is planned.
 | **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 6                                                                                                  |
 | **Kit**          | How a team's discs look in a match: **home** (filled with the team color) or **away** (white, trimmed in the team color). Your team always wears home, and the visitor always wears away |
 | **Expansion**    | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                                     |
-| **Draft**        | Picking your 6 spoofs from a generated pool of 18–24                                                                                                                                     |
+| **Draft**        | Picking your 6 spoofs from a generated pool of 18                                                                                                                                        |
 | **Combine**      | How you draft: candidate spoofs show their abilities by moving, in warm-ups and drills, like the NFL Scouting Combine                                                                    |
 | **Warm-up**      | A candidate moving on its own in a small round cell, so you can compare a whole pool at a glance                                                                                         |
 | **Drill**        | A short exercise on a small court (sprint, blow, hold) that shows one or two of a spoof's traits, without numbers                                                                        |
 | **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                      |
+| **Draft pick**   | What replacing a spoof costs. A team holds up to 3 and gets one back after each loss                                                                                                     |
+| **Prospect**     | A candidate to replace a spoof in Pharm. You choose from 3                                                                                                                               |
+| **Host**         | The team that places last in each mise. For now picked at random each match                                                                                                              |
 | **Stats**        | Your team's record and each spoof's numbers across matches                                                                                                                               |

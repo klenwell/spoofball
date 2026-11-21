@@ -152,7 +152,7 @@ def expansion():
         b.line(sx - 12 * math.cos(ang), sy - 12 * math.sin(ang), sx, sy, color=LIGHT, width=2, dash=True)
         b.spoof(sx, sy, 5 + (i % 4), solid=True)
     b.note(446, 'each cell: one candidate moving on its own (no numbers)')
-    b.note(461, 'tap a cell for drills · 18–24 candidates, scroll if needed')
+    b.note(461, 'tap a cell for drills · 18 candidates, scroll if needed')
     for i in range(6):
         b.circle(36 + i * 46, 498, 15, fill=FILL if i > 1 else INK, stroke=LIGHT if i > 1 else INK, dash=i > 1)
     b.button(16, 534, W - 32, 'Done (needs 6)', primary=False)
@@ -212,7 +212,7 @@ def match():
             visitor=[(0.4, -0.3, 9), (0.55, 0.5, 8), (-0.75, 0.4, 7)])
     b.note(472, 'spoofs play on their own; you watch')
     b.note(487, 'clock bar under the scoreboard: 8 s a scrum')
-    b.box(16, 500, W - 32, 36, 'Pause · Speed', rx=18, fill='#ffffff', size=11, color=MID, dash=True)
+    b.button(16, 500, W - 32, 'Pause', primary=False)
     b.tabs('Match')
 
     c = Frame('3 · Result')
@@ -238,6 +238,14 @@ def match():
 
 # --- Pharm ------------------------------------------------------------------
 
+def pick_dots(f, y):
+    """Draft picks left, out of 3: filled dots are picks you have."""
+    f.text(W / 2 - 34, y + 4, 'Draft picks', size=11, color=MID, anchor='end')
+    for i in range(3):
+        have = i < 2
+        f.circle(W / 2 - 18 + i * 18, y, 6, fill=ACCENT if have else '#ffffff', stroke=ACCENT, width=2)
+
+
 def pharm():
     a = Frame('1 · Roster')
     a.circle(36, 40, 20, fill=FILL, stroke=INK, width=2)
@@ -251,8 +259,9 @@ def pharm():
         a.box(68, y + 10, 110, 12, fill=FILL, stroke=FILL)
         a.text(68, y + 38, f'{[6, 6, 5, 6, 4, 6][i]} matches · {[7.8, 7.1, 6.4, 5.9, 4.2, 3.5][i]} pts/scrum', size=10, color=MID)
         a.text(W - 24, y + 30, '›', size=18, color=MID, anchor='end')
-    a.note(434, 'each spoof moves in its cell, as in the combine')
-    a.button(16, 452, W - 32, 'Re-draft the team', primary=False)
+    a.note(432, 'each spoof moves in its cell, as in the combine')
+    a.note(447, 're-draft resets the record and stats (with a warning)')
+    a.button(16, 462, W - 32, 'Re-draft the team', primary=False)
     a.tabs('Pharm')
 
     b = Frame('2 · Spoof card')
@@ -273,19 +282,20 @@ def pharm():
     b.tabs('Pharm')
 
     c = Frame('3 · Replace')
-    c.header('Replace', 'Pick 1 from a new combine pool')
+    c.header('Replace', 'Pick 1 of 3 prospects · costs 1 draft pick')
     c.box(12, 72, W - 24, 44, fill=FILL, stroke=FILL)
     c.spoof(36, 94, 9, solid=True)
     c.text(56, 98, 'Replacing this spoof', size=11)
-    for i in range(8):
-        cx = 52 + (i % 3) * 98
-        cy = 168 + (i // 3) * 82
-        if i >= 8:
-            continue
-        picked = i == 4
-        c.circle(cx, cy, 32, fill='#ffffff', stroke=ACCENT if picked else LIGHT, width=3 if picked else 1)
-        c.spoof(cx + (i % 2) * 8 - 4, cy + 3, 7 + (i % 3), solid=True)
-    c.note(420, 'tap a cell for drills, same as the combine')
+    for i in range(3):
+        cx = 58 + i * 92
+        cy = 190
+        picked = i == 1
+        c.circle(cx, cy, 40, fill='#ffffff', stroke=ACCENT if picked else LIGHT, width=3 if picked else 1)
+        c.spoof(cx + (i % 2) * 8 - 4, cy + 3, 8 + i * 2, solid=True)
+    c.note(262, 'tap a cell for drills, same as the combine')
+    c.note(277, 'prospects you pass on stay for next time')
+    pick_dots(c, 314)
+    c.note(342, 'a loss earns a pick back, up to 3')
     c.button(16, 444, W - 32, 'Swap in the picked spoof')
     c.button(16, 490, W - 32, 'Cancel', primary=False)
     c.tabs('Pharm')
