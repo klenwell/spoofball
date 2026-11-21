@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { SEATS_PER_BENCH } from './arena';
 import { isOnCourt, zoneAt } from './court';
 import { PRESET_HOME, PRESET_VISITOR } from './preset-teams';
+import { sizeToRadius, skillTotal, typeProfiles } from './skills';
 import { MAX_SPOOF_RADIUS, MIN_SPOOF_RADIUS } from './spoof-types';
 import { FACE_TYPES, ROYAL_TYPES, SPOOFS_PER_TEAM, type Lineup } from './teams';
 
@@ -39,6 +40,13 @@ describe('the preset lineups', () => {
       for (const s of spoofs) {
         expect(s.radius, s.id).toBeGreaterThanOrEqual(MIN_SPOOF_RADIUS);
         expect(s.radius, s.id).toBeLessThanOrEqual(MAX_SPOOF_RADIUS);
+      }
+    });
+
+    it('gives every spoof generated hidden skills within its type cap, and a radius from its size', () => {
+      for (const s of spoofs) {
+        expect(skillTotal(s.skills), s.id).toBeLessThanOrEqual(typeProfiles[s.type].maxTotal);
+        expect(s.radius, s.id).toBe(sizeToRadius(s.skills.size));
       }
     });
 
