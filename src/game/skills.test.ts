@@ -149,6 +149,21 @@ describe('generateSkills', () => {
     });
   });
 
+  // The prototype sized its chunks once, at 10% of the points to add, so a
+  // total within 4 points of a type's base gave a chunk of 0 and crashed
+  // (`randint` with a minimum above its maximum). Chunks here are at least 1.
+  describe("regression: a total just above the type's starting points", () => {
+    it.each(spoofTypes)('still generates a %s that adds up to the total', (type) => {
+      for (let extra = 1; extra <= 5; extra += 1) {
+        const target = minimumTotal(type) + extra;
+        expect(
+          skillTotal(generateSkills(type, target, createRandom(TEST_SEED))),
+          `+${String(extra)}`,
+        ).toBe(target);
+      }
+    });
+  });
+
   describe("when the total is below the type's starting points", () => {
     it('refuses it', () => {
       expect(() => generateSkills('rook', minimumTotal('rook') - 1, createRandom(1))).toThrow(

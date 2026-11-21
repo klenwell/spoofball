@@ -16,6 +16,8 @@ const sources = import.meta.glob<string>(['./**/*.ts', '!./**/*.test.ts'], {
 const forbidden: [string, RegExp][] = [
   ['the skills module', /from ['"][./]*\/?game\/skills['"]/],
   ["a spoof's skills", /\.skills\b/],
+  // Destructuring, as in `({ skills }) => skills.size` or `const { radius, skills } = spoof`.
+  ['destructured skills', /[{,]\s*skills\s*[,}:=]/],
   ['comps', /\bcomps\s*\(/],
   ['type profiles', /\btypeProfiles\b/],
 ];
