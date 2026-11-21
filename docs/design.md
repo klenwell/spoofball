@@ -139,7 +139,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **Spoofs only grow during a scrum.** Tiring slows their growth, but nothing shrinks them.
   - **Grace sets how a spoof skids and turns** (burst, constancy and stamina). Mass only matters in collisions, where the heavier spoof is pushed less.
   - Shrinking on hits, and mass in turning, are ideas for later: #47.
-- **The spoof AI builds what the prototype meant, not how it played** (the owner, on #37, 2026-11-21). The prototype's AI had bugs: its spoofs mostly drifted toward the nearest group, ignoring the crush, and its charges at opponents never worked. Here:
+- **The spoof AI builds what the prototype meant, not how it played** (the owner, on #37, 2026-11-21). The prototype's AI had bugs: its spoofs mostly drifted toward the nearest group, ignoring the crush, and its charges at opponents never expired, because they timed out by wall-clock time. Here:
   - a spoof surveys the spots within its vision (range from vision, detail from iq), and values each by zone and by the teammates sharing it, the same overlap bonus scoring uses;
   - it prefers nearer spots a little, and misjudges more with low smarts;
   - it holds its spot when nothing it sees is worth more;
