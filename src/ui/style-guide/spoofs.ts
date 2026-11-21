@@ -50,7 +50,7 @@ function typeCards(color: TeamColorName): HTMLElement[] {
       });
     });
     canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', `${avatar}: home and away kits at 10, 16 and 24 px`);
+    canvas.setAttribute('aria-label', `${avatar}: home and away kits at radius 10, 16 and 24`);
     const caption = document.createElement('figcaption');
     caption.textContent = avatar === 'pawn' ? 'pawn (all subtypes)' : avatar;
     card.append(canvas, caption);
@@ -78,7 +78,7 @@ function stateStrip(title: string, discs: (SpoofDisc & { caption: string })[]): 
 
 function states(color: TeamColorName): HTMLElement[] {
   const home = kit(color, 'home');
-  const clash = scrumKits(color, color);
+  const scrum = scrumKits(color, color);
   return [
     stateStrip(
       'Fatigue: fades as it tires, never below 30%',
@@ -93,14 +93,14 @@ function states(color: TeamColorName): HTMLElement[] {
       })),
     ),
     stateStrip(
-      'Growth: grows during a round, 10 to 24 px',
+      'Growth: grows during a round, radius 10 to 24',
       [10, 13, 16, 20, 24].map((radius) => ({
         x: 0,
         y: 0,
         radius,
         type: 'king',
         kit: home,
-        caption: `${String(radius)}px`,
+        caption: String(radius),
       })),
     ),
     stateStrip('Highlight: selected', [
@@ -116,11 +116,11 @@ function states(color: TeamColorName): HTMLElement[] {
         caption: 'away',
       },
     ]),
-    stateStrip('Same color in a scrum: home vs visitor', [
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: clash.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: clash.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: clash.visitor, caption: 'visitor' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: clash.visitor, caption: 'visitor' },
+    stateStrip('In a scrum, the visitor always wears away (even in the same color)', [
+      { x: 0, y: 0, radius: 16, type: 'knight', kit: scrum.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, type: 'bishop', kit: scrum.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, type: 'knight', kit: scrum.visitor, caption: 'visitor' },
+      { x: 0, y: 0, radius: 16, type: 'bishop', kit: scrum.visitor, caption: 'visitor' },
     ]),
   ];
 }
@@ -157,7 +157,7 @@ export function spoofsSection(
 
   return section(
     'Spoofs',
-    'Every avatar on the white court. Top row: home kit. Bottom row: away kit. Left to right: 10, 16 and 24 px radius, the smallest and largest a spoof can be. There are 8 spoof types but 6 avatars: pawn subtypes (basic, noble, angry) are hidden and look the same, showing only through how they play. These are the draft marks, for review in #18.',
+    'Every avatar on the white court. Top row: home kit. Bottom row: away kit. Left to right: radius 10, 16 and 24 court units (the smallest and largest a spoof can be), drawn here at 1 unit = 1 px. In the arena they scale with the court. There are 8 spoof types but 6 avatars: pawn subtypes (basic, noble, angry) are hidden and look the same, showing only through how they play. These are the draft marks, for review in #18.',
     [picker, types, h3('States'), stateList],
   );
 }

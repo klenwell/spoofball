@@ -9,14 +9,23 @@ export const palette = {
   background: '#111317',
   /** Raised surfaces: cards, panels, seat rows. */
   surface: '#1A1E24',
-  /** The court's playing surface: white, like the prototype's arena. Team colors are checked against it. */
-  court: '#FFFFFF',
-  /** The band around the court. */
-  courtRing: '#CCCCCC',
-  /** Lines drawn on the court. */
-  courtLine: '#D5D9E0',
-  /** The mosh: the court's center scoring zone. */
-  mosh: '#EEF1F5',
+  /** The mosh: the court's large white circle (×1). Team colors are checked against it. */
+  mosh: '#FFFFFF',
+  /**
+   * The apron: the court's gray outer ring (×0), where spoofs start. Lighter
+   * than the prototype's #CCCCCC so every disc's trim keeps 3:1 against it.
+   */
+  apron: '#D9DCE1',
+  /** The crush: the red center spot (×3), like a hockey face-off spot. */
+  crush: '#D7263D',
+  /** The mosh's outline, in the crush's red. */
+  moshLine: '#D7263D',
+  /** The two diagonal lines that quarter the court. Decorative. */
+  courtLine: '#2F6FD6',
+  /** A bench: the curved band holding a team's seats. */
+  bench: '#262B33',
+  /** An empty seat on a bench. */
+  seat: '#353C47',
   /** Labels drawn on the court. */
   courtText: '#5F6670',
   text: '#E8EAED',
@@ -104,7 +113,7 @@ function kebab(name: string): string {
   return name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-/** Every token as a CSS custom property, e.g. `--color-court: #1C2027`. */
+/** Every token as a CSS custom property, e.g. `--color-mosh: #FFFFFF`. */
 export function cssVariables(): Record<string, string> {
   const vars: Record<string, string> = {};
   for (const [name, value] of Object.entries(palette)) vars[`--color-${kebab(name)}`] = value;
