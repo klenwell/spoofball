@@ -93,8 +93,10 @@ export function steerToward(position: Vec, target: Vec, speed: number): Vec {
 }
 
 /**
- * Grace: how cleanly a spoof stops. Higher grace keeps more speed and turns
- * less on reaching its goal (the prototype's `gracefulness`).
+ * Grace: how cleanly a spoof stops on reaching its goal (the prototype's
+ * `gracefulness`). A graceful spoof stops sharply: it keeps little of its
+ * speed and turns little. A clumsy one drifts on with more of its speed, and
+ * turns more.
  */
 export function grace(skills: Skills): number {
   return composite(skills, { burst: 1, constancy: 1, stamina: 0.5 });
@@ -103,6 +105,7 @@ export function grace(skills: Skills): number {
 /**
  * Skidding, when a spoof reaches its goal: it keeps a random 1% to
  * (100 − grace)% of its speed, and turns by up to ±(100 − grace) degrees.
+ * So the more graceful the spoof, the less it drifts and turns.
  */
 export function skid(velocity: Vec, skills: Skills, random: Random): Vec {
   const clumsiness = 100 - grace(skills);

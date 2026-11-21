@@ -19,7 +19,7 @@ import {
   steerToward,
   thoughtProbability,
 } from './spoof-motion';
-import { length, vec } from './vec';
+import { angle, length, vec } from './vec';
 
 function skills(overrides: Partial<Skills> = {}): Skills {
   return { ...(Object.fromEntries(skillNames.map((n) => [n, 50])) as Skills), ...overrides };
@@ -97,7 +97,7 @@ describe('steerToward', () => {
 });
 
 describe('skid', () => {
-  it('keeps a share of the speed and turns', () => {
+  it('keeps a share of the speed', () => {
     // grace 50: keep 1–50% of the speed, turn up to ±50°. Draws: keep 50%, turn 0°.
     const random = sequenceRandom([0.99, 0.5]);
     const after = skid(vec(10, 0), skills(), random);
@@ -105,9 +105,17 @@ describe('skid', () => {
     expect(after.y).toBeCloseTo(0);
   });
 
-  it('turns and slows a clumsy spoof more than a graceful one, on average', () => {
+  it('turns by up to 100 − grace degrees', () => {
+    // grace 50. Draws: keep 50%, then the sharpest turn one way, −50°.
+    const after = skid(vec(10, 0), skills(), sequenceRandom([0.99, 0]));
+    expect(angle(after)).toBeCloseTo((-50 * Math.PI) / 180);
+  });
+
+  // In the prototype a graceful spoof stops sharply, and a clumsy one drifts
+  // on with more of its speed (it keeps up to 100 − grace percent).
+  it('lets a clumsy spoof drift on with more of its speed than a graceful one, on average', () => {
     const random = createRandom(TEST_SEED);
-    const average = (s: Skills) => {
+    const averageKept = (s: Skills) => {
       let kept = 0;
       for (let i = 0; i < 500; i += 1) kept += length(skid(vec(10, 0), s, random));
       return kept / 500;
@@ -115,7 +123,19 @@ describe('skid', () => {
     const graceful = skills({ burst: 95, constancy: 95, stamina: 95 });
     const clumsy = skills({ burst: 10, constancy: 10, stamina: 10 });
     expect(grace(graceful)).toBeGreaterThan(grace(clumsy));
-    expect(average(clumsy)).toBeGreaterThan(average(graceful));
+    expect(averageKept(clumsy)).toBeGreaterThan(averageKept(graceful));
+  });
+
+  it('turns a clumsy spoof more than a graceful one, on average', () => {
+    const random = createRandom(TEST_SEED);
+    const averageTurn = (s: Skills) => {
+      let total = 0;
+      for (let i = 0; i < 500; i += 1) total += Math.abs(angle(skid(vec(10, 0), s, random)));
+      return total / 500;
+    };
+    const graceful = skills({ burst: 95, constancy: 95, stamina: 95 });
+    const clumsy = skills({ burst: 10, constancy: 10, stamina: 10 });
+    expect(averageTurn(clumsy)).toBeGreaterThan(averageTurn(graceful));
   });
 });
 
