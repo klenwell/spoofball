@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#111317" />
     <meta
       name="description"
       content="Spoofball: a simple one-player 2D sports simulation for the browser."
@@ -10,19 +11,12 @@
     <title>Spoofball</title>
   </head>
   <body>
-    <main class="intro">
-      <h1>Spoofball</h1>
-      <p class="tagline">
-        A simple one-player sports simulation. Draft a team of six spoofs, place them on the court,
-        and watch them play.
-      </p>
-      <p class="status">In development. The first playable match is coming in v0.2.0.</p>
-    </main>
-    <footer class="footer">
-      <span id="version" class="version"></span>
-      <span aria-hidden="true">·</span>
-      <a href="https://github.com/klenwell/spoofball">Source and progress on GitHub</a>
-    </footer>
+    <div id="app" class="app">
+      <noscript>
+        <p>Spoofball needs JavaScript to run.</p>
+        <p><a href="https://github.com/klenwell/spoofball">Source and progress on GitHub</a></p>
+      </noscript>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
