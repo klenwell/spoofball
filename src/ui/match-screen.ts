@@ -521,12 +521,21 @@ export function createMatchScreen(): Panel {
     return cell;
   }
 
-  /** A header row: an empty corner, the 3 scrums, and Total. */
-  function scrumHeaderRow(corner: string): HTMLTableRowElement {
-    const head = el('tr');
-    head.append(el('th', 'scorecard-label', corner));
-    for (let n = 1; n <= SCRUMS_PER_MATCH; n += 1) head.append(el('th', undefined, String(n)));
-    head.append(el('th', undefined, 'Total'));
+  /** A header row: its label (text or elements), the 3 scrums, and Total. */
+  function scrumHeaderRow(label: string | Node, className?: string): HTMLTableRowElement {
+    const head = el('tr', className);
+    const corner = el('th', 'scorecard-label');
+    corner.scope = 'col';
+    corner.append(label);
+    head.append(corner);
+    for (let n = 1; n <= SCRUMS_PER_MATCH; n += 1) {
+      const th = el('th', undefined, String(n));
+      th.scope = 'col';
+      head.append(th);
+    }
+    const total = el('th', undefined, 'Total');
+    total.scope = 'col';
+    head.append(total);
     return head;
   }
 
@@ -549,47 +558,52 @@ export function createMatchScreen(): Panel {
     heading.id = 'scorecard-title';
     scrumPanel.setAttribute('aria-labelledby', heading.id);
 
+    // One table, so every column lines up (the owner, #60): the box score,
+    // then each team's spoofs under a header row with its name.
     const body = el('div', 'scorecard-body');
-    // The box score: each team's points in each scrum.
-    const box = el('table', 'scorecard-table');
+    const table = el('table', 'scorecard-table');
+    const box = el('tbody');
     box.append(scrumHeaderRow('Scrum'));
     for (const side of SIDES) {
       const team = card.teams[side];
       const row = el('tr');
-      row.append(el('th', 'scorecard-label', team.name));
+      const name = el('th', 'scorecard-label', team.name);
+      name.scope = 'row';
+      row.append(name);
       for (const points of team.byScrum) row.append(pointsCell(points));
       row.append(el('td', 'scorecard-total', String(team.total)));
       box.append(row);
     }
-    body.append(box);
+    table.append(box);
 
-    // Each team's spoofs, scrum by scrum.
     for (const side of SIDES) {
       const team = card.teams[side];
-      const title = el('h3', 'scorecard-team');
+      const section = el('tbody', 'scorecard-team');
+      const label = el('span', 'scorecard-spoof');
       const swatch = el('span', 'match-swatch');
       swatch.style.background = kitFor(side).fill;
       swatch.style.borderColor = kitFor(side).trim;
       swatch.setAttribute('aria-hidden', 'true');
-      title.append(swatch, el('span', undefined, `${team.name} ${String(team.total)}`));
-      const table = el('table', 'scorecard-table');
-      table.append(scrumHeaderRow(''));
+      label.append(swatch, el('span', undefined, team.name));
+      section.append(scrumHeaderRow(label, 'scorecard-team-head'));
       for (const spoof of team.lines) {
         const row = el('tr');
         const name = el('th', 'scorecard-label');
-        const { canvas: disc, ctx: discCtx } = createCanvas(18, 18);
+        name.scope = 'row';
+        const { canvas: disc, ctx: discCtx } = createCanvas(16, 16);
         disc.setAttribute('aria-hidden', 'true');
-        drawSpoofDisc(discCtx, { x: 9, y: 9, radius: 7, type: spoof.type, kit: kitFor(side) });
+        drawSpoofDisc(discCtx, { x: 8, y: 8, radius: 6.5, type: spoof.type, kit: kitFor(side) });
         const who = el('span', 'scorecard-spoof');
         who.append(disc, el('span', undefined, avatarName(spoof.type)));
         name.append(who);
         row.append(name);
         for (const points of spoof.byScrum) row.append(pointsCell(points));
         row.append(el('td', 'scorecard-total', String(spoof.total)));
-        table.append(row);
+        section.append(row);
       }
-      body.append(title, table);
+      table.append(section);
     }
+    body.append(table);
     scrumPanel.replaceChildren(heading, body, playAgainButton);
   }
 
