@@ -6,6 +6,7 @@ import {
   arenaBounds,
   benchRadius,
   benchSeats,
+  seatAt,
 } from './arena';
 import { COURT_RADIUS, courtRadius, courtWithMosh } from './court';
 import { MAX_SPOOF_RADIUS } from './spoof-types';
@@ -122,5 +123,21 @@ describe('the arena on a court with a smaller mosh (#51)', () => {
     const smaller = arenaBounds(small);
     expect(smaller.maxX - smaller.minX).toBeLessThan(big.maxX - big.minX);
     expect(smaller.maxY - smaller.minY).toBeLessThan(big.maxY - big.minY);
+  });
+});
+
+describe('seatAt', () => {
+  it("finds the seat under a point, on that side's bench", () => {
+    const seat = benchSeats('home')[3];
+    if (!seat) throw new Error('no seat');
+    expect(seatAt('home', seat.x + SEAT_RADIUS - 1, seat.y)?.index).toBe(3);
+  });
+
+  it("is null off a seat, or on the other side's bench", () => {
+    const seat = benchSeats('home')[3];
+    if (!seat) throw new Error('no seat');
+    expect(seatAt('home', seat.x + SEAT_RADIUS + 1, seat.y)).toBeNull();
+    expect(seatAt('visitor', seat.x, seat.y)).toBeNull();
+    expect(seatAt('home', 0, 0)).toBeNull();
   });
 });

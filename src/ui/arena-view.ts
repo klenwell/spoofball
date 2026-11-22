@@ -27,3 +27,8 @@ export function arenaHeightFor(bounds: Bounds, width: number, padding = 8): numb
   const ratio = (bounds.maxY - bounds.minY) / (bounds.maxX - bounds.minX);
   return Math.round((width - padding * 2) * ratio + padding * 2);
 }
+
+/** The point in court units under a point on the canvas (CSS px): the inverse of the view. */
+export function courtPointAt(view: ArenaView, px: number, py: number): { x: number; y: number } {
+  return { x: (px - view.cx) / view.scale, y: (py - view.cy) / view.scale };
+}

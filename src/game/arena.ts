@@ -68,6 +68,16 @@ export function benchSeats(side: BenchSide, court: Court = DEFAULT_COURT): Seat[
   return seats.sort((a, b) => a.x - b.x).map((seat, index) => ({ ...seat, index }));
 }
 
+/** The seat of a bench under a point in court units, or null if the point isn't on one. */
+export function seatAt(
+  side: BenchSide,
+  x: number,
+  y: number,
+  court: Court = DEFAULT_COURT,
+): Seat | null {
+  return benchSeats(side, court).find((s) => Math.hypot(s.x - x, s.y - y) <= SEAT_RADIUS) ?? null;
+}
+
 export interface Bounds {
   minX: number;
   minY: number;

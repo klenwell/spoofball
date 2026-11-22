@@ -1,39 +1,63 @@
 import { matchKits, type Kit } from '../design/kits';
-import { arenaBounds, benchSeats } from '../game/arena';
+import { arenaBounds, benchSeats, seatAt, type BenchSide } from '../game/arena';
+import {
+  REFUSAL_TEXT,
+  computerMove,
+  drawOrder,
+  isMiseOver,
+  leftToPlace,
+  miseEntries,
+  placeSpoof,
+  spotForTap,
+  startMise,
+  whoseTurn,
+  MISE_TURNS,
+  type MiseState,
+} from '../game/mise';
 import { PRESET_HOME, PRESET_VISITOR } from '../game/preset-teams';
-import { createRandom } from '../game/random';
+import { createRandom, type Random } from '../game/random';
 import { finalScores, liveScores, type Scores } from '../game/scoring';
-import { simulateScrum, type ScrumFrame } from '../game/scrum';
+import { simulateScrum, type ScrumEntry, type ScrumFrame } from '../game/scrum';
 import { avatarOf, type SpoofType } from '../game/spoof-types';
 import { SCRUM_SECONDS } from '../game/spoof-motion';
-import { lineupEntries, type Lineup } from '../game/teams';
+import type { Lineup, Spoof } from '../game/teams';
 import type { Panel } from './app-shell';
 import { drawArena, drawSpoofInArena } from './arena';
-import { arenaHeightFor, fitArena, type ArenaView } from './arena-view';
+import { arenaHeightFor, courtPointAt, fitArena, type ArenaView } from './arena-view';
 import { createCanvas } from './canvas';
-import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
 import { drawImpactRing, impactsAt, type Impact } from './impacts';
+import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
 import { drawSpoofDisc } from './spoof-disc';
 
 /**
- * The Match screen (#38): press Start scrum and watch the two preset teams
- * play an 8-second scrum, with a live scoreboard and clock, then the result.
- * The scrum is simulated up front, then played back at the screen's frame
- * rate (the plan's default 1, #33). Tap the arena or Pause to pause, and
- * leaving the tab or the page pauses too.
+ * The Match screen. First the mise (#39): the two teams take turns placing 3
+ * spoofs each, you by tapping a spoof on your bench and then a spot on the
+ * court, the Embers by themselves after a short pause. Then press Start scrum
+ * and watch the 8-second scrum (#38), with a live scoreboard and clock, then
+ * the result. The scrum is simulated up front, then played back at the
+ * screen's frame rate. Tap the arena or Pause to pause, and leaving the tab
+ * or the page pauses too.
  *
- * How opponents collide and how lively spoofs are use the game's defaults,
- * which the owner picked on review-only sliders during #49.
+ * A match's random choices (the host, the turn order, the Embers' moves, the
+ * scrum) all come from one seed, so with your taps it can be replayed.
  */
 
 const MAX_ARENA_WIDTH = 480;
 /** The longest a single display frame may advance playback, so a hiccup doesn't skip ahead. */
 const MAX_STEP_SECONDS = 0.1;
+/** How long the Embers wait before placing a spoof, so you can follow them. */
+const COMPUTER_PAUSE_MS = 900;
 
-type Status = 'ready' | 'playing' | 'paused' | 'done';
+type Status = 'mise' | 'ready' | 'playing' | 'paused' | 'done';
 
-const LINEUPS: readonly Lineup[] = [PRESET_HOME, PRESET_VISITOR];
-const ENTRIES = LINEUPS.flatMap(lineupEntries);
+const YOU: BenchSide = 'home';
+const COMPUTER: BenchSide = 'visitor';
+const LINEUPS: Readonly<Record<BenchSide, Lineup>> = { home: PRESET_HOME, visitor: PRESET_VISITOR };
+const TEAMS: Readonly<Record<BenchSide, readonly Spoof[]>> = {
+  home: PRESET_HOME.team.spoofs,
+  visitor: PRESET_VISITOR.team.spoofs,
+};
+const SIDES: readonly BenchSide[] = ['home', 'visitor'];
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string) {
   const node = document.createElement(tag);
@@ -54,35 +78,41 @@ function avatarName(type: SpoofType): string {
 }
 
 interface Played {
-  readonly seed: number;
   readonly frames: readonly ScrumFrame[];
   readonly live: readonly Scores[];
   readonly final: Scores;
+  readonly entries: readonly ScrumEntry[];
 }
 
-function play(seed: number): Played {
-  const result = simulateScrum(ENTRIES, { random: createRandom(seed) });
+function play(entries: readonly ScrumEntry[], seed: number): Played {
+  const result = simulateScrum(entries, { random: createRandom(seed) });
   const last = result.frames[result.frames.length - 1];
   if (!last) throw new Error('A scrum produced no frames');
   return {
-    seed,
-    frames: [startFrame(ENTRIES), ...result.frames],
+    frames: [startFrame(entries), ...result.frames],
     live: liveScores(result.frames),
     final: finalScores(last),
+    entries,
   };
 }
 
 export function createMatchScreen(): Panel {
   const kits = matchKits(PRESET_HOME.team.color, PRESET_VISITOR.team.color);
   const kitFor = (side: string): Kit => (side === 'home' ? kits.home : kits.visitor);
-  const typeOf = new Map(LINEUPS.flatMap((l) => l.team.spoofs.map((s) => [s.id, s.type] as const)));
+  const typeOf = new Map(SIDES.flatMap((side) => TEAMS[side].map((s) => [s.id, s.type] as const)));
+  const nameOf = (side: BenchSide) => LINEUPS[side].team.name;
 
-  let status: Status = 'ready';
+  let status: Status = 'mise';
   let seconds = 0;
   let lastTick = 0;
-  let scrum: Played | null = null;
   let raf = 0;
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let random: Random = createRandom(1);
+  let mise: MiseState = startMise(drawOrder('visitor', random));
+  let picked: Spoof | null = null;
+  /** The Embers' latest placement, outlined so you can see where it went. */
+  let justPlaced: string | null = null;
+  let computerTimer = 0;
+  let scrum: Played | null = null;
 
   // --- Scoreboard ---------------------------------------------------------
   const board = el('div', 'scoreboard');
@@ -99,13 +129,20 @@ export function createMatchScreen(): Panel {
   const home = side(PRESET_HOME);
   const visitor = side(PRESET_VISITOR);
   const middle = el('div', 'scoreboard-middle');
-  const clockText = el('span', 'scoreboard-clock', '8.0 s');
+  const middleLabel = el('span', 'scoreboard-label', 'Mise');
+  const clockText = el('span', 'scoreboard-clock', '');
   const clockBar = el('div', 'clock-bar');
   const clockFill = el('div', 'clock-fill');
   clockBar.append(clockFill);
   clockBar.setAttribute('aria-hidden', 'true');
-  middle.append(el('span', 'scoreboard-label', 'Scrum'), clockText);
+  middle.append(middleLabel, clockText);
   board.append(home.block, middle, visitor.block);
+
+  // --- Mise turns: a dot per turn, in each team's kit ------------------------
+  const turnStrip = el('ol', 'mise-turns');
+  turnStrip.setAttribute('aria-hidden', 'true');
+  const statusLine = el('p', 'match-status');
+  statusLine.setAttribute('aria-live', 'polite');
 
   // --- Arena ----------------------------------------------------------------
   const stage = el('div', 'match-stage');
@@ -114,6 +151,7 @@ export function createMatchScreen(): Panel {
   let ctx: CanvasRenderingContext2D | null = null;
   let view: ArenaView | null = null;
   const bounds = arenaBounds();
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   // --- Controls -----------------------------------------------------------
   const controls = el('div', 'match-controls');
@@ -121,7 +159,6 @@ export function createMatchScreen(): Panel {
   startButton.type = 'button';
   const pauseButton = el('button', 'button', 'Pause');
   pauseButton.type = 'button';
-  pauseButton.hidden = true;
   controls.append(startButton, pauseButton);
 
   const results = el('section', 'match-results');
@@ -129,11 +166,20 @@ export function createMatchScreen(): Panel {
   results.setAttribute('aria-live', 'polite');
 
   const root = el('div', 'match-screen');
-  root.append(board, clockBar, stage, controls, results);
+  root.append(board, clockBar, turnStrip, stage, statusLine, controls, results);
 
   // --- Drawing -------------------------------------------------------------
-  function current(): ScrumFrame {
-    return scrum ? frameAt(scrum.frames, seconds) : startFrame(ENTRIES);
+  /** Where each spoof is: on the court if placed (or playing), otherwise in its seat. */
+  function onCourt(): ScrumFrame['spoofs'] {
+    if (scrum) return frameAt(scrum.frames, seconds).spoofs;
+    return mise.placements.map((p) => ({
+      id: p.spoofId,
+      team: p.team,
+      x: p.x,
+      y: p.y,
+      radius: p.radius,
+      fatigue: 0,
+    }));
   }
 
   function draw(): void {
@@ -142,24 +188,25 @@ export function createMatchScreen(): Panel {
     const v = view;
     c.clearRect(0, 0, c.canvas.width, c.canvas.height);
     drawArena(c, v);
-    // Benched spoofs wait in their seats.
-    for (const lineup of LINEUPS) {
-      const seats = benchSeats(lineup.side);
-      for (const spoof of lineup.team.spoofs) {
-        const spot = lineup.spots[spoof.id];
-        if (!spot || !('seat' in spot)) continue;
-        const seat = seats[spot.seat];
-        if (!seat) continue;
+    const spoofs = onCourt();
+    const playing = new Set(spoofs.map((s) => `${s.team}|${s.id}`));
+    // Spoofs not on the court wait in their seats: spoof k in seat k.
+    for (const team of SIDES) {
+      const seats = benchSeats(team);
+      TEAMS[team].forEach((spoof, k) => {
+        const seat = seats[k];
+        if (!seat || playing.has(`${team}|${spoof.id}`)) return;
         drawSpoofInArena(c, v, {
           x: seat.x,
           y: seat.y,
           radius: spoof.radius,
           type: spoof.type,
-          kit: kitFor(lineup.side),
+          kit: kitFor(team),
+          highlighted: picked?.id === spoof.id && team === YOU,
         });
-      }
+      });
     }
-    for (const s of current().spoofs) {
+    for (const s of spoofs) {
       const type = typeOf.get(s.id);
       if (!type) continue;
       drawSpoofInArena(c, v, {
@@ -169,6 +216,7 @@ export function createMatchScreen(): Panel {
         type,
         kit: kitFor(s.team),
         fatigue: Math.min(100, s.fatigue),
+        highlighted: status === 'mise' && s.team === COMPUTER && s.id === justPlaced,
       });
     }
     // Hit cues go on top, so a hit shows even where discs overlap.
@@ -176,9 +224,9 @@ export function createMatchScreen(): Panel {
     for (const impact of showingImpacts()) drawImpactRing(c, v, impact, reduced);
   }
 
-  /** The hit cues showing now. None before a scrum or once it's over, so the final picture is clear. */
+  /** The hit cues showing now: only while a scrum plays or is paused. */
   function showingImpacts(): Impact[] {
-    if (!scrum || status === 'done' || status === 'ready') return [];
+    if (!scrum || (status !== 'playing' && status !== 'paused')) return [];
     return impactsAt(scrum.frames, seconds);
   }
 
@@ -190,14 +238,58 @@ export function createMatchScreen(): Panel {
     canvas = made.canvas;
     ctx = made.ctx;
     view = fitArena(bounds, width, height);
-    canvas.addEventListener('click', togglePause);
+    canvas.addEventListener('click', onArenaTap);
     stage.replaceChildren(canvas);
     draw();
   }
 
   // --- Text and labels -------------------------------------------------------
+  function drawTurns(): void {
+    turnStrip.hidden = status !== 'mise' && status !== 'ready';
+    turnStrip.replaceChildren(
+      ...mise.order.map((team, turn) => {
+        const dot = el('li', 'mise-turn');
+        const kit = kitFor(team);
+        dot.style.borderColor = kit.trim;
+        if (turn < mise.placements.length) dot.style.background = kit.fill;
+        if (turn === mise.placements.length) dot.classList.add('mise-turn-now');
+        return dot;
+      }),
+    );
+  }
+
+  /** The instruction or state shown under the arena, also read out to screen readers. */
+  function miseMessage(): string {
+    const turn = whoseTurn(mise);
+    if (!turn) return `All ${String(MISE_TURNS)} spoofs are placed. Press Start scrum.`;
+    if (turn === COMPUTER) return `The ${nameOf(COMPUTER)} are placing a spoof…`;
+    if (!picked) return 'Your turn: tap a spoof on your bench.';
+    return `Your turn: tap the court to place your ${avatarName(picked.type).toLowerCase()}, or pick another.`;
+  }
+
   let lastLabelSecond = -1;
   function updateText(force = false): void {
+    if (status === 'mise' || status === 'ready') {
+      middleLabel.textContent = 'Mise';
+      const turn = Math.min(mise.placements.length + 1, MISE_TURNS);
+      clockText.textContent = `Turn ${String(turn)} of ${String(MISE_TURNS)}`;
+      home.score.textContent = `${String(leftToPlace(mise, 'home'))} to place`;
+      visitor.score.textContent = `${String(leftToPlace(mise, 'visitor'))} to place`;
+      clockBar.hidden = true;
+      drawTurns();
+      const state =
+        status === 'ready'
+          ? 'The mise is over.'
+          : `Turn ${String(turn)} of ${String(MISE_TURNS)}: the ${nameOf(whoseTurn(mise) ?? YOU)} place a spoof.`;
+      stage.setAttribute(
+        'aria-label',
+        `The court. ${state} ${nameOf('home')} have ${String(leftToPlace(mise, 'home'))} to place, ${nameOf('visitor')} ${String(leftToPlace(mise, 'visitor'))}.`,
+      );
+      return;
+    }
+    middleLabel.textContent = 'Scrum';
+    clockBar.hidden = false;
+    drawTurns();
     const left = Math.max(0, SCRUM_SECONDS - seconds);
     const scores =
       status === 'done' && scrum ? scrum.final : scrum ? scoresAt(scrum.live, seconds) : null;
@@ -208,9 +300,8 @@ export function createMatchScreen(): Panel {
     const whole = Math.floor(seconds);
     if (!force && whole === lastLabelSecond) return;
     lastLabelSecond = whole;
-    const score = `${PRESET_HOME.team.name} ${home.score.textContent}, ${PRESET_VISITOR.team.name} ${visitor.score.textContent}`;
+    const score = `${nameOf('home')} ${home.score.textContent}, ${nameOf('visitor')} ${visitor.score.textContent}`;
     const state = {
-      ready: 'Ready to start. Each team has 3 spoofs on the court and 2 on its bench.',
       playing: `Scrum playing, ${left.toFixed(0)} seconds left. ${score}.`,
       paused: `Scrum paused, ${left.toFixed(0)} seconds left. ${score}.`,
       done: `Scrum over. Final score: ${score}.`,
@@ -218,18 +309,22 @@ export function createMatchScreen(): Panel {
     stage.setAttribute('aria-label', `The court. ${state}`);
   }
 
+  function say(message: string): void {
+    statusLine.textContent = message;
+  }
+
   function showResults(): void {
     if (!scrum) return;
     const final = scrum.final;
     results.replaceChildren(el('h2', 'match-results-title', 'Final score'));
-    for (const lineup of LINEUPS) {
+    for (const team of SIDES) {
       const list = el('ul', 'match-results-list');
       const heading = el(
         'h3',
         'match-results-team',
-        `${lineup.team.name} ${String(final.teams[lineup.side] ?? 0)}`,
+        `${nameOf(team)} ${String(final.teams[team] ?? 0)}`,
       );
-      for (const entry of ENTRIES.filter((e) => e.team === lineup.side)) {
+      for (const entry of scrum.entries.filter((e) => e.team === team)) {
         const item = el('li', 'match-results-row');
         const { canvas: disc, ctx: discCtx } = createCanvas(28, 28);
         disc.setAttribute('aria-hidden', 'true');
@@ -238,7 +333,7 @@ export function createMatchScreen(): Panel {
           y: 14,
           radius: 11,
           type: entry.spoof.type,
-          kit: kitFor(lineup.side),
+          kit: kitFor(team),
         });
         const points = final.spoofs[entry.spoof.id] ?? 0;
         item.append(
@@ -254,11 +349,99 @@ export function createMatchScreen(): Panel {
   }
 
   function updateControls(): void {
-    startButton.hidden = status === 'playing' || status === 'paused';
-    startButton.textContent = status === 'done' ? 'Start another scrum' : 'Start scrum';
+    startButton.hidden = !(status === 'ready' || status === 'done');
+    startButton.textContent = status === 'done' ? 'New match' : 'Start scrum';
     pauseButton.hidden = !(status === 'playing' || status === 'paused');
     pauseButton.textContent = status === 'paused' ? 'Resume' : 'Pause';
     pauseButton.setAttribute('aria-pressed', String(status === 'paused'));
+    if (canvas) canvas.style.cursor = status === 'mise' && whoseTurn(mise) === YOU ? 'pointer' : '';
+  }
+
+  function refresh(): void {
+    draw();
+    updateText(true);
+    updateControls();
+  }
+
+  // --- The mise ----------------------------------------------------------------
+  function newMatch(): void {
+    window.clearTimeout(computerTimer);
+    cancelAnimationFrame(raf);
+    random = createRandom(newSeed());
+    // The host places last; picked at random each match (docs/design.md).
+    const host = random.pick(SIDES);
+    mise = startMise(drawOrder(host, random));
+    picked = null;
+    justPlaced = null;
+    scrum = null;
+    seconds = 0;
+    status = 'mise';
+    results.hidden = true;
+    say(miseMessage());
+    refresh();
+    nextTurn();
+  }
+
+  /** Moves the mise on: the Embers play after a pause; on your turn it waits for a tap. */
+  function nextTurn(): void {
+    if (isMiseOver(mise)) {
+      const hadFocus = document.activeElement === pauseButton;
+      status = 'ready';
+      say(miseMessage());
+      refresh();
+      if (hadFocus) startButton.focus();
+      return;
+    }
+    if (whoseTurn(mise) !== COMPUTER) return;
+    computerTimer = window.setTimeout(() => {
+      const move = computerMove(mise, COMPUTER, TEAMS[COMPUTER], random);
+      mise = placeSpoof(mise, move.spoof, COMPUTER, move.spot);
+      justPlaced = move.spoof.id;
+      say(miseMessage());
+      refresh();
+      nextTurn();
+    }, COMPUTER_PAUSE_MS);
+  }
+
+  function onMiseTap(px: number, py: number): void {
+    if (!view) return;
+    if (whoseTurn(mise) !== YOU) {
+      say(`Wait for the ${nameOf(COMPUTER)} to place their spoof.`);
+      return;
+    }
+    const point = courtPointAt(view, px, py);
+    const seat = seatAt(YOU, point.x, point.y);
+    if (seat) {
+      const spoof = TEAMS[YOU][seat.index];
+      const placed = mise.placements.some((p) => p.team === YOU && p.spoofId === spoof?.id);
+      if (spoof && !placed) {
+        // Tapping the picked spoof again puts it back down.
+        picked = picked?.id === spoof.id ? null : spoof;
+        say(miseMessage());
+        draw();
+      }
+      return;
+    }
+    if (!picked) {
+      say('Tap a spoof on your bench first.');
+      return;
+    }
+    const result = spotForTap(mise, YOU, point, picked.radius);
+    if ('refusal' in result) {
+      say(REFUSAL_TEXT[result.refusal]);
+      return;
+    }
+    mise = placeSpoof(mise, picked, YOU, result.spot);
+    picked = null;
+    justPlaced = null;
+    say(miseMessage());
+    refresh();
+    nextTurn();
+  }
+
+  function onArenaTap(event: MouseEvent): void {
+    if (status === 'mise') onMiseTap(event.offsetX, event.offsetY);
+    else togglePause();
   }
 
   // --- Playback loop ---------------------------------------------------------
@@ -270,9 +453,8 @@ export function createMatchScreen(): Panel {
     if (isOver(seconds)) {
       const hadFocus = document.activeElement === pauseButton;
       status = 'done';
-      draw();
-      updateText(true);
-      updateControls();
+      say('');
+      refresh();
       showResults();
       // Pause hides at the end; keep a keyboard user on the controls.
       if (hadFocus) startButton.focus();
@@ -295,10 +477,12 @@ export function createMatchScreen(): Panel {
     if (hadFocus) pauseButton.focus();
   }
 
-  function start(seed: number): void {
-    scrum = play(seed);
+  function startScrum(): void {
+    // The scrum's seed comes from the match's, after the mise's choices.
+    scrum = play(miseEntries(mise, TEAMS), random.int(1, 2 ** 31 - 1));
     seconds = 0;
     results.hidden = true;
+    say('');
     run();
   }
 
@@ -317,7 +501,8 @@ export function createMatchScreen(): Panel {
 
   // --- Events -----------------------------------------------------------------
   startButton.addEventListener('click', () => {
-    start(newSeed());
+    if (status === 'ready') startScrum();
+    else if (status === 'done') newMatch();
   });
   pauseButton.addEventListener('click', togglePause);
   document.addEventListener('visibilitychange', () => {
@@ -331,8 +516,7 @@ export function createMatchScreen(): Panel {
     rebuildCanvas();
   }).observe(stage);
 
-  updateControls();
-  updateText(true);
+  newMatch();
 
   return { element: root, hide: pause };
 }

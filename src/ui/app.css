@@ -208,6 +208,36 @@ body {
   background: var(--color-accent);
 }
 
+/* The mise's 6 turns (#39): a dot per turn in the team's kit, filled once taken. */
+.mise-turns {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mise-turn {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 3px solid;
+  border-radius: var(--radius-circle);
+  background: var(--color-surface);
+}
+
+.mise-turn-now {
+  outline: 2px solid var(--color-highlight);
+  outline-offset: 2px;
+}
+
+/* What to do now, or why a tap was refused. Read out to screen readers. */
+.match-status {
+  min-height: 1.5em;
+  margin: 0;
+  text-align: center;
+}
+
 .match-swatch {
   width: 1rem;
   height: 1rem;
