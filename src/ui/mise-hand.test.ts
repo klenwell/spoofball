@@ -5,6 +5,7 @@ import { placeSpoof, startMise, whoseTurn, type MiseOrder } from '../game/mise';
 import { PRESET_HOME } from '../game/preset-teams';
 import {
   GRACE_SECONDS,
+  RED_LINE_PULL,
   TAP_SLOP,
   aim,
   cancel,
@@ -71,6 +72,11 @@ describe('dragging a spoof from the bench', () => {
     expect(aim(held, 'home')).toMatchObject({ kind: 'refused', refusal: 'apron-rule' });
   });
 
+  it('lands where you let go, even if the last move was reported somewhere else', () => {
+    const held = drag(press(fresh(), 'home', TEAM, seat(0)), apron(0));
+    expect(release(held, 'home', apron(60), 0).pending?.spot.x).toBeCloseTo(apron(60).x);
+  });
+
   it('sends it back to its seat when dropped on a spot that is not allowed, with the reason', () => {
     const hand = dragTo(fresh(), seat(0), { x: COURT_RADIUS + 40, y: 0 });
     expect(hand.pending).toBeNull();
@@ -107,7 +113,7 @@ describe('the grace period', () => {
   const placed = dragTo(fresh(), seat(0), apron(0), 10);
 
   it(`locks the spoof in after ${String(GRACE_SECONDS)} s, and the turn passes`, () => {
-    expect(GRACE_SECONDS).toBe(1.5);
+    expect(GRACE_SECONDS).toBe(1);
     expect(tick(placed, 'home', 10 + GRACE_SECONDS * 0.99).pending).not.toBeNull();
     const locked = tick(placed, 'home', 10 + GRACE_SECONDS);
     expect(locked.pending).toBeNull();
@@ -258,5 +264,58 @@ describe('cancel', () => {
   it('keeps a tap pick', () => {
     const picked = tap(fresh(), seat(1));
     expect(cancel(picked)).toBe(picked);
+  });
+});
+
+describe("the red line's resistance", () => {
+  const spoof = TEAM[0];
+  if (!spoof) throw new Error('no spoof');
+  /** Where a spoof's center is when it just touches the red line from the apron. */
+  const edge = MOSH_RADIUS + spoof.radius;
+  const east = (d: number) => ({ x: d, y: 0 });
+  const dragged = (...points: { x: number; y: number }[]) =>
+    points.reduce((hand, at) => drag(hand, at), press(fresh(), 'home', TEAM, seat(0)));
+
+  it(`holds a spoof from the apron on the apron until it's pushed ${String(RED_LINE_PULL)} units past the line, even with the spot inside unused`, () => {
+    expect(RED_LINE_PULL).toBe(12);
+    const held = aim(dragged(apron(0), east(edge - RED_LINE_PULL + 1)), 'home');
+    expect(held).toMatchObject({ kind: 'spot', inside: false, resisted: true });
+    if (held?.kind !== 'spot') throw new Error('no spot');
+    expect(Math.hypot(held.spot.x, held.spot.y)).toBeCloseTo(edge);
+  });
+
+  it('lets it cross once pushed past the pull', () => {
+    expect(aim(dragged(apron(0), east(edge - RED_LINE_PULL)), 'home')).toMatchObject({
+      kind: 'spot',
+      inside: true,
+      resisted: false,
+    });
+  });
+
+  it('lets a spoof that has crossed move freely inside, right up to the line', () => {
+    const back = aim(dragged(apron(0), east(40), east(edge - 2)), 'home');
+    expect(back).toMatchObject({ kind: 'spot', inside: true, resisted: false });
+  });
+
+  it('holds it back again once it has been dragged back out onto the apron', () => {
+    const again = aim(dragged(apron(0), east(40), east(edge + 5), east(edge - 2)), 'home');
+    expect(again).toMatchObject({ kind: 'spot', inside: false, resisted: true });
+  });
+
+  it('places it against the line when let go there', () => {
+    const at = east(edge - 5);
+    const placed = release(dragged(apron(0), at), 'home', at, 0);
+    expect(placed.pending?.spot.x).toBeCloseTo(edge);
+  });
+
+  it('lets a pending spoof already inside the line move freely there', () => {
+    const inside = dragTo(fresh(), seat(0), east(30), 0);
+    const moved = drag(drag(press(inside, 'home', TEAM, east(30)), east(edge - 3)), east(edge - 2));
+    expect(aim(moved, 'home')).toMatchObject({ kind: 'spot', inside: true, resisted: false });
+  });
+
+  it("doesn't hold back a tap: it goes where you aim", () => {
+    const placed = tap(tap(fresh(), seat(0)), east(edge - 5));
+    expect(placed.pending?.spot.x).toBeCloseTo(edge - 5);
   });
 });

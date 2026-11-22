@@ -1,4 +1,4 @@
-import { palette } from '../design/tokens';
+import { fontFamily, palette } from '../design/tokens';
 import type { Court } from '../game/court';
 import type { Vec } from '../game/vec';
 import type { ArenaView } from './arena-view';
@@ -91,5 +91,30 @@ export function drawGraceRing(
   ctx.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
   ctx.strokeStyle = palette.highlight;
   ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * The cue that the scrum is about to start, once all 6 spoofs are placed: a
+ * white pill reading "Scrum!" over the center of the court.
+ */
+export function drawScrumCue(ctx: CanvasRenderingContext2D, view: ArenaView): void {
+  const size = Math.max(18, 22 * view.scale);
+  ctx.save();
+  ctx.font = `700 ${String(size)}px ${fontFamily.body}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const text = 'Scrum!';
+  const width = ctx.measureText(text).width + size * 1.4;
+  const height = size * 1.8;
+  ctx.beginPath();
+  ctx.roundRect(view.cx - width / 2, view.cy - height / 2, width, height, height / 2);
+  ctx.fillStyle = palette.white;
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = palette.highlight;
+  ctx.stroke();
+  ctx.fillStyle = palette.text;
+  ctx.fillText(text, view.cx, view.cy);
   ctx.restore();
 }

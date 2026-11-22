@@ -4,6 +4,7 @@ import {
   REFUSAL_TEXT,
   computerMove,
   drawOrder,
+  insideSpotsLeft,
   isMiseOver,
   leftToPlace,
   miseEntries,
@@ -24,7 +25,13 @@ import { drawArena, drawSpoofInArena } from './arena';
 import { arenaHeightFor, courtPointAt, fitArena, type ArenaView } from './arena-view';
 import { createCanvas } from './canvas';
 import { drawImpactRing, impactsAt, type Impact } from './impacts';
-import { drawGraceRing, drawInsideLine, drawPlacingHalo, drawRefusedRing } from './mise-draw';
+import {
+  drawGraceRing,
+  drawInsideLine,
+  drawPlacingHalo,
+  drawRefusedRing,
+  drawScrumCue,
+} from './mise-draw';
 import {
   aim,
   cancel,
@@ -58,6 +65,8 @@ const MAX_ARENA_WIDTH = 480;
 const MAX_STEP_SECONDS = 0.1;
 /** How long the Embers wait before placing a spoof, so you can follow them. */
 const COMPUTER_PAUSE_MS = 900;
+/** How long the "Scrum!" cue shows once all 6 spoofs are placed, before the scrum starts by itself. */
+const SCRUM_CUE_MS = 1000;
 /**
  * How far above a finger a dragged spoof is held, in court units, so the
  * finger doesn't hide where it will land. A mouse drags it right under the pointer.
@@ -177,11 +186,11 @@ export function createMatchScreen(): Panel {
 
   // --- Controls -----------------------------------------------------------
   const controls = el('div', 'match-controls');
-  const startButton = el('button', 'button button-primary', 'Start scrum');
-  startButton.type = 'button';
+  const newMatchButton = el('button', 'button button-primary', 'New match');
+  newMatchButton.type = 'button';
   const pauseButton = el('button', 'button', 'Pause');
   pauseButton.type = 'button';
-  controls.append(startButton, pauseButton);
+  controls.append(newMatchButton, pauseButton);
 
   const results = el('section', 'match-results');
   results.hidden = true;
@@ -246,6 +255,7 @@ export function createMatchScreen(): Panel {
       });
     }
     if (status === 'mise') drawHand(c, v);
+    if (status === 'ready') drawScrumCue(c, v);
     // Hit cues go on top, so a hit shows even where discs overlap.
     const reduced = reducedMotion.matches;
     for (const impact of showingImpacts()) drawImpactRing(c, v, impact, reduced);
@@ -324,14 +334,18 @@ export function createMatchScreen(): Panel {
   /** The instruction or state shown under the arena, also read out to screen readers. */
   function miseMessage(): string {
     const turn = whoseTurn(hand.mise);
-    if (!turn) return `All ${String(MISE_TURNS)} spoofs are placed. Press Start scrum.`;
+    if (!turn) return `All ${String(MISE_TURNS)} spoofs are placed. Scrum!`;
     if (turn === COMPUTER) return `The ${nameOf(COMPUTER)} are placing a spoof…`;
     const held = hand.held;
     const landing = aim(hand, YOU);
     if (landing?.kind === 'bench') return 'Let go to put it back on your bench.';
     if (landing?.kind === 'refused') return REFUSAL_TEXT[landing.refusal];
     if (landing?.kind === 'spot') {
-      return landing.inside ? 'Your one spot inside the red line.' : 'Let go to place it here.';
+      if (landing.inside) return 'Your one spot inside the red line.';
+      if (landing.resisted && insideSpotsLeft(hand.mise, YOU) > 0) {
+        return 'Push past the red line to use your one spot inside.';
+      }
+      return 'Let go to place it here.';
     }
     if (hand.refusal) return REFUSAL_TEXT[hand.refusal];
     if (hand.pending) {
@@ -426,8 +440,7 @@ export function createMatchScreen(): Panel {
   }
 
   function updateControls(): void {
-    startButton.hidden = !(status === 'ready' || status === 'done');
-    startButton.textContent = status === 'done' ? 'New match' : 'Start scrum';
+    newMatchButton.hidden = status !== 'done';
     pauseButton.hidden = !(status === 'playing' || status === 'paused');
     pauseButton.textContent = status === 'paused' ? 'Resume' : 'Pause';
     pauseButton.setAttribute('aria-pressed', String(status === 'paused'));
@@ -466,11 +479,11 @@ export function createMatchScreen(): Panel {
   /** Moves the mise on: the Embers play after a pause; on your turn it waits for a tap. */
   function nextTurn(): void {
     if (isMiseOver(hand.mise)) {
-      const hadFocus = document.activeElement === pauseButton;
+      // All placed: a quick cue, then the scrum starts by itself (the owner, #39).
       status = 'ready';
       say(miseMessage());
       refresh();
-      if (hadFocus) startButton.focus();
+      computerTimer = window.setTimeout(startScrum, SCRUM_CUE_MS);
       return;
     }
     if (whoseTurn(hand.mise) !== COMPUTER) return;
@@ -573,7 +586,7 @@ export function createMatchScreen(): Panel {
       refresh();
       showResults();
       // Pause hides at the end; keep a keyboard user on the controls.
-      if (hadFocus) startButton.focus();
+      if (hadFocus) newMatchButton.focus();
       return;
     }
     draw();
@@ -582,14 +595,14 @@ export function createMatchScreen(): Panel {
   }
 
   function run(): void {
-    const hadFocus = document.activeElement === startButton;
+    const hadFocus = document.activeElement === newMatchButton;
     status = 'playing';
     lastTick = performance.now();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tick);
     updateControls();
     updateText(true);
-    // Start hides while it has focus; keep a keyboard user on the controls.
+    // New match hides while it has focus; keep a keyboard user on the controls.
     if (hadFocus) pauseButton.focus();
   }
 
@@ -600,6 +613,8 @@ export function createMatchScreen(): Panel {
     results.hidden = true;
     say('');
     run();
+    // If you left the page during the cue, it starts paused.
+    if (document.hidden) pause();
   }
 
   function pause(): void {
@@ -616,9 +631,8 @@ export function createMatchScreen(): Panel {
   }
 
   // --- Events -----------------------------------------------------------------
-  startButton.addEventListener('click', () => {
-    if (status === 'ready') startScrum();
-    else if (status === 'done') newMatch();
+  newMatchButton.addEventListener('click', () => {
+    if (status === 'done') newMatch();
   });
   pauseButton.addEventListener('click', togglePause);
   document.addEventListener('visibilitychange', () => {

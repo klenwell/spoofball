@@ -9,6 +9,7 @@ import {
   checkSpot,
   computerMove,
   drawOrder,
+  insideSpotsLeft,
   isMiseOver,
   isOnApron,
   leftToPlace,
@@ -216,6 +217,20 @@ describe('checkSpot', () => {
   it('counts a disc reaching over the mosh as inside, not on the apron', () => {
     const state = withPlacements(placed('home', 0, 0));
     expect(checkSpot(state, 'home', MOSH_RADIUS + 5, 40, 15)).toBe('apron-rule');
+  });
+});
+
+describe('insideSpotsLeft', () => {
+  it("is 1 until a team places a spoof off the apron, then 0; the other team's don't count", () => {
+    expect(insideSpotsLeft(startMise(ORDER), 'home')).toBe(1);
+    expect(
+      insideSpotsLeft(
+        withPlacements(placed('home', ...([apronSpot(0).x, apronSpot(0).y] as const))),
+        'home',
+      ),
+    ).toBe(1);
+    expect(insideSpotsLeft(withPlacements(placed('home', 0, 0)), 'home')).toBe(0);
+    expect(insideSpotsLeft(withPlacements(placed('visitor', 0, 0)), 'home')).toBe(1);
   });
 });
 

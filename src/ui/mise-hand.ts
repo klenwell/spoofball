@@ -27,8 +27,16 @@ import type { Vec } from '../game/vec';
  *   in, and sends the placed one back to the bench.
  */
 
-/** How long a placed spoof can still be moved before it locks: the prototype's 1.5 s. */
-export const GRACE_SECONDS = 1.5;
+/** How long a placed spoof can still be moved before it locks: 1 s (the owner, 2026-11-22; the prototype's was 1.5 s). */
+export const GRACE_SECONDS = 1;
+
+/**
+ * How far past the red line a spoof dragged from the apron must be pushed
+ * before it crosses, in court units (the owner, 2026-11-22). Until then it
+ * stays on the apron, against the line, so your one spot inside is never
+ * used by accident.
+ */
+export const RED_LINE_PULL = 12;
 
 /** How far a press may move, in court units, and still count as a tap rather than a drag. */
 export const TAP_SLOP = 4;
@@ -61,6 +69,8 @@ export type Held =
        * finger doesn't hide it on a touch screen. 0 for a mouse.
        */
       readonly lift: number;
+      /** Whether it has been pushed past the red line's pull, so it may go inside. */
+      readonly crossed: boolean;
     };
 
 export interface Hand {
@@ -78,26 +88,64 @@ export function startHand(mise: MiseState): Hand {
 /** Where a spoof being dragged would land, and whether it may. */
 export type Aim =
   | { readonly kind: 'bench' }
-  | { readonly kind: 'spot'; readonly spot: Vec; readonly inside: boolean }
+  | {
+      readonly kind: 'spot';
+      readonly spot: Vec;
+      readonly inside: boolean;
+      /** Whether the red line is holding it on the apron. */
+      readonly resisted: boolean;
+    }
   | { readonly kind: 'refused'; readonly at: Vec; readonly refusal: Refusal };
 
-function aimAt(mise: MiseState, side: BenchSide, spoof: Spoof, at: Vec): Aim {
-  if (isOnBench(side, at.x, at.y, mise.court)) return { kind: 'bench' };
+type Dragging = Extract<Held, { kind: 'dragging' }>;
+
+/** Where a dragged spoof is held: above the finger once it moves, by its lift. */
+export function heldPoint(held: Dragging): Vec {
+  return held.moved ? { x: held.at.x, y: held.at.y - held.lift } : held.at;
+}
+
+/** How far from the center a spoof's center is when it just touches the red line from the apron. */
+const apronEdge = (mise: MiseState, spoof: Spoof) => mise.court.moshRadius + spoof.radius;
+
+/**
+ * Where a dragged spoof would be after the red line's pull: held against the
+ * line on the apron side, unless it has crossed (`crossedNow`, which `drag`
+ * keeps up to date). Null when it isn't held back.
+ */
+function heldBack(mise: MiseState, held: Dragging): Vec | null {
+  if (held.crossed) return null;
+  const p = heldPoint(held);
+  const d = Math.hypot(p.x, p.y);
+  const edge = apronEdge(mise, held.spoof);
+  if (d === 0 || d >= edge) return null;
+  return { x: (p.x * edge) / d, y: (p.y * edge) / d };
+}
+
+/** Whether the dragged spoof has crossed the red line: pushed past its pull, and not since back on the apron. */
+function crossedNow(mise: MiseState, held: Dragging): boolean {
+  const p = heldPoint(held);
+  const d = Math.hypot(p.x, p.y);
+  const edge = apronEdge(mise, held.spoof);
+  if (held.crossed) return d < edge;
+  return d <= edge - RED_LINE_PULL;
+}
+
+function aimAt(mise: MiseState, side: BenchSide, held: Dragging): Aim {
+  const raw = heldPoint(held);
+  if (isOnBench(side, raw.x, raw.y, mise.court)) return { kind: 'bench' };
+  const back = heldBack(mise, held);
+  const at = back ?? raw;
+  const spoof = held.spoof;
   const result = spotForTap(mise, side, at, spoof.radius);
   if ('refusal' in result) return { kind: 'refused', at, refusal: result.refusal };
   const inside = !isOnApron(result.spot.x, result.spot.y, spoof.radius, mise.court);
-  return { kind: 'spot', spot: result.spot, inside };
-}
-
-/** Where a dragged spoof is held: above the finger once it moves, by its lift. */
-export function heldPoint(held: Extract<Held, { kind: 'dragging' }>): Vec {
-  return held.moved ? { x: held.at.x, y: held.at.y - held.lift } : held.at;
+  return { kind: 'spot', spot: result.spot, inside, resisted: back !== null };
 }
 
 /** Where the spoof in hand would land now, or null when nothing is being dragged. */
 export function aim(hand: Hand, side: BenchSide): Aim | null {
   const held = hand.held;
-  return held.kind === 'dragging' ? aimAt(hand.mise, side, held.spoof, heldPoint(held)) : null;
+  return held.kind === 'dragging' ? aimAt(hand.mise, side, held) : null;
 }
 
 /** How far through its grace period the pending spoof is, from 0 to 1. It starts again each time it's put down. */
@@ -140,6 +188,8 @@ export function press(
         moved: false,
         wasPicked: false,
         lift,
+        // Already inside the red line, it moves freely there.
+        crossed: !isOnApron(pending.spot.x, pending.spot.y, pending.spoof.radius, hand.mise.court),
       },
     };
   }
@@ -158,6 +208,7 @@ export function press(
         moved: false,
         wasPicked,
         lift,
+        crossed: false,
       },
     };
   }
@@ -169,7 +220,8 @@ export function drag(hand: Hand, at: Vec): Hand {
   const held = hand.held;
   if (held.kind !== 'dragging') return hand;
   const moved = held.moved || Math.hypot(at.x - held.start.x, at.y - held.start.y) > TAP_SLOP;
-  return { ...hand, held: { ...held, at, moved } };
+  const next = { ...held, at, moved };
+  return { ...hand, held: { ...next, crossed: crossedNow(hand.mise, next) } };
 }
 
 /** Puts a spoof down on a spot, pending, replacing whatever was pending. */
@@ -191,8 +243,11 @@ export function release(hand: Hand, side: BenchSide, at: Vec, now: number): Hand
     return { ...hand, held: { kind: 'picked', spoof: held.spoof }, pending: null };
   }
 
+  // Where it lands is where it was last drawn, after this last move.
+  const last = drag(hand, at).held;
+  if (last.kind !== 'dragging') return hand;
   // A pending spoof isn't in the mise yet, so it never blocks its own new spot.
-  const landing = aimAt(hand.mise, side, held.spoof, heldPoint({ ...held, at }));
+  const landing = aimAt(hand.mise, side, last);
   if (landing.kind === 'spot') {
     return putDown(hand, held.spoof, landing.spot, now);
   }

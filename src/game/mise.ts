@@ -112,6 +112,14 @@ export const REFUSAL_TEXT: Readonly<Record<Refusal, string>> = {
     'Only one of your three can go inside the red line. Place this one on the gray apron.',
 };
 
+/** How many of its spoofs a team may still place off the apron: 1 until it has used its spot inside. */
+export function insideSpotsLeft(state: MiseState, team: BenchSide): number {
+  const used = state.placements.filter(
+    (p) => p.team === team && !isOnApron(p.x, p.y, p.radius, state.court),
+  ).length;
+  return ANYWHERE_ALLOWED - used;
+}
+
 /** Why a spoof of this radius can't go at (x, y) for this team, or null if it can. */
 export function checkSpot(
   state: MiseState,
@@ -124,11 +132,8 @@ export function checkSpot(
   for (const p of state.placements) {
     if (Math.hypot(p.x - x, p.y - y) < p.radius + radius) return 'overlap';
   }
-  if (!isOnApron(x, y, radius, state.court)) {
-    const anywhere = state.placements.filter(
-      (p) => p.team === team && !isOnApron(p.x, p.y, p.radius, state.court),
-    ).length;
-    if (anywhere >= ANYWHERE_ALLOWED) return 'apron-rule';
+  if (!isOnApron(x, y, radius, state.court) && insideSpotsLeft(state, team) <= 0) {
+    return 'apron-rule';
   }
   return null;
 }
