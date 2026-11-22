@@ -1,13 +1,13 @@
 import { palette } from '../design/tokens';
 import {
   BENCH_HALF_WIDTH,
-  BENCH_RADIUS,
+  benchRadius,
   SEAT_RADIUS,
   benchArc,
   benchSeats,
   type BenchSide,
 } from '../game/arena';
-import { COURT_RADIUS, CRUSH_RADIUS, MOSH_RADIUS } from '../game/court';
+import { CRUSH_RADIUS, DEFAULT_COURT, courtRadius, type Court } from '../game/court';
 import type { ArenaView } from './arena-view';
 import { drawSpoofDisc, type SpoofDisc } from './spoof-disc';
 
@@ -37,8 +37,8 @@ function circle(ctx: CanvasRenderingContext2D, radius: number): void {
   ctx.arc(0, 0, radius, 0, Math.PI * 2);
 }
 
-function drawBench(ctx: CanvasRenderingContext2D, side: BenchSide): void {
-  const [start, end] = benchArc(side);
+function drawBench(ctx: CanvasRenderingContext2D, side: BenchSide, court: Court): void {
+  const [start, end] = benchArc(side, court);
   // The band, drawn twice: a slightly wider pass in the edge color, then the
   // bench color on top, leaving a thin outline so the white band reads on the page.
   ctx.lineCap = 'round';
@@ -47,13 +47,13 @@ function drawBench(ctx: CanvasRenderingContext2D, side: BenchSide): void {
     [BENCH_HALF_WIDTH * 2, palette.bench],
   ] as const) {
     ctx.beginPath();
-    ctx.arc(0, 0, BENCH_RADIUS, start, end);
+    ctx.arc(0, 0, benchRadius(court), start, end);
     ctx.lineWidth = width;
     ctx.strokeStyle = color;
     ctx.stroke();
   }
 
-  for (const seat of benchSeats(side)) {
+  for (const seat of benchSeats(side, court)) {
     ctx.beginPath();
     ctx.arc(seat.x, seat.y, SEAT_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = palette.seat;
@@ -61,22 +61,23 @@ function drawBench(ctx: CanvasRenderingContext2D, side: BenchSide): void {
   }
 }
 
-function drawCourt(ctx: CanvasRenderingContext2D): void {
+function drawCourt(ctx: CanvasRenderingContext2D, court: Court): void {
+  const edge = courtRadius(court);
   // Apron: the gray outer ring, under everything else.
-  circle(ctx, COURT_RADIUS);
+  circle(ctx, edge);
   ctx.fillStyle = palette.apron;
   ctx.fill();
 
   // Mosh: the large white circle.
-  circle(ctx, MOSH_RADIUS);
+  circle(ctx, court.moshRadius);
   ctx.fillStyle = palette.mosh;
   ctx.fill();
 
   // Two diagonals quartering the whole court, clipped to its edge.
   ctx.save();
-  circle(ctx, COURT_RADIUS);
+  circle(ctx, edge);
   ctx.clip();
-  const reach = COURT_RADIUS;
+  const reach = edge;
   ctx.beginPath();
   ctx.moveTo(-reach, -reach);
   ctx.lineTo(reach, reach);
@@ -88,7 +89,7 @@ function drawCourt(ctx: CanvasRenderingContext2D): void {
   ctx.restore();
 
   // The mosh's outline.
-  circle(ctx, MOSH_RADIUS);
+  circle(ctx, court.moshRadius);
   ctx.lineWidth = 2;
   ctx.strokeStyle = palette.moshLine;
   ctx.stroke();
@@ -107,19 +108,23 @@ function drawCourt(ctx: CanvasRenderingContext2D): void {
   ctx.stroke();
 
   // The court's edge, so the light apron stands out from the light page.
-  circle(ctx, COURT_RADIUS);
+  circle(ctx, edge);
   ctx.lineWidth = COURT_EDGE_WIDTH;
   ctx.strokeStyle = palette.courtEdge;
   ctx.stroke();
 }
 
-export function drawArena(ctx: CanvasRenderingContext2D, view: ArenaView): void {
+export function drawArena(
+  ctx: CanvasRenderingContext2D,
+  view: ArenaView,
+  court: Court = DEFAULT_COURT,
+): void {
   ctx.save();
   ctx.translate(view.cx, view.cy);
   ctx.scale(view.scale, view.scale);
-  drawBench(ctx, 'visitor');
-  drawBench(ctx, 'home');
-  drawCourt(ctx);
+  drawBench(ctx, 'visitor', court);
+  drawBench(ctx, 'home', court);
+  drawCourt(ctx, court);
   ctx.restore();
 }
 

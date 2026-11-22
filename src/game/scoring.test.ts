@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TEST_SEED } from '../test-support/random';
 import { presetScrumEntries } from '../test-support/scrum';
+import { courtWithMosh } from './court';
 import { createRandom } from './random';
 import {
   SCORING_COEFFICIENT,
@@ -173,5 +174,22 @@ describe('estimatedScore', () => {
   it('is close to the exact score for a spoof in the mosh', () => {
     const s = at('s', 'home', 50, 10, 30);
     expect(Math.abs(estimatedScore(s, [s]) - exactScore(s, [s]))).toBeLessThanOrEqual(1);
+  });
+});
+
+describe('scoring on a court with a smaller mosh (#51)', () => {
+  const small = courtWithMosh(70);
+
+  it("scores a spoof by that court's zones: at radius 85 it's on the apron, so 0", () => {
+    const s = at('s', 'home', 0, 85, 12);
+    expect(exactScore(s, [s])).toBeGreaterThan(0);
+    expect(exactScore(s, [s], small)).toBe(0);
+  });
+
+  it('passes the court through to the final and live scores', () => {
+    const s = at('s', 'home', 0, 85, 12);
+    const frame = { clock: 0, spoofs: [s] };
+    expect(finalScores(frame, small).teams.home).toBe(0);
+    expect(liveScores([frame], small)[0]?.teams.home).toBe(0);
   });
 });

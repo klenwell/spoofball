@@ -1,4 +1,4 @@
-import { COURT_RADIUS } from './court';
+import { DEFAULT_COURT, courtRadius, type Court } from './court';
 import type { Random } from './random';
 import { clampSkill, type SkillName, type Skills } from './skills';
 import { add, dot, length, normalize, rotate, scale, subtract, ZERO, type Vec } from './vec';
@@ -50,15 +50,22 @@ export interface Tuning {
    * rest, so a graceful spoof keeps less than a clumsy one.
    */
   readonly skidFloor: number;
+  /**
+   * How much spoofs value spots with opponents on them, for knocking them off
+   * (#51). Each spoof's temperament scales it. 0 is the AI from #37, which
+   * ignored opponents except to charge a crowd of 2 or more.
+   */
+  readonly aggression: number;
 }
 
 /**
  * The owner's picks on #49 (2026-11-21), after watching scrums with sliders:
  * thinking at 3× the prototype's pace, and a skid keeping at least 10% of a
  * spoof's speed. Past about 3×, more thinking made spoofs hold more, flattened
- * the skill edge, and cost smart spoofs growth (#50).
+ * the skill edge, and cost smart spoofs growth (#50). Aggression 1 is a
+ * starting point for the owner's review on #51.
  */
-export const DEFAULT_TUNING: Tuning = { thinkingPace: 3, skidFloor: 0.1 };
+export const DEFAULT_TUNING: Tuning = { thinkingPace: 3, skidFloor: 0.1, aggression: 1 };
 
 /** Skills a scrum changes as a spoof tires. */
 export type ScrumSkills = Record<SkillName, number>;
@@ -191,8 +198,9 @@ export function keepOnCourt(
   position: Vec,
   velocity: Vec,
   radius: number,
+  court: Court = DEFAULT_COURT,
 ): { position: Vec; velocity: Vec } {
-  const limit = COURT_RADIUS - radius;
+  const limit = courtRadius(court) - radius;
   const fromCenter = length(position);
   if (fromCenter <= limit) return { position, velocity };
   const outward = fromCenter > 0 ? normalize(position) : { x: 1, y: 0 };

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { BENCH_RADIUS, SEATS_PER_BENCH, SEAT_RADIUS, arenaBounds, benchSeats } from './arena';
-import { COURT_RADIUS } from './court';
+import {
+  BENCH_RADIUS,
+  SEATS_PER_BENCH,
+  SEAT_RADIUS,
+  arenaBounds,
+  benchRadius,
+  benchSeats,
+} from './arena';
+import { COURT_RADIUS, courtRadius, courtWithMosh } from './court';
 import { MAX_SPOOF_RADIUS } from './spoof-types';
 
 describe('benchSeats', () => {
@@ -82,5 +89,32 @@ describe('arenaBounds', () => {
   it('is taller than wide, to suit a phone in portrait', () => {
     const { minX, maxX, minY, maxY } = arenaBounds();
     expect(maxY - minY).toBeGreaterThan(maxX - minX);
+  });
+});
+
+describe('the arena on a court with a smaller mosh (#51)', () => {
+  const small = courtWithMosh(70);
+  const neighbourGap = (seats: { x: number; y: number }[]) => {
+    const [a, b] = seats;
+    if (!a || !b) throw new Error('missing seats');
+    return Math.hypot(b.x - a.x, b.y - a.y);
+  };
+
+  it("puts the benches just outside the smaller court's edge", () => {
+    expect(benchRadius(small)).toBe(BENCH_RADIUS - 30);
+    for (const seat of benchSeats('home', small)) {
+      expect(Math.hypot(seat.x, seat.y) - SEAT_RADIUS).toBeGreaterThan(courtRadius(small));
+    }
+  });
+
+  it("keeps the seats as far apart as on today's court, so they don't overlap", () => {
+    expect(neighbourGap(benchSeats('home', small))).toBeCloseTo(neighbourGap(benchSeats('home')));
+  });
+
+  it('shrinks the bounds with the court', () => {
+    const big = arenaBounds();
+    const smaller = arenaBounds(small);
+    expect(smaller.maxX - smaller.minX).toBeLessThan(big.maxX - big.minX);
+    expect(smaller.maxY - smaller.minY).toBeLessThan(big.maxY - big.minY);
   });
 });

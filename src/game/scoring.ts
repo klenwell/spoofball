@@ -1,4 +1,4 @@
-import { zoneAt, zoneMultiplier } from './court';
+import { DEFAULT_COURT, zoneAt, zoneMultiplier, type Court } from './court';
 import type { ScrumFrame, SpoofFrame } from './scrum';
 
 /**
@@ -36,8 +36,9 @@ export function pointValue(
   others: readonly SpoofFrame[],
   x: number,
   y: number,
+  court: Court = DEFAULT_COURT,
 ): number {
-  const zone = zoneMultiplier[zoneAt(x, y)];
+  const zone = zoneMultiplier[zoneAt(x, y, court)];
   if (zone === 0) return 0;
   let team = 0;
   for (const other of others) {
@@ -50,26 +51,39 @@ export function pointValue(
  * Walks the points of a grid with this spacing (aligned to the court's
  * center) that fall inside a spoof, adding up their value.
  */
-function sumOver(spoof: SpoofFrame, spoofs: readonly SpoofFrame[], spacing: number): number {
+function sumOver(
+  spoof: SpoofFrame,
+  spoofs: readonly SpoofFrame[],
+  spacing: number,
+  court: Court,
+): number {
   const minX = Math.ceil((spoof.x - spoof.radius) / spacing) * spacing;
   const minY = Math.ceil((spoof.y - spoof.radius) / spacing) * spacing;
   let total = 0;
   for (let y = minY; y <= spoof.y + spoof.radius; y += spacing) {
     for (let x = minX; x <= spoof.x + spoof.radius; x += spacing) {
-      if (covers(spoof, x, y)) total += pointValue(spoof, spoofs, x, y);
+      if (covers(spoof, x, y)) total += pointValue(spoof, spoofs, x, y, court);
     }
   }
   return total * spacing * spacing;
 }
 
 /** A spoof's exact points from where everyone is: every whole-number point it covers. */
-export function exactScore(spoof: SpoofFrame, spoofs: readonly SpoofFrame[]): number {
-  return Math.round(sumOver(spoof, spoofs, 1) * SCORING_COEFFICIENT);
+export function exactScore(
+  spoof: SpoofFrame,
+  spoofs: readonly SpoofFrame[],
+  court: Court = DEFAULT_COURT,
+): number {
+  return Math.round(sumOver(spoof, spoofs, 1, court) * SCORING_COEFFICIENT);
 }
 
 /** A cheaper estimate of the same, on the live scoreboard's coarse grid. */
-export function estimatedScore(spoof: SpoofFrame, spoofs: readonly SpoofFrame[]): number {
-  return Math.round(sumOver(spoof, spoofs, LIVE_GRID_SPACING) * SCORING_COEFFICIENT);
+export function estimatedScore(
+  spoof: SpoofFrame,
+  spoofs: readonly SpoofFrame[],
+  court: Court = DEFAULT_COURT,
+): number {
+  return Math.round(sumOver(spoof, spoofs, LIVE_GRID_SPACING, court) * SCORING_COEFFICIENT);
 }
 
 export interface Scores {
@@ -89,9 +103,9 @@ function teamTotals(
 }
 
 /** The scrum's result: exact points from the last frame. */
-export function finalScores(frame: ScrumFrame): Scores {
+export function finalScores(frame: ScrumFrame, court: Court = DEFAULT_COURT): Scores {
   const spoofs: Record<string, number> = {};
-  for (const s of frame.spoofs) spoofs[s.id] = exactScore(s, frame.spoofs);
+  for (const s of frame.spoofs) spoofs[s.id] = exactScore(s, frame.spoofs, court);
   return { spoofs, teams: teamTotals(frame, spoofs) };
 }
 
@@ -103,11 +117,11 @@ export function finalScores(frame: ScrumFrame): Scores {
  * at the whistle. This ends within about 2 points of `finalScores`, which is
  * the score that counts, for about 6 ms of work a scrum (#49).
  */
-export function liveScores(frames: readonly ScrumFrame[]): Scores[] {
+export function liveScores(frames: readonly ScrumFrame[], court: Court = DEFAULT_COURT): Scores[] {
   const latest: Record<string, number> = {};
   const result: Scores[] = [];
   frames.forEach((frame) => {
-    for (const s of frame.spoofs) latest[s.id] = estimatedScore(s, frame.spoofs);
+    for (const s of frame.spoofs) latest[s.id] = estimatedScore(s, frame.spoofs, court);
     const spoofs = { ...latest };
     result.push({ spoofs, teams: teamTotals(frame, spoofs) });
   });
