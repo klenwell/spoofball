@@ -241,10 +241,9 @@ body {
 
 /*
  * What to do now, or why a spot was refused, over the Embers' bench, so it's
- * on screen whenever the arena is (the owner, #39). A translucent panel, so
- * the bench shows through; presses pass through it to the arena. Read out to
- * screen readers. match-screen.ts sets its top (the bench's middle seat) and
- * width (the bench's).
+ * on screen whenever the arena is (the owner, #39). Presses pass through it
+ * to the arena. Read out to screen readers. match-screen.ts sets its top (the
+ * bench's middle seat), width (the bench's) and type size (with the arena).
  */
 .match-status {
   position: absolute;
@@ -252,7 +251,9 @@ body {
   transform: translate(-50%, -50%);
   margin: 0;
   padding: var(--space-1) var(--space-2);
-  background: rgb(255 255 255 / 0.88);
+  /* Half see-through, so the bench shows (the owner, 2026-11-22). The text
+     itself stays fully opaque. */
+  background: rgb(255 255 255 / 0.5);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   font-weight: 600;
@@ -268,109 +269,6 @@ body {
 /* The arena: the canvas, with the caption laid over it. */
 .arena-frame {
   position: relative;
-}
-
-.match-swatch {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.scoreboard-name {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-
-.scoreboard-score {
-  grid-column: 1 / -1;
-  font-family: var(--font-numeric);
-  font-size: var(--text-xxl);
-  font-weight: 700;
-  line-height: 1.1;
-}
-
-.scoreboard-unit {
-  grid-column: 1 / -1;
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-}
-
-.scoreboard-middle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--space-1) var(--space-3);
-  background: var(--color-background);
-  border-radius: var(--radius-pill);
-}
-
-.scoreboard-label {
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-}
-
-.scoreboard-clock {
-  font-family: var(--font-numeric);
-  font-size: var(--text-sm);
-  /* "Turn 2 of 6" stays on one line, even on a small phone. */
-  white-space: nowrap;
-}
-
-.clock-bar {
-  height: 6px;
-  background: var(--color-line);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
-}
-
-.clock-fill {
-  height: 100%;
-  width: 100%;
-  background: var(--color-accent);
-}
-
-/* The mise's 6 turns (#39): a dot per turn in the team's kit, filled once taken. */
-.mise-turns {
-  display: flex;
-  justify-content: center;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mise-turn {
-  width: 0.875rem;
-  height: 0.875rem;
-  border: 3px solid;
-  border-radius: var(--radius-circle);
-  background: var(--color-surface);
-}
-
-.mise-turn-now {
-  outline: 2px solid var(--color-highlight);
-  outline-offset: 2px;
-}
-
-/*
- * What to do now, or why a tap was refused, above the arena so it's seen
- * (the owner, #39). Read out to screen readers. It always keeps room for
- * three lines, the longest any caption runs to on a phone 320 to 390 px wide
- * (measured), so the arena never jumps under your finger as the text changes.
- */
-.match-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* 3 lines, the padding and the border (box-sizing is border-box). */
-  min-height: calc(3 * 1.35em + 2 * var(--space-2) + 2px);
-  margin: 0;
-  padding: var(--space-2) var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  font-weight: 600;
-  line-height: 1.35;
-  text-align: center;
 }
 
 .match-swatch {
