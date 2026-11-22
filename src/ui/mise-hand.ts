@@ -75,6 +75,12 @@ export type Held =
       readonly crossed: boolean;
       /** Whether it may cross at all: false once your one spot inside is used. */
       readonly canCross: boolean;
+      /**
+       * The last point it was drawn at clear of every placed spoof (#61), so
+       * when it's wedged in a gap too narrow for it, it stays stopped there
+       * instead of being drawn over another spoof.
+       */
+      readonly lastClear: Vec;
     };
 
 export interface Hand {
@@ -170,6 +176,16 @@ function crossedNow(mise: MiseState, held: Dragging): boolean {
   return d <= edge - RED_LINE_PULL;
 }
 
+/** Whether a spoof of this radius at a point overlaps a placed spoof. */
+function overlapsPlaced(mise: MiseState, at: Vec, radius: number): boolean {
+  return mise.placements.some((p) => Math.hypot(p.x - at.x, p.y - at.y) < p.radius + radius);
+}
+
+/** Where a dragged spoof is drawn before the nudge: the red line's pull, then stopped by other spoofs. */
+function stoppedAt(mise: MiseState, held: Dragging): { at: Vec; blocked: boolean } {
+  return clearOfSpoofs(mise, held, heldBack(mise, held) ?? heldPoint(held));
+}
+
 function aimAt(mise: MiseState, side: BenchSide, held: Dragging): Aim {
   const raw = heldPoint(held);
   if (isOnBench(side, raw.x, raw.y, mise.court)) return { kind: 'bench' };
@@ -177,10 +193,34 @@ function aimAt(mise: MiseState, side: BenchSide, held: Dragging): Aim {
   // It stops against other spoofs (#61). Until it has crossed the red line,
   // the line holds it: the nudge keeps it on the apron, whether the line or
   // another spoof pushed it in (#56 review).
-  const { at, blocked } = clearOfSpoofs(mise, held, back ?? raw);
+  const { at, blocked } = stoppedAt(mise, held);
   const spoof = held.spoof;
-  const result = spotForTap(mise, side, at, spoof.radius, { apronOnly: !held.crossed });
-  if ('refusal' in result) return { kind: 'refused', at, refusal: result.refusal };
+  const apronOnly = !held.crossed;
+  const result = spotForTap(mise, side, at, spoof.radius, { apronOnly });
+  if ('refusal' in result) {
+    // Wedged in a gap too narrow for it, it's still over another spoof: it
+    // stays stopped where it last fit, placed there if that spot's allowed,
+    // and never drawn over another spoof (#66 review).
+    if (!overlapsPlaced(mise, at, spoof.radius))
+      return { kind: 'refused', at, refusal: result.refusal };
+    const fromLastClear = spotForTap(mise, side, held.lastClear, spoof.radius, { apronOnly });
+    if ('spot' in fromLastClear) {
+      const inside = !isOnApron(
+        fromLastClear.spot.x,
+        fromLastClear.spot.y,
+        spoof.radius,
+        mise.court,
+      );
+      return {
+        kind: 'spot',
+        spot: fromLastClear.spot,
+        inside,
+        resisted: back !== null,
+        blocked: true,
+      };
+    }
+    return { kind: 'refused', at: held.lastClear, refusal: result.refusal };
+  }
   const inside = !isOnApron(result.spot.x, result.spot.y, spoof.radius, mise.court);
   return { kind: 'spot', spot: result.spot, inside, resisted: back !== null, blocked };
 }
@@ -234,6 +274,7 @@ export function press(
         // Already inside the red line, it moves freely there.
         crossed: !isOnApron(pending.spot.x, pending.spot.y, pending.spoof.radius, hand.mise.court),
         canCross: insideSpotsLeft(hand.mise, side) > 0,
+        lastClear: pending.spot,
       },
     };
   }
@@ -254,6 +295,8 @@ export function press(
         lift,
         crossed: false,
         canCross: insideSpotsLeft(hand.mise, side) > 0,
+        // Its seat, off the court: clear of every placed spoof.
+        lastClear: at,
       },
     };
   }
@@ -266,7 +309,13 @@ export function drag(hand: Hand, at: Vec): Hand {
   if (held.kind !== 'dragging') return hand;
   const moved = held.moved || Math.hypot(at.x - held.start.x, at.y - held.start.y) > TAP_SLOP;
   const next = { ...held, at, moved };
-  return { ...hand, held: { ...next, crossed: crossedNow(hand.mise, next) } };
+  const now = { ...next, crossed: crossedNow(hand.mise, next) };
+  // Remember where it last fit clear of the other spoofs.
+  const stopped = stoppedAt(hand.mise, now).at;
+  const lastClear = overlapsPlaced(hand.mise, stopped, held.spoof.radius)
+    ? held.lastClear
+    : stopped;
+  return { ...hand, held: { ...now, lastClear } };
 }
 
 /** Puts a spoof down on a spot, pending, replacing whatever was pending. */

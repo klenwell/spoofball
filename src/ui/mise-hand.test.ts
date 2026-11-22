@@ -553,36 +553,92 @@ describe('Hand', () => {
       }
     });
 
-    it('never shows it over another spoof, wherever it is dragged', () => {
-      const second = VISITOR[1];
-      if (!second) throw new Error('no spoof');
+    it('stays stopped where it last fit when wedged in a gap too narrow for it (#66 review)', () => {
+      // The review's case: two small Embers spoofs on the apron, 16 units
+      // apart, and your queen (radius 19) dragged along the apron into the gap.
+      const a = VISITOR[1];
+      const b = VISITOR[2];
+      if (!a || !b) throw new Error('no spoofs');
+      const order2: MiseOrder = ['visitor', 'visitor', 'home', 'visitor', 'home', 'home'];
+      const wedge = startHand(
+        placeSpoof(placeSpoof(startMise(order2), a, 'visitor', { x: 105, y: 0 }), b, 'visitor', {
+          x: 96.6,
+          y: 41.2,
+        }),
+      );
+      const path = Array.from({ length: 15 }, (_, i) => apron(90 - i * 5));
+
+      let hand = drag(press(wedge, 'home', TEAM, seat(0)), apron(90));
+      for (const at of [...path, { x: 98, y: 30 }]) {
+        hand = drag(hand, at);
+        const landing = aim(hand, 'home');
+        const drawn =
+          landing?.kind === 'spot' ? landing.spot : landing?.kind === 'refused' ? landing.at : null;
+        if (!drawn) continue;
+        for (const p of wedge.mise.placements) {
+          expect(
+            Math.hypot(drawn.x - p.x, drawn.y - p.y),
+            `at ${JSON.stringify(at)}`,
+          ).toBeGreaterThanOrEqual(p.radius + mine.radius);
+        }
+      }
+      expect(aim(hand, 'home')?.kind).toBe('spot');
+    });
+
+    it("pushes it off another spoof's exact center, not left on top of it", () => {
+      const landing = aim(dragThrough(inCrush, CENTER), 'home');
+
+      expect(landing).toMatchObject({ kind: 'spot', blocked: true });
+      if (landing?.kind !== 'spot') throw new Error('no spot');
+      expect(Math.hypot(landing.spot.x, landing.spot.y)).toBeCloseTo(touching, 6);
+    });
+
+    it('never shows it over another spoof, wherever it is dragged, even into a gap too narrow for it', () => {
+      // The crush taken, and two small spoofs on the apron with a gap
+      // narrower than yours between them.
+      const a = VISITOR[1];
+      const b = VISITOR[2];
+      if (!a || !b) throw new Error('no spoofs');
       const busy = startHand(
         placeSpoof(
           placeSpoof(
-            startMise(['visitor', 'visitor', 'home', 'visitor', 'home', 'home']),
-            theirs,
+            placeSpoof(
+              startMise(['visitor', 'visitor', 'visitor', 'home', 'home', 'home']),
+              theirs,
+              'visitor',
+              CENTER,
+            ),
+            a,
             'visitor',
-            CENTER,
+            { x: 105, y: 0 },
           ),
-          second,
+          b,
           'visitor',
-          apron(30),
+          { x: 96.6, y: 41.2 },
         ),
       );
-      let spots = 0;
+      let drawn = 0;
       for (let x = -120; x <= 120; x += 8) {
         for (let y = -120; y <= 120; y += 8) {
-          const landing = aim(dragThrough(busy, { x, y }), 'home');
-          if (landing?.kind !== 'spot') continue;
-          spots += 1;
+          // Each drag comes in from the south apron, then heads for the point.
+          const landing = aim(dragThrough(busy, { x: x / 2, y: y / 2 }, { x, y }), 'home');
+          const at =
+            landing?.kind === 'spot'
+              ? landing.spot
+              : landing?.kind === 'refused'
+                ? landing.at
+                : null;
+          if (!at) continue;
+          drawn += 1;
           for (const p of busy.mise.placements) {
-            expect(Math.hypot(landing.spot.x - p.x, landing.spot.y - p.y)).toBeGreaterThanOrEqual(
-              p.radius + mine.radius,
-            );
+            expect(
+              Math.hypot(at.x - p.x, at.y - p.y),
+              `to (${String(x)}, ${String(y)})`,
+            ).toBeGreaterThanOrEqual(p.radius + mine.radius);
           }
         }
       }
-      expect(spots).toBeGreaterThan(100);
+      expect(drawn).toBeGreaterThan(300);
     });
 
     it('still refuses a tap on another spoof, with the reason', () => {
