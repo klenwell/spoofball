@@ -452,4 +452,141 @@ describe('Hand', () => {
       expect(tap(tap(used, seat(1)), east(45)).refusal).toBe('apron-rule');
     });
   });
+
+  describe('when a spoof is dragged over another spoof (#61)', () => {
+    const mine = TEAM[0];
+    const theirs = VISITOR[0];
+    if (!mine || !theirs) throw new Error('no spoofs');
+    const touching = mine.radius + theirs.radius;
+    const order: MiseOrder = ['visitor', 'home', 'home', 'visitor', 'visitor', 'home'];
+    /** The Embers' spoof placed in the crush, then your turn. */
+    const inCrush = startHand(placeSpoof(startMise(order), theirs, 'visitor', CENTER));
+    /** Drags your first spoof in from the bench, across the red line, then on through the points. */
+    const dragThrough = (hand: Hand, ...points: { x: number; y: number }[]) =>
+      points.reduce(
+        (h, at) => drag(h, at),
+        drag(drag(press(hand, 'home', TEAM, seat(0)), apron(90)), { x: 0, y: 60 }),
+      );
+
+    it('stops it against the other spoof, just touching, instead of over it', () => {
+      const landing = aim(dragThrough(inCrush, { x: 5, y: 30 }), 'home');
+
+      expect(landing).toMatchObject({ kind: 'spot', blocked: true });
+      if (landing?.kind !== 'spot') throw new Error('no spot');
+      expect(Math.hypot(landing.spot.x, landing.spot.y)).toBeCloseTo(touching, 6);
+    });
+
+    it('slides it around the other spoof as you keep dragging', () => {
+      const spots = [
+        { x: 30, y: 5 },
+        { x: 5, y: 30 },
+        { x: -30, y: 5 },
+      ].map((at) => {
+        const landing = aim(dragThrough(inCrush, at), 'home');
+        if (landing?.kind !== 'spot') throw new Error('no spot');
+        return landing.spot;
+      });
+
+      for (const spot of spots) expect(Math.hypot(spot.x, spot.y)).toBeCloseTo(touching, 6);
+      expect(new Set(spots.map((s) => Math.round(Math.atan2(s.y, s.x) * 10))).size).toBe(3);
+    });
+
+    it('places it where it stopped when let go', () => {
+      const at = { x: 5, y: 30 };
+      const placed = release(dragThrough(inCrush, at), 'home', at, 0);
+
+      expect(placed.pending).not.toBeNull();
+      const spot = placed.pending?.spot ?? CENTER;
+      expect(Math.hypot(spot.x, spot.y)).toBeCloseTo(touching, 6);
+    });
+
+    it('stops it against your own placed spoofs too', () => {
+      // Yours on the apron (not inside, which would use your spot inside the red line).
+      const other = TEAM[1];
+      if (!other) throw new Error('no spoof');
+      const yours = startHand(
+        placeSpoof(
+          startMise(['home', 'home', 'visitor', 'visitor', 'visitor', 'home']),
+          other,
+          'home',
+          apron(0),
+        ),
+      );
+
+      const held = drag(drag(press(yours, 'home', TEAM, seat(0)), apron(90)), apron(8));
+      const landing = aim(held, 'home');
+
+      if (landing?.kind !== 'spot') throw new Error('no spot');
+      expect(landing.blocked).toBe(true);
+      const o = apron(0);
+      expect(Math.hypot(landing.spot.x - o.x, landing.spot.y - o.y)).toBeGreaterThanOrEqual(
+        mine.radius + other.radius,
+      );
+    });
+
+    it("isn't blocked when nothing is in the way", () => {
+      expect(aim(dragThrough(inCrush, { x: 0, y: 70 }), 'home')).toMatchObject({
+        kind: 'spot',
+        blocked: false,
+      });
+    });
+
+    it("doesn't let another spoof push it across the red line before it has crossed", () => {
+      // A small Embers spoof against the court's edge, just outward of where
+      // yours is dragged along the apron: pushed straight out of it, yours
+      // would go inside.
+      const small = TEAM[2];
+      const blocker = VISITOR[1];
+      if (!small || !blocker) throw new Error('no spoofs');
+      const out = COURT_RADIUS - blocker.radius;
+      const hand = startHand(placeSpoof(startMise(order), blocker, 'visitor', { x: out, y: 0 }));
+      const line = MOSH_RADIUS + small.radius;
+
+      const held = drag(drag(press(hand, 'home', TEAM, seat(2)), apron(90)), { x: line + 2, y: 3 });
+      const landing = aim(held, 'home');
+
+      expect(landing).not.toMatchObject({ kind: 'spot', inside: true });
+      if (landing?.kind === 'spot') {
+        expect(Math.hypot(landing.spot.x - out, landing.spot.y)).toBeGreaterThanOrEqual(
+          small.radius + blocker.radius,
+        );
+      }
+    });
+
+    it('never shows it over another spoof, wherever it is dragged', () => {
+      const second = VISITOR[1];
+      if (!second) throw new Error('no spoof');
+      const busy = startHand(
+        placeSpoof(
+          placeSpoof(
+            startMise(['visitor', 'visitor', 'home', 'visitor', 'home', 'home']),
+            theirs,
+            'visitor',
+            CENTER,
+          ),
+          second,
+          'visitor',
+          apron(30),
+        ),
+      );
+      let spots = 0;
+      for (let x = -120; x <= 120; x += 8) {
+        for (let y = -120; y <= 120; y += 8) {
+          const landing = aim(dragThrough(busy, { x, y }), 'home');
+          if (landing?.kind !== 'spot') continue;
+          spots += 1;
+          for (const p of busy.mise.placements) {
+            expect(Math.hypot(landing.spot.x - p.x, landing.spot.y - p.y)).toBeGreaterThanOrEqual(
+              p.radius + mine.radius,
+            );
+          }
+        }
+      }
+      expect(spots).toBeGreaterThan(100);
+    });
+
+    it('still refuses a tap on another spoof, with the reason', () => {
+      expect(tap(tap(inCrush, seat(0)), CENTER).refusal).toBe('overlap');
+    });
+  });
 });

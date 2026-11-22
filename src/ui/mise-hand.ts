@@ -98,6 +98,8 @@ export type Aim =
       readonly inside: boolean;
       /** Whether the red line is holding it on the apron. */
       readonly resisted: boolean;
+      /** Whether another spoof stopped it (#61). */
+      readonly blocked: boolean;
     }
   | { readonly kind: 'refused'; readonly at: Vec; readonly refusal: Refusal };
 
@@ -129,6 +131,35 @@ function heldBack(mise: MiseState, held: Dragging): Vec | null {
   return { x: (p.x * distance) / d, y: (p.y * distance) / d };
 }
 
+/**
+ * Where a dragged spoof stops against the spoofs already placed (#61): pushed
+ * straight out from any it would overlap, to just touching it, so it slides
+ * around it as you drag. What's left is the nudge's (in `aimAt`): an overlap
+ * remaining when wedged between two spoofs, or a push across the red line
+ * before the spoof has crossed it, settled or refused. Returns the point,
+ * and whether anything stopped it.
+ */
+function clearOfSpoofs(mise: MiseState, held: Dragging, at: Vec): { at: Vec; blocked: boolean } {
+  const r = held.spoof.radius;
+  let p = at;
+  let blocked = false;
+  for (const other of mise.placements) {
+    const dx = p.x - other.x;
+    const dy = p.y - other.y;
+    const d = Math.hypot(dx, dy);
+    const touching = other.radius + r;
+    if (d >= touching) continue;
+    // A hair beyond touching, so rounding never leaves them overlapping.
+    const out = touching + 1e-9;
+    p =
+      d === 0
+        ? { x: other.x + out, y: other.y }
+        : { x: other.x + (dx * out) / d, y: other.y + (dy * out) / d };
+    blocked = true;
+  }
+  return { at: p, blocked };
+}
+
 /** Whether the dragged spoof has crossed the red line: pushed past its pull, and not since back on the apron. */
 function crossedNow(mise: MiseState, held: Dragging): boolean {
   if (!held.canCross) return false;
@@ -143,13 +174,15 @@ function aimAt(mise: MiseState, side: BenchSide, held: Dragging): Aim {
   const raw = heldPoint(held);
   if (isOnBench(side, raw.x, raw.y, mise.court)) return { kind: 'bench' };
   const back = heldBack(mise, held);
-  const at = back ?? raw;
+  // It stops against other spoofs (#61). Until it has crossed the red line,
+  // the line holds it: the nudge keeps it on the apron, whether the line or
+  // another spoof pushed it in (#56 review).
+  const { at, blocked } = clearOfSpoofs(mise, held, back ?? raw);
   const spoof = held.spoof;
-  // While the line holds it back, the nudge mustn't carry it across (#56 review).
-  const result = spotForTap(mise, side, at, spoof.radius, { apronOnly: back !== null });
+  const result = spotForTap(mise, side, at, spoof.radius, { apronOnly: !held.crossed });
   if ('refusal' in result) return { kind: 'refused', at, refusal: result.refusal };
   const inside = !isOnApron(result.spot.x, result.spot.y, spoof.radius, mise.court);
-  return { kind: 'spot', spot: result.spot, inside, resisted: back !== null };
+  return { kind: 'spot', spot: result.spot, inside, resisted: back !== null, blocked };
 }
 
 /** Where the spoof in hand would land now, or null when nothing is being dragged. */
