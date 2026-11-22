@@ -8,6 +8,7 @@ import {
   isMatchOver,
   matchRandom,
   matchRecord,
+  matchScorecard,
   matchScore,
   miseRandom,
   nextMise,
@@ -455,6 +456,60 @@ describe('outcomeFor', () => {
 
   it("refuses a match that isn't over", () => {
     expect(() => outcomeFor(finished([10], [5]), 'home')).toThrow(/not over/);
+  });
+});
+
+describe('matchScorecard', () => {
+  const match = computerMatch(TEST_SEED);
+  const card = matchScorecard(match);
+
+  it('gives the home result, as outcomeFor does', () => {
+    expect(card.outcome).toBe(outcomeFor(match, 'home'));
+  });
+
+  it("gives both teams' names, scores by scrum and totals", () => {
+    const by = scoreByScrum(match);
+    for (const side of ['home', 'visitor'] as const) {
+      expect(card.teams[side].name).toBe(match.teams[side].name);
+      expect(card.teams[side].byScrum).toEqual(by[side]);
+      expect(card.teams[side].total).toBe(matchScore(match)[side]);
+    }
+  });
+
+  it("gives every spoof's points in each scrum, null for a scrum it sat out, and its total", () => {
+    for (const side of ['home', 'visitor'] as const) {
+      expect(card.teams[side].lines.map((l) => l.id)).toEqual(
+        match.teams[side].spoofs.map((s) => s.id),
+      );
+      for (const line of card.teams[side].lines) {
+        expect(line.byScrum).toHaveLength(3);
+        match.scrums.forEach((scrum, n) => {
+          const played = scrum.mise.placements.some(
+            (p) => p.team === side && p.spoofId === line.id,
+          );
+          if (played) expect(line.byScrum[n]).toBe(scrum.scores.spoofs[line.id]);
+          else expect(line.byScrum[n]).toBeNull();
+        });
+        expect(line.total).toBe(line.byScrum.reduce<number>((a, p) => a + (p ?? 0), 0));
+      }
+    }
+  });
+
+  it("adds each team's spoofs up to its total", () => {
+    for (const side of ['home', 'visitor'] as const) {
+      const sum = card.teams[side].lines.reduce((a, l) => a + l.total, 0);
+      expect(sum).toBe(card.teams[side].total);
+    }
+  });
+
+  it('shows outcomes only, never skills', () => {
+    expect(JSON.stringify(card)).not.toMatch(
+      /"(skills|stamina|burst|iq|growth|temperament|fatigue)"/,
+    );
+  });
+
+  it("refuses a match that isn't over", () => {
+    expect(() => matchScorecard(startMatch(HOME, VISITOR, TEST_SEED))).toThrow(/not over/);
   });
 });
 

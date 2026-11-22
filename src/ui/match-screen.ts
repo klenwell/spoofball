@@ -4,13 +4,13 @@ import { COURT_RADIUS } from '../game/court';
 import {
   SCRUMS_PER_MATCH,
   isMatchOver,
+  matchScorecard,
   scrumSummary,
   matchScore,
   miseRandom,
   nextMise,
   outcomeFor,
   playScrum,
-  scoreByScrum,
   scrumEntries,
   scrumNumber,
   startMatch,
@@ -209,26 +209,25 @@ export function createMatchScreen(): Panel {
 
   // --- Controls -----------------------------------------------------------
   const controls = el('div', 'match-controls');
-  const newMatchButton = el('button', 'button button-primary', 'New match');
-  newMatchButton.type = 'button';
   const pauseButton = el('button', 'button', 'Pause');
   pauseButton.type = 'button';
-  controls.append(newMatchButton, pauseButton);
+  controls.append(pauseButton);
 
-  // --- A scrum's result, over the court during the break (#58) ---------------
+  // --- The panel over the court: a scrum's result during the break (#58), and
+  // the match scorecard at the end (#60) --------------------------------------
   const scrumPanel = el('section', 'scrum-result');
   scrumPanel.hidden = true;
   scrumPanel.setAttribute('aria-live', 'polite');
   const nextScrumButton = el('button', 'button button-primary', 'Next scrum');
   nextScrumButton.type = 'button';
-
-  const results = el('section', 'match-results');
-  results.hidden = true;
-  results.setAttribute('aria-live', 'polite');
+  const playAgainButton = el('button', 'button button-primary', 'Play another match');
+  playAgainButton.type = 'button';
+  /** The canvas's size in CSS pixels, for sizing the panel. */
+  let arenaSize = { width: 0, height: 0 };
 
   const root = el('div', 'match-screen');
   // The caption goes over the Embers' bench, inside the arena (rebuildCanvas).
-  root.append(board, clockBar, turnStrip, stage, controls, results);
+  root.append(board, clockBar, turnStrip, stage, controls);
 
   // --- Drawing -------------------------------------------------------------
   /** How tired a spoof is now, carried from earlier scrums (#40). */
@@ -370,14 +369,26 @@ export function createMatchScreen(): Panel {
     // bench on a small phone: 12 px at the smallest, 16 px at full size.
     statusLine.style.fontSize = `${String(Math.min(16, Math.max(12, view.scale * 12.5)))}px`;
     const frame = el('div', 'arena-frame');
-    // The scrum's result covers the court, a little inside its edge, with
-    // type scaled to the arena like the caption's.
-    scrumPanel.style.top = `${String(view.cy)}px`;
-    scrumPanel.style.width = `${String(2 * COURT_RADIUS * view.scale * 0.92)}px`;
+    arenaSize = { width, height };
     scrumPanel.style.fontSize = statusLine.style.fontSize;
+    sizePanel();
     frame.append(canvas, statusLine, scrumPanel);
     stage.replaceChildren(frame);
     draw();
+  }
+
+  /**
+   * Sizes the panel over the court. A scrum's result covers the court, a
+   * little inside its edge; the match scorecard, with more to show, covers
+   * the whole arena and scrolls within.
+   */
+  function sizePanel(): void {
+    if (!view) return;
+    const scorecard = status === 'done';
+    scrumPanel.classList.toggle('scorecard', scorecard);
+    scrumPanel.style.top = `${String(scorecard ? arenaSize.height / 2 : view.cy)}px`;
+    scrumPanel.style.width = `${String(scorecard ? arenaSize.width * 0.96 : 2 * COURT_RADIUS * view.scale * 0.92)}px`;
+    scrumPanel.style.maxHeight = scorecard ? `${String(arenaSize.height * 0.96)}px` : '';
   }
 
   // --- Text and labels -------------------------------------------------------
@@ -497,63 +508,95 @@ export function createMatchScreen(): Panel {
     if (statusLine.textContent !== message) statusLine.textContent = message;
   }
 
-  /** The match result: who won, the score by scrum, and your spoofs' points. Outcomes only. */
-  function showResults(): void {
-    const total = matchScore(match);
-    const outcome = outcomeFor(match, YOU);
-    const line = `${String(total[YOU])}–${String(total[COMPUTER])}`;
+  /** A points cell: the points, or a dot for a scrum the spoof sat out, read out as "sat out". */
+  function pointsCell(points: number | null, className?: string): HTMLTableCellElement {
+    const cell = el('td', className);
+    if (points !== null) {
+      cell.textContent = String(points);
+      return cell;
+    }
+    const dot = el('span', 'scorecard-out', '•');
+    dot.setAttribute('aria-hidden', 'true');
+    cell.append(dot, el('span', 'visually-hidden', 'sat out'));
+    return cell;
+  }
+
+  /** A header row: an empty corner, the 3 scrums, and Total. */
+  function scrumHeaderRow(corner: string): HTMLTableRowElement {
+    const head = el('tr');
+    head.append(el('th', 'scorecard-label', corner));
+    for (let n = 1; n <= SCRUMS_PER_MATCH; n += 1) head.append(el('th', undefined, String(n)));
+    head.append(el('th', undefined, 'Total'));
+    return head;
+  }
+
+  /**
+   * The match scorecard over the arena (#60): who won, both teams' scores by
+   * scrum, and each spoof's points by scrum, after the prototype's box score.
+   * Outcomes only.
+   */
+  function showScorecard(): void {
+    const card = matchScorecard(match);
+    const you = card.teams[YOU];
+    const them = card.teams[COMPUTER];
+    const line = `${String(you.total)}–${String(them.total)}`;
     const title = {
       won: `You won, ${line}`,
       lost: `You lost, ${line}`,
       tied: `A tie, ${line}`,
-    }[outcome];
-    results.replaceChildren(el('h2', 'match-results-title', title));
+    }[outcomeFor(match, YOU)];
+    const heading = el('h2', 'scrum-result-title scorecard-title', title);
+    heading.id = 'scorecard-title';
+    scrumPanel.setAttribute('aria-labelledby', heading.id);
 
-    // The score by scrum.
-    const by = scoreByScrum(match);
-    const table = el('table', 'match-results-scrums');
-    const head = el('tr');
-    head.append(el('th', undefined, ''));
-    for (let n = 0; n < SCRUMS_PER_MATCH; n += 1)
-      head.append(el('th', undefined, `Scrum ${String(n + 1)}`));
-    head.append(el('th', undefined, 'Total'));
-    table.append(head);
-    for (const team of SIDES) {
+    const body = el('div', 'scorecard-body');
+    // The box score: each team's points in each scrum.
+    const box = el('table', 'scorecard-table');
+    box.append(scrumHeaderRow('Scrum'));
+    for (const side of SIDES) {
+      const team = card.teams[side];
       const row = el('tr');
-      row.append(el('th', undefined, nameOf(team)));
-      for (const points of by[team]) row.append(el('td', undefined, String(points)));
-      row.append(el('td', 'match-results-total', String(total[team])));
-      table.append(row);
+      row.append(el('th', 'scorecard-label', team.name));
+      for (const points of team.byScrum) row.append(pointsCell(points));
+      row.append(el('td', 'scorecard-total', String(team.total)));
+      box.append(row);
     }
-    results.append(table);
+    body.append(box);
 
-    // Your spoofs' points, and how many scrums each played.
-    results.append(el('h3', 'match-results-team', `Your ${nameOf(YOU)}`));
-    const list = el('ul', 'match-results-list');
-    for (const m of match.spoofs[YOU]) {
-      const item = el('li', 'match-results-row');
-      const { canvas: disc, ctx: discCtx } = createCanvas(28, 28);
-      disc.setAttribute('aria-hidden', 'true');
-      drawSpoofDisc(discCtx, { x: 14, y: 14, radius: 11, type: m.spoof.type, kit: kitFor(YOU) });
-      const played = m.points.filter((p) => p !== null).length;
-      const points = m.points.reduce<number>((a, p) => a + (p ?? 0), 0);
-      item.append(
-        disc,
-        el('span', 'match-results-name', avatarName(m.spoof.type)),
-        el('span', 'match-results-played', played === 1 ? '1 scrum' : `${String(played)} scrums`),
-        el('span', 'match-results-points', `${String(points)} ${points === 1 ? 'pt' : 'pts'}`),
-      );
-      list.append(item);
+    // Each team's spoofs, scrum by scrum.
+    for (const side of SIDES) {
+      const team = card.teams[side];
+      const title = el('h3', 'scorecard-team');
+      const swatch = el('span', 'match-swatch');
+      swatch.style.background = kitFor(side).fill;
+      swatch.style.borderColor = kitFor(side).trim;
+      swatch.setAttribute('aria-hidden', 'true');
+      title.append(swatch, el('span', undefined, `${team.name} ${String(team.total)}`));
+      const table = el('table', 'scorecard-table');
+      table.append(scrumHeaderRow(''));
+      for (const spoof of team.lines) {
+        const row = el('tr');
+        const name = el('th', 'scorecard-label');
+        const { canvas: disc, ctx: discCtx } = createCanvas(18, 18);
+        disc.setAttribute('aria-hidden', 'true');
+        drawSpoofDisc(discCtx, { x: 9, y: 9, radius: 7, type: spoof.type, kit: kitFor(side) });
+        const who = el('span', 'scorecard-spoof');
+        who.append(disc, el('span', undefined, avatarName(spoof.type)));
+        name.append(who);
+        row.append(name);
+        for (const points of spoof.byScrum) row.append(pointsCell(points));
+        row.append(el('td', 'scorecard-total', String(spoof.total)));
+        table.append(row);
+      }
+      body.append(title, table);
     }
-    results.append(list);
-    results.hidden = false;
+    scrumPanel.replaceChildren(heading, body, playAgainButton);
   }
 
   function updateControls(): void {
-    // Between scrums, Next scrum is on the result panel over the court (#58).
-    newMatchButton.hidden = status !== 'done';
-    newMatchButton.textContent = 'Play another match';
-    scrumPanel.hidden = status !== 'break';
+    // Between scrums and at the end, the buttons are on the panel over the court (#58, #60).
+    scrumPanel.hidden = status !== 'break' && status !== 'done';
+    sizePanel();
     pauseButton.hidden = !(status === 'playing' || status === 'paused');
     pauseButton.textContent = status === 'paused' ? 'Resume' : 'Pause';
     pauseButton.setAttribute('aria-pressed', String(status === 'paused'));
@@ -632,7 +675,6 @@ export function createMatchScreen(): Panel {
     scrum = null;
     seconds = 0;
     status = 'mise';
-    results.hidden = true;
     say(miseMessage());
     refresh();
     nextTurn();
@@ -761,28 +803,27 @@ export function createMatchScreen(): Panel {
     raf = requestAnimationFrame(tick);
   }
 
-  /** After the beat: the scrum's result over the court, or the match's result. */
+  /**
+   * After the beat: over the court, the scrum's result with Next scrum, or at
+   * the match's end, the scorecard with Play another match. The panel says it
+   * all, so the caption clears.
+   */
   function showOutcome(hadFocus: boolean): void {
-    const n = String(scrumNumber(match));
-    const final = scrum?.final.teams;
-    const scrumScore = `${nameOf('home')} ${String(final?.home ?? 0)}, ${nameOf('visitor')} ${String(final?.visitor ?? 0)}`;
+    say('');
     if (isMatchOver(match)) {
       status = 'done';
-      say(`Scrum ${n}: ${scrumScore}. The match is over: the result is below.`);
-      showResults();
+      showScorecard();
     } else {
-      // A break: the scrum's result over the court, with Next scrum on it.
       status = 'break';
-      say('');
       showScrumResult();
     }
     refresh();
     // Pause hid when the scrum ended; keep a keyboard user on the controls.
-    if (hadFocus) (status === 'break' ? nextScrumButton : newMatchButton).focus();
+    if (hadFocus) (status === 'break' ? nextScrumButton : playAgainButton).focus();
   }
 
   function run(): void {
-    const hadFocus = document.activeElement === newMatchButton;
+    const hadFocus = scrumPanel.contains(document.activeElement);
     status = 'playing';
     say('Tap the court, or Pause, to pause.');
     lastTick = performance.now();
@@ -790,7 +831,7 @@ export function createMatchScreen(): Panel {
     raf = requestAnimationFrame(tick);
     updateControls();
     updateText(true);
-    // New match hides while it has focus; keep a keyboard user on the controls.
+    // The panel hides while it has focus; keep a keyboard user on the controls.
     if (hadFocus) pauseButton.focus();
   }
 
@@ -809,7 +850,6 @@ export function createMatchScreen(): Panel {
       entries,
     };
     seconds = 0;
-    results.hidden = true;
     run();
     // If you left the page during the cue, it starts paused.
     if (document.hidden) pause();
@@ -830,7 +870,7 @@ export function createMatchScreen(): Panel {
   }
 
   // --- Events -----------------------------------------------------------------
-  newMatchButton.addEventListener('click', () => {
+  playAgainButton.addEventListener('click', () => {
     if (status === 'done') newMatch();
   });
   nextScrumButton.addEventListener('click', () => {

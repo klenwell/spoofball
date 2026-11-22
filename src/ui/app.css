@@ -351,6 +351,81 @@ body {
   min-width: 0;
 }
 
+/*
+ * The match scorecard (#60): the same panel, covering the whole arena, with
+ * its tables scrolling inside and Play another match always in view.
+ */
+.scrum-result.scorecard {
+  overflow: hidden;
+}
+
+.scorecard-body {
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.scorecard-table {
+  width: 100%;
+  margin-bottom: var(--space-2);
+  border-collapse: collapse;
+}
+
+.scorecard-table th,
+.scorecard-table td {
+  padding: 2px var(--space-1);
+  border-bottom: 1px solid var(--color-line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.scorecard-table td {
+  font-family: var(--font-numeric);
+}
+
+.scorecard-table .scorecard-label {
+  text-align: left;
+}
+
+/* A spoof's disc and name, side by side, inside its table cell. */
+.scorecard-spoof {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* Who won, in the panel's strongest type. */
+.scrum-result .scorecard-title {
+  color: var(--color-text);
+  font-size: 1.35em;
+}
+
+.scorecard-total {
+  font-weight: 700;
+}
+
+.scorecard-out {
+  color: var(--color-text-muted);
+}
+
+.scorecard-team {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: 1em;
+}
+
+/* Read out to screen readers, but not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* The arena: the canvas, with the caption laid over it. */
 .arena-frame {
   position: relative;
@@ -409,78 +484,6 @@ body {
 .button:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 3px;
-}
-
-.match-results {
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-}
-
-.match-results-title {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-lg);
-}
-
-.match-results-team {
-  margin: var(--space-3) 0 var(--space-1);
-  font-size: var(--text-md);
-}
-
-.match-results-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.match-results-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) 0;
-  border-bottom: 1px solid var(--color-line);
-}
-
-.match-results-name {
-  flex: 1;
-}
-
-.match-results-points {
-  font-family: var(--font-numeric);
-}
-
-.match-results-played {
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-
-/* The match result's score by scrum (#40). */
-.match-results-scrums {
-  width: 100%;
-  margin: var(--space-2) 0 var(--space-3);
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-
-.match-results-scrums th,
-.match-results-scrums td {
-  padding: var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--color-line);
-  text-align: right;
-  white-space: nowrap;
-}
-
-.match-results-scrums th:first-child {
-  text-align: left;
-}
-
-.match-results-scrums td {
-  font-family: var(--font-numeric);
-}
-
-.match-results-total {
-  font-weight: 700;
 }
 
 .app-footer {

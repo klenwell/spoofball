@@ -309,6 +309,49 @@ export function outcomeFor(match: Match, side: BenchSide): Outcome {
   return mine > theirs ? 'won' : mine < theirs ? 'lost' : 'tied';
 }
 
+/** A spoof's line on the match scorecard: its points in each scrum (null if it sat out), and its total. */
+export interface ScorecardLine {
+  readonly id: string;
+  readonly type: Spoof['type'];
+  readonly byScrum: readonly (number | null)[];
+  readonly total: number;
+}
+
+/** A team on the match scorecard: its name, its score in each scrum and in all, and its spoofs. */
+export interface ScorecardTeam {
+  readonly name: string;
+  readonly byScrum: readonly number[];
+  readonly total: number;
+  readonly lines: readonly ScorecardLine[];
+}
+
+/** The match scorecard (#60): the outcome, and both teams' scores broken down by scrum. Outcomes only. */
+export interface Scorecard {
+  /** The home team's result. */
+  readonly outcome: Outcome;
+  readonly teams: Readonly<Record<BenchSide, ScorecardTeam>>;
+}
+
+export function matchScorecard(match: Match): Scorecard {
+  const by = scoreByScrum(match);
+  const total = matchScore(match);
+  const team = (side: BenchSide): ScorecardTeam => ({
+    name: match.teams[side].name,
+    byScrum: by[side],
+    total: total[side],
+    lines: match.spoofs[side].map((m) => ({
+      id: m.spoof.id,
+      type: m.spoof.type,
+      byScrum: m.points,
+      total: m.points.reduce<number>((a, p) => a + (p ?? 0), 0),
+    })),
+  });
+  return {
+    outcome: outcomeFor(match, 'home'),
+    teams: { home: team('home'), visitor: team('visitor') },
+  };
+}
+
 /**
  * What a finished match leaves behind, ready for the Stats epic to save
  * (#40): the teams, the score by scrum, the result, and for each spoof its
