@@ -24,9 +24,20 @@ export interface SpoofDisc {
 /** A spent spoof stays this visible, so it never vanishes from the court. */
 export const MIN_FATIGUE_OPACITY = 0.3;
 
-/** Opacity for a fatigue level, from 1 (fresh) down to MIN_FATIGUE_OPACITY (spent). */
+/**
+ * The fatigue at which a spoof is at its most see-through: 70, the owner's
+ * pick on #59 (2026-11-22). Spoofs typically carry 20–30 fatigue into a
+ * mise; at 70 that's 80% to 70% opaque, where at 100 (before #59) they
+ * barely faded.
+ */
+export const FADED_AT_FATIGUE = 70;
+
+/**
+ * Opacity for a fatigue level: from 1 (fresh) down to MIN_FATIGUE_OPACITY at
+ * `FADED_AT_FATIGUE` and beyond.
+ */
 export function fatigueOpacity(fatigue: number): number {
-  const level = Math.min(100, Math.max(0, fatigue)) / 100;
+  const level = Math.min(1, Math.max(0, fatigue) / FADED_AT_FATIGUE);
   return 1 - level * (1 - MIN_FATIGUE_OPACITY);
 }
 

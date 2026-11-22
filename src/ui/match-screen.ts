@@ -84,6 +84,11 @@ const COMPUTER_PAUSE_MS = 900;
 /** How long the "Scrum!" cue shows once all 6 spoofs are placed, before the scrum starts by itself. */
 const SCRUM_CUE_MS = 1000;
 /**
+ * How long the court stays in view when a scrum ends, with the spoofs where
+ * they settled, before its result appears: 1.25 s, the owner's pick on #59.
+ */
+const SETTLE_MS = 1250;
+/**
  * How far above a finger a dragged spoof is held, in court units, so the
  * finger doesn't hide where it will land. A mouse drags it right under the pointer.
  */
@@ -94,8 +99,8 @@ const REFUSED_OPACITY = 0.45;
 /** Seconds on the page's clock, for the grace period. */
 const nowSeconds = () => performance.now() / 1000;
 
-/** `break` is between scrums; `done` is the match's end. */
-type Status = 'mise' | 'ready' | 'playing' | 'paused' | 'break' | 'done';
+/** `settling` is the beat after a scrum ends; `break` is between scrums; `done` is the match's end. */
+type Status = 'mise' | 'ready' | 'playing' | 'paused' | 'settling' | 'break' | 'done';
 
 const YOU: BenchSide = 'home';
 const COMPUTER: BenchSide = 'visitor';
@@ -450,7 +455,7 @@ export function createMatchScreen(): Panel {
       return;
     }
     middleLabel.textContent = of;
-    clockBar.hidden = status === 'break' || status === 'done';
+    clockBar.hidden = status === 'settling' || status === 'break' || status === 'done';
     drawTurns();
     const left = Math.max(0, SCRUM_SECONDS - seconds);
     const playingNow = status === 'playing' || status === 'paused';
@@ -467,7 +472,11 @@ export function createMatchScreen(): Panel {
     home.unit.textContent = 'points';
     visitor.unit.textContent = 'points';
     clockText.textContent =
-      status === 'done' ? 'Final' : status === 'break' ? 'Break' : `${left.toFixed(1)} s`;
+      status === 'done'
+        ? 'Final'
+        : status === 'break' || status === 'settling'
+          ? 'Over'
+          : `${left.toFixed(1)} s`;
     clockFill.style.width = `${String((left / SCRUM_SECONDS) * 100)}%`;
     const whole = Math.floor(seconds);
     if (!force && whole === lastLabelSecond) return;
@@ -476,6 +485,7 @@ export function createMatchScreen(): Panel {
     const state = {
       playing: `${of} playing, ${left.toFixed(0)} seconds left. ${score}.`,
       paused: `${of} paused, ${left.toFixed(0)} seconds left. ${score}.`,
+      settling: `${of} over. Match score: ${score}.`,
       break: `${of} over. Match score: ${score}.`,
       done: `The match is over. Final score: ${score}.`,
     }[status];
@@ -737,27 +747,38 @@ export function createMatchScreen(): Panel {
     seconds = advance(seconds, elapsed);
     if (isOver(seconds)) {
       const hadFocus = document.activeElement === pauseButton;
-      const n = String(scrumNumber(match));
-      const final = scrum?.final.teams;
-      const scrumScore = `${nameOf('home')} ${String(final?.home ?? 0)}, ${nameOf('visitor')} ${String(final?.visitor ?? 0)}`;
-      if (isMatchOver(match)) {
-        status = 'done';
-        say(`Scrum ${n}: ${scrumScore}. The match is over: the result is below.`);
-        showResults();
-      } else {
-        // A break: the scrum's result over the court, with Next scrum on it.
-        status = 'break';
-        say('');
-        showScrumResult();
-      }
+      // A beat to see where the spoofs settled, before the result (#59).
+      status = 'settling';
+      say(`Scrum ${String(scrumNumber(match))} is over.`);
       refresh();
-      // Pause hides at the end; keep a keyboard user on the controls.
-      if (hadFocus) (status === 'break' ? nextScrumButton : newMatchButton).focus();
+      computerTimer = window.setTimeout(() => {
+        showOutcome(hadFocus);
+      }, SETTLE_MS);
       return;
     }
     draw();
     updateText();
     raf = requestAnimationFrame(tick);
+  }
+
+  /** After the beat: the scrum's result over the court, or the match's result. */
+  function showOutcome(hadFocus: boolean): void {
+    const n = String(scrumNumber(match));
+    const final = scrum?.final.teams;
+    const scrumScore = `${nameOf('home')} ${String(final?.home ?? 0)}, ${nameOf('visitor')} ${String(final?.visitor ?? 0)}`;
+    if (isMatchOver(match)) {
+      status = 'done';
+      say(`Scrum ${n}: ${scrumScore}. The match is over: the result is below.`);
+      showResults();
+    } else {
+      // A break: the scrum's result over the court, with Next scrum on it.
+      status = 'break';
+      say('');
+      showScrumResult();
+    }
+    refresh();
+    // Pause hid when the scrum ended; keep a keyboard user on the controls.
+    if (hadFocus) (status === 'break' ? nextScrumButton : newMatchButton).focus();
   }
 
   function run(): void {

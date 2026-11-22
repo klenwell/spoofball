@@ -1,3 +1,4 @@
+import { drawSeatMark } from './seat-mark';
 import { palette } from '../design/tokens';
 import {
   BENCH_HALF_WIDTH,
@@ -58,6 +59,8 @@ function drawBench(ctx: CanvasRenderingContext2D, side: BenchSide, court: Court)
     ctx.arc(seat.x, seat.y, SEAT_RADIUS, 0, Math.PI * 2);
     ctx.fillStyle = palette.seat;
     ctx.fill();
+    // The gauge a seated spoof's fatigue shows against (#59).
+    drawSeatMark(ctx, seat.x, seat.y);
   }
 }
 
