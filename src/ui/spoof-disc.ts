@@ -18,15 +18,27 @@ export interface SpoofDisc {
   kit: Kit;
   /** 0 (fresh) to 100 (spent). The disc fades as it tires. */
   fatigue?: number;
+  /** The fatigue at which it's most see-through (`FADED_AT_FATIGUE` unless given; #59's review). */
+  fadedAt?: number;
   highlighted?: boolean;
 }
 
 /** A spent spoof stays this visible, so it never vanishes from the court. */
 export const MIN_FATIGUE_OPACITY = 0.3;
 
-/** Opacity for a fatigue level, from 1 (fresh) down to MIN_FATIGUE_OPACITY (spent). */
-export function fatigueOpacity(fatigue: number): number {
-  const level = Math.min(100, Math.max(0, fatigue)) / 100;
+/**
+ * The fatigue at which a spoof is at its most see-through. Spoofs typically
+ * carry 20–30 fatigue into a mise (#59), so at 100 they barely fade; the
+ * owner picks the value on #59's review.
+ */
+export const FADED_AT_FATIGUE = 100;
+
+/**
+ * Opacity for a fatigue level: from 1 (fresh) down to MIN_FATIGUE_OPACITY at
+ * `fadedAt` fatigue and beyond.
+ */
+export function fatigueOpacity(fatigue: number, fadedAt: number = FADED_AT_FATIGUE): number {
+  const level = Math.min(1, Math.max(0, fatigue) / fadedAt);
   return 1 - level * (1 - MIN_FATIGUE_OPACITY);
 }
 
@@ -138,7 +150,7 @@ function drawFadedBody(
 
 export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): void {
   const { x, y, radius, type, kit } = disc;
-  const opacity = fatigueOpacity(disc.fatigue ?? 0);
+  const opacity = fatigueOpacity(disc.fatigue ?? 0, disc.fadedAt);
 
   ctx.save();
   ctx.translate(x, y);
