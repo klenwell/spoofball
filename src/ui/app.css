@@ -273,8 +273,8 @@ body {
 }
 
 /*
- * A scrum's result, over the court during the break (#58): half see-through,
- * so the court shows, with each spoof's points and Next scrum. match-screen.ts
+ * A scrum's result, over the court during the break (#58): see-through, so
+ * the court shows, with each spoof's points and Next scrum. match-screen.ts
  * sets its top (the court's center), width (the court's) and type size.
  */
 .scrum-result {
@@ -286,7 +286,8 @@ body {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: rgb(255 255 255 / 0.5);
+  /* 80% white, the owner's pick on #58: the court shows through, and the text reads clearly. */
+  background: rgb(255 255 255 / 0.8);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   font-weight: 600;
