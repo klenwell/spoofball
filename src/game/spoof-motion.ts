@@ -62,10 +62,10 @@ export interface Tuning {
  * The owner's picks on #49 (2026-11-21), after watching scrums with sliders:
  * thinking at 3× the prototype's pace, and a skid keeping at least 10% of a
  * spoof's speed. Past about 3×, more thinking made spoofs hold more, flattened
- * the skill edge, and cost smart spoofs growth (#50). Aggression 1 is a
- * starting point for the owner's review on #51.
+ * the skill edge, and cost smart spoofs growth (#50). Aggression 2 is the
+ * owner's pick on #51 (2026-11-22): it made matches more kinetic.
  */
-export const DEFAULT_TUNING: Tuning = { thinkingPace: 3, skidFloor: 0.1, aggression: 1 };
+export const DEFAULT_TUNING: Tuning = { thinkingPace: 3, skidFloor: 0.1, aggression: 2 };
 
 /** Skills a scrum changes as a spoof tires. */
 export type ScrumSkills = Record<SkillName, number>;

@@ -1,12 +1,11 @@
 import { matchKits, type Kit } from '../design/kits';
 import { arenaBounds, benchSeats } from '../game/arena';
-import { DEFAULT_COURT, courtWithMosh, fitToCourt, type Court } from '../game/court';
 import { PRESET_HOME, PRESET_VISITOR } from '../game/preset-teams';
 import { createRandom } from '../game/random';
 import { finalScores, liveScores, type Scores } from '../game/scoring';
-import { simulateScrum, type ScrumEntry, type ScrumFrame } from '../game/scrum';
+import { simulateScrum, type ScrumFrame } from '../game/scrum';
 import { avatarOf, type SpoofType } from '../game/spoof-types';
-import { DEFAULT_TUNING, SCRUM_SECONDS } from '../game/spoof-motion';
+import { SCRUM_SECONDS } from '../game/spoof-motion';
 import { lineupEntries, type Lineup } from '../game/teams';
 import type { Panel } from './app-shell';
 import { drawArena, drawSpoofInArena } from './arena';
@@ -35,15 +34,6 @@ type Status = 'ready' | 'playing' | 'paused' | 'done';
 const LINEUPS: readonly Lineup[] = [PRESET_HOME, PRESET_VISITOR];
 const ENTRIES = LINEUPS.flatMap(lineupEntries);
 
-/** The lineup on a court, with placed spoofs moved to the same spots on its zones (#51). */
-function entriesFor(court: Court): ScrumEntry[] {
-  return ENTRIES.map((e) => ({ ...e, position: fitToCourt(e.position.x, e.position.y, court) }));
-}
-
-function isReview(): boolean {
-  return new URLSearchParams(window.location.search).has('review');
-}
-
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -69,20 +59,15 @@ interface Played {
   readonly final: Scores;
 }
 
-function play(seed: number, court: Court, aggression: number): Played {
-  const entries = entriesFor(court);
-  const result = simulateScrum(entries, {
-    random: createRandom(seed),
-    court,
-    tuning: { aggression },
-  });
+function play(seed: number): Played {
+  const result = simulateScrum(ENTRIES, { random: createRandom(seed) });
   const last = result.frames[result.frames.length - 1];
   if (!last) throw new Error('A scrum produced no frames');
   return {
     seed,
-    frames: [startFrame(entries), ...result.frames],
-    live: liveScores(result.frames, court),
-    final: finalScores(last, court),
+    frames: [startFrame(ENTRIES), ...result.frames],
+    live: liveScores(result.frames),
+    final: finalScores(last),
   };
 }
 
@@ -126,9 +111,7 @@ export function createMatchScreen(): Panel {
   let canvas: HTMLCanvasElement | null = null;
   let ctx: CanvasRenderingContext2D | null = null;
   let view: ArenaView | null = null;
-  let court: Court = DEFAULT_COURT;
-  let aggression = DEFAULT_TUNING.aggression;
-  let bounds = arenaBounds(court);
+  const bounds = arenaBounds();
 
   // --- Controls -----------------------------------------------------------
   const controls = el('div', 'match-controls');
@@ -143,47 +126,12 @@ export function createMatchScreen(): Panel {
   results.hidden = true;
   results.setAttribute('aria-live', 'polite');
 
-  // --- Review-only controls (#51), with ?review in the address --------------
-  const review = el('fieldset', 'review-controls');
-  review.hidden = !isReview();
-  const slider = (
-    name: string,
-    min: number,
-    max: number,
-    step: number,
-    value: number,
-    digits: number,
-  ) => {
-    const label = el('label', 'review-row');
-    const input = el('input');
-    input.type = 'range';
-    input.min = String(min);
-    input.max = String(max);
-    input.step = String(step);
-    input.value = String(value);
-    const shown = el('span', 'review-value', value.toFixed(digits));
-    input.addEventListener('input', () => {
-      shown.textContent = Number(input.value).toFixed(digits);
-    });
-    label.append(el('span', 'review-name', name), input, shown);
-    return { label, input };
-  };
-  const aggressionSlider = slider('Aggression', 0, 3, 0.25, aggression, 2);
-  const moshSlider = slider('Mosh radius', 60, 100, 5, court.moshRadius, 0);
-  const seedText = el('p', 'review-seed', 'Changing a setting replays the same scrum.');
-  review.append(
-    el('legend', undefined, 'Review only (#51): attacking and the mosh'),
-    aggressionSlider.label,
-    moshSlider.label,
-    seedText,
-  );
-
   const root = el('div', 'match-screen');
-  root.append(board, clockBar, stage, controls, results, review);
+  root.append(board, clockBar, stage, controls, results);
 
   // --- Drawing -------------------------------------------------------------
   function current(): ScrumFrame {
-    return scrum ? frameAt(scrum.frames, seconds) : startFrame(entriesFor(court));
+    return scrum ? frameAt(scrum.frames, seconds) : startFrame(ENTRIES);
   }
 
   function draw(): void {
@@ -191,10 +139,10 @@ export function createMatchScreen(): Panel {
     const c = ctx;
     const v = view;
     c.clearRect(0, 0, c.canvas.width, c.canvas.height);
-    drawArena(c, v, court);
+    drawArena(c, v);
     // Benched spoofs wait in their seats.
     for (const lineup of LINEUPS) {
-      const seats = benchSeats(lineup.side, court);
+      const seats = benchSeats(lineup.side);
       for (const spoof of lineup.team.spoofs) {
         const spot = lineup.spots[spoof.id];
         if (!spot || !('seat' in spot)) continue;
@@ -337,8 +285,7 @@ export function createMatchScreen(): Panel {
   }
 
   function start(seed: number): void {
-    scrum = play(seed, court, aggression);
-    seedText.textContent = `Seed ${String(seed)} · aggression ${aggression.toFixed(2)} · mosh ${String(court.moshRadius)}. Changing a setting replays this scrum.`;
+    scrum = play(seed);
     seconds = 0;
     results.hidden = true;
     run();
@@ -362,15 +309,6 @@ export function createMatchScreen(): Panel {
     start(newSeed());
   });
   pauseButton.addEventListener('click', togglePause);
-  const replay = () => {
-    aggression = Number(aggressionSlider.input.value);
-    court = courtWithMosh(Number(moshSlider.input.value));
-    bounds = arenaBounds(court);
-    rebuildCanvas();
-    if (scrum) start(scrum.seed);
-  };
-  aggressionSlider.input.addEventListener('change', replay);
-  moshSlider.input.addEventListener('change', replay);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pause();
   });

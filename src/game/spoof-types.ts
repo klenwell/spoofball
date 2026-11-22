@@ -34,7 +34,7 @@ export function avatarOf(type: SpoofType): Avatar {
 
 /**
  * A spoof's base (starting) radius limits, in court units (the court's radius
- * is 150). During a scrum a spoof can blow from 8 up to 40 (the prototype's
+ * is 130). During a scrum a spoof can blow from 8 up to 40 (the prototype's
  * MIN_BLOW_RADIUS and MAX_BLOW_RADIUS); the Match epic adds those limits.
  */
 export const MIN_SPOOF_RADIUS = 10;

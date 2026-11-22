@@ -5,6 +5,7 @@ import {
   CRUSH_RADIUS,
   DEFAULT_COURT,
   MOSH_RADIUS,
+  PROTOTYPE_COURT,
   courtRadius,
   courtWithMosh,
   fitToCourt,
@@ -25,9 +26,10 @@ describe('zoneAt', () => {
   });
 
   it('measures distance in every direction', () => {
-    expect(zoneAt(60, 60)).toBe('mosh'); // about 85 from the center
-    expect(zoneAt(80, -80)).toBe('apron'); // about 113
-    expect(zoneAt(-110, 110)).toBe('off'); // about 156
+    // The game's court: mosh 80, court 130.
+    expect(zoneAt(50, 50)).toBe('mosh'); // about 71 from the center
+    expect(zoneAt(70, -70)).toBe('apron'); // about 99
+    expect(zoneAt(-95, 95)).toBe('off'); // about 134
   });
 });
 
@@ -55,9 +57,14 @@ describe('isOnCourt', () => {
 describe('a court with a smaller mosh (#51)', () => {
   const small = courtWithMosh(70);
 
-  it("keeps today's court as the default: mosh 100, radius 150", () => {
-    expect(DEFAULT_COURT.moshRadius).toBe(100);
-    expect(courtRadius()).toBe(150);
+  it("keeps the owner's court as the default: mosh 80, radius 130 (#51)", () => {
+    expect(DEFAULT_COURT.moshRadius).toBe(80);
+    expect(courtRadius()).toBe(130);
+  });
+
+  it("remembers the prototype's court: mosh 100, radius 150", () => {
+    expect(PROTOTYPE_COURT.moshRadius).toBe(100);
+    expect(courtRadius(PROTOTYPE_COURT)).toBe(150);
   });
 
   it('keeps the apron a ring 50 wide, so the court is the mosh plus 50', () => {
@@ -90,9 +97,14 @@ describe('a court with a smaller mosh (#51)', () => {
 describe('fitToCourt', () => {
   const small = courtWithMosh(70);
 
-  it("leaves a spot alone on today's court", () => {
-    expect(fitToCourt(30, -40, DEFAULT_COURT).x).toBeCloseTo(30);
-    expect(fitToCourt(30, -40, DEFAULT_COURT).y).toBeCloseTo(-40);
+  it('leaves a spot alone when moving it onto the same court', () => {
+    expect(fitToCourt(30, -40, PROTOTYPE_COURT).x).toBeCloseTo(30);
+    expect(fitToCourt(30, -40, PROTOTYPE_COURT).y).toBeCloseTo(-40);
+  });
+
+  it("moves a spot from any court, not only the prototype's", () => {
+    const back = fitToCourt(0, 75, PROTOTYPE_COURT, small);
+    expect(back.y).toBeCloseTo(105);
   });
 
   it('leaves the crush where it is', () => {
@@ -100,13 +112,13 @@ describe('fitToCourt', () => {
   });
 
   it('squeezes the mosh: its edge lands on the smaller edge', () => {
-    expect(fitToCourt(0, MOSH_RADIUS, small).y).toBeCloseTo(70);
+    expect(fitToCourt(0, PROTOTYPE_COURT.moshRadius, small).y).toBeCloseTo(70);
   });
 
   it("keeps an apron spot on the apron, the same distance in from the court's edge", () => {
     const moved = fitToCourt(0, 130, small);
     expect(zoneAt(moved.x, moved.y, small)).toBe('apron');
-    expect(courtRadius(small) - moved.y).toBeCloseTo(COURT_RADIUS - 130);
+    expect(courtRadius(small) - moved.y).toBeCloseTo(courtRadius(PROTOTYPE_COURT) - 130);
   });
 
   it('keeps the direction from the center', () => {

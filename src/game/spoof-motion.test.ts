@@ -161,8 +161,8 @@ describe('DEFAULT_TUNING', () => {
     expect(DEFAULT_TUNING.skidFloor).toBe(0.1);
   });
 
-  it('starts aggression at 1, for the owner to pick on #51', () => {
-    expect(DEFAULT_TUNING.aggression).toBe(1);
+  it("holds the owner's pick on #51: aggression 2", () => {
+    expect(DEFAULT_TUNING.aggression).toBe(2);
   });
 });
 

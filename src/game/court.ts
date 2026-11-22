@@ -1,6 +1,7 @@
 /**
  * The court, in **court units**, not pixels: a circle centered on (0, 0),
- * with y pointing down. Today's court has a radius of 150.
+ * with y pointing down. The game's court has a radius of 130: a mosh of 80
+ * inside an apron ring 50 wide.
  *
  * Every position, size and speed in the game is in court units: zones here,
  * seats in arena.ts, spoof radii in spoof-types.ts. Only drawing converts to
@@ -9,8 +10,9 @@
  * so the arena scales cleanly to any screen and stays crisp. The game logic
  * never knows the screen size.
  *
- * The numbers match the prototype (court.py, and MatchMosh in match.js),
- * where 1 unit was 1 pixel on a 300 px court, so its tuning carries over.
+ * Units match the prototype (court.py, and MatchMosh in match.js), where 1
+ * unit was 1 pixel on a 300 px court (mosh 100), so its speeds and sizes
+ * carry over. The owner shrank the mosh to 80 on #51 for livelier scrums.
  *
  * **The mosh's size can change; the rest can't** (the owner, #51). The crush
  * stays at radius 25, and the apron stays a ring 50 wide, room for a
@@ -29,12 +31,15 @@ export interface Court {
   readonly moshRadius: number;
 }
 
-/** Today's court: mosh radius 100, so a court radius of 150. */
-export const DEFAULT_COURT: Court = { moshRadius: 100 };
+/** The prototype's court: mosh radius 100, court radius 150. */
+export const PROTOTYPE_COURT: Court = { moshRadius: 100 };
 
-/** Today's court radius, 150. */
+/** The game's court: mosh radius 80, so a court radius of 130 (the owner, on #51, 2026-11-22). */
+export const DEFAULT_COURT: Court = { moshRadius: 80 };
+
+/** The game's court radius, 130. */
 export const COURT_RADIUS = courtRadius(DEFAULT_COURT);
-/** Today's mosh radius, 100. */
+/** The game's mosh radius, 80. */
 export const MOSH_RADIUS = DEFAULT_COURT.moshRadius;
 
 /** A court's radius: its mosh plus the apron ring. */
@@ -87,22 +92,28 @@ export function isOnCourt(
 }
 
 /**
- * Where a spot on today's court lands on a court with a smaller mosh, keeping
- * it in the same zone and the same place within it. The crush doesn't move,
- * the mosh between it and its edge is squeezed in proportion, and the apron
- * ring moves in by however much the mosh shrank. So a spoof placed on the
- * apron stays on the apron (#51).
+ * Where a spot on one court lands on another, keeping it in the same zone and
+ * the same place within it (#51). The crush doesn't move, the mosh between it
+ * and its edge is stretched or squeezed in proportion, and the apron ring
+ * moves by however much the mosh changed. So a spoof placed on the apron
+ * stays on the apron. Spots are measured on `from`, the prototype's court
+ * unless given.
  */
-export function fitToCourt(x: number, y: number, court: Court): { x: number; y: number } {
+export function fitToCourt(
+  x: number,
+  y: number,
+  court: Court,
+  from: Court = PROTOTYPE_COURT,
+): { x: number; y: number } {
   const d = Math.hypot(x, y);
   if (d === 0 || d <= CRUSH_RADIUS) return { x, y };
   let fitted: number;
-  if (d <= MOSH_RADIUS) {
+  if (d <= from.moshRadius) {
     fitted =
       CRUSH_RADIUS +
-      ((d - CRUSH_RADIUS) * (court.moshRadius - CRUSH_RADIUS)) / (MOSH_RADIUS - CRUSH_RADIUS);
+      ((d - CRUSH_RADIUS) * (court.moshRadius - CRUSH_RADIUS)) / (from.moshRadius - CRUSH_RADIUS);
   } else {
-    fitted = d - (MOSH_RADIUS - court.moshRadius);
+    fitted = d - (from.moshRadius - court.moshRadius);
   }
   return { x: (x * fitted) / d, y: (y * fitted) / d };
 }

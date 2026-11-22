@@ -8,9 +8,8 @@ import type { SpoofType } from './spoof-types';
  * cautious spoof can be equally good. Like skills, it's never shown on screen
  * (docs/design.md, Decision 7).
  *
- * 1 is average. The game's aggression level is scaled by each spoof's
- * temperament, so at the same level a hot spoof attacks far more than a calm
- * one.
+ * 1 is average. A spoof above 0.7 is drawn to opponents, more so the hotter
+ * it is; one below 0.7 is shy of them (`appetite` in spoof-ai.ts).
  */
 
 /** The lowest and highest temperament a spoof can have. */
@@ -21,7 +20,7 @@ export const MAX_TEMPERAMENT = 2;
 export const TEMPERAMENT_SPREAD = 0.4;
 
 /**
- * Each type's average temperament: a proposal for the owner to review on #51.
+ * Each type's average temperament, set on #51.
  * The hidden angry pawns run hottest, so their subtype shows through play,
  * and noble pawns calmest.
  */

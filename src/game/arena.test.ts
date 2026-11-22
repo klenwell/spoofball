@@ -101,7 +101,7 @@ describe('the arena on a court with a smaller mosh (#51)', () => {
   };
 
   it("puts the benches just outside the smaller court's edge", () => {
-    expect(benchRadius(small)).toBe(BENCH_RADIUS - 30);
+    expect(benchRadius(small)).toBe(courtRadius(small) + 15 + SEAT_RADIUS);
     for (const seat of benchSeats('home', small)) {
       expect(Math.hypot(seat.x, seat.y) - SEAT_RADIUS).toBeGreaterThan(courtRadius(small));
     }
