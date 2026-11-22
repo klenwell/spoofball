@@ -82,8 +82,8 @@ describe('impact', () => {
 });
 
 describe('resolveCollision', () => {
-  it('defaults to a bit of bounce, 0.4, in the range the owner liked on #49', () => {
-    expect(DEFAULT_COLLISION_RULE).toEqual(impact(0.4));
+  it("defaults to the owner's pick on #49: a little bounce, 0.25", () => {
+    expect(DEFAULT_COLLISION_RULE).toEqual(impact(0.25));
   });
 
   describe.each([

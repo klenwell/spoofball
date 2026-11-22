@@ -56,7 +56,13 @@ describe('simulateScrum', () => {
 
   it('moves spoofs toward their goal: with a brain that always picks the crush, they close in on it', () => {
     const start = presetScrumEntries();
-    const toCrush = simulateScrum(start, { random: createRandom(TEST_SEED), brain: headForCrush });
+    // The prototype's skid, which stops a spoof cleanly at the crush: this
+    // test is about steering, not the skid floor.
+    const toCrush = simulateScrum(start, {
+      random: createRandom(TEST_SEED),
+      brain: headForCrush,
+      tuning: { skidFloor: 0 },
+    });
     const end = toCrush.frames[toCrush.frames.length - 1];
     const before = start.reduce((sum, e) => sum + Math.hypot(e.position.x, e.position.y), 0);
     const after = end?.spoofs.reduce((sum, s) => sum + Math.hypot(s.x, s.y), 0) ?? Infinity;

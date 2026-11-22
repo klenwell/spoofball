@@ -18,6 +18,7 @@ import {
   skid,
   steerToward,
   thoughtProbability,
+  DEFAULT_TUNING,
 } from './spoof-motion';
 import { angle, length, vec } from './vec';
 
@@ -56,9 +57,9 @@ describe('thoughtProbability', () => {
     }
   });
 
-  it('thinks at twice the prototype pace by default (the owner, on #49)', () => {
+  it('thinks at 3 times the prototype pace by default (the owner, on #49)', () => {
     const s = skills({ iq: 50, impact: 1, constancy: 1 });
-    expect(thoughtProbability(s, 0)).toBeCloseTo(2 * thoughtProbability(s, 0, 1));
+    expect(thoughtProbability(s, 0)).toBeCloseTo(3 * thoughtProbability(s, 0, 1));
   });
 
   it('rises as the clock runs down, more with high impact and constancy', () => {
@@ -115,7 +116,7 @@ describe('skid', () => {
   it('keeps a share of the speed', () => {
     // grace 50: keep 1–50% of the speed, turn up to ±50°. Draws: keep 50%, turn 0°.
     const random = sequenceRandom([0.99, 0.5]);
-    const after = skid(vec(10, 0), skills(), random);
+    const after = skid(vec(10, 0), skills(), random, 0);
     expect(length(after)).toBeCloseTo(5);
     expect(after.y).toBeCloseTo(0);
   });
@@ -151,6 +152,12 @@ describe('skid', () => {
     const graceful = skills({ burst: 95, constancy: 95, stamina: 95 });
     const clumsy = skills({ burst: 10, constancy: 10, stamina: 10 });
     expect(averageTurn(clumsy)).toBeGreaterThan(averageTurn(graceful));
+  });
+});
+
+describe('DEFAULT_TUNING', () => {
+  it("holds the owner's picks on #49: thinking 3×, skids keep at least 10%", () => {
+    expect(DEFAULT_TUNING).toEqual({ thinkingPace: 3, skidFloor: 0.1 });
   });
 });
 

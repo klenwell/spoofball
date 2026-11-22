@@ -34,8 +34,9 @@ export const MAX_BLOW_RADIUS = 40;
 
 /**
  * Tuning for how lively a scrum is (#49). The owner found scrums slow: spoofs
- * sat nearly still about half the time. These are set while watching scrums,
- * on review-only sliders, then fixed.
+ * sat nearly still about half the time. These were set while watching scrums,
+ * on review-only sliders, then fixed. Tests and later tuning (#41) can pass
+ * other values to `simulateScrum`.
  */
 export interface Tuning {
   /**
@@ -51,8 +52,13 @@ export interface Tuning {
   readonly skidFloor: number;
 }
 
-/** Thinking twice the prototype's pace (the owner, on #49); skids as in the prototype. */
-export const DEFAULT_TUNING: Tuning = { thinkingPace: 2, skidFloor: 0 };
+/**
+ * The owner's picks on #49 (2026-11-21), after watching scrums with sliders:
+ * thinking at 3× the prototype's pace, and a skid keeping at least 10% of a
+ * spoof's speed. Past about 3×, more thinking made spoofs hold more, flattened
+ * the skill edge, and cost smart spoofs growth (#50).
+ */
+export const DEFAULT_TUNING: Tuning = { thinkingPace: 3, skidFloor: 0.1 };
 
 /** Skills a scrum changes as a spoof tires. */
 export type ScrumSkills = Record<SkillName, number>;
