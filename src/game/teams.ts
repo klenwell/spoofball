@@ -3,6 +3,7 @@ import type { ScrumEntry } from './scrum';
 import type { TeamColorName } from '../design/tokens';
 import type { Random } from './random';
 import { generateSkills, sizeToRadius, skillNames, type Skills } from './skills';
+import { drawTemperament } from './temperament';
 import type { SpoofType } from './spoof-types';
 
 /**
@@ -19,11 +20,16 @@ export interface Spoof {
   readonly skills: Skills;
   /** Base radius in court units, from the size skill (`sizeToRadius`), 10 to 24. */
   readonly radius: number;
+  /**
+   * How keen it is to attack: 1 is average (#51). Hidden, like its skills,
+   * and not a skill itself: a style of play, neither better nor worse.
+   */
+  readonly temperament: number;
 }
 
 /** A spoof with its radius worked out from its size skill. */
-export function createSpoof(id: string, type: SpoofType, skills: Skills): Spoof {
-  return { id, type, skills, radius: sizeToRadius(skills.size) };
+export function createSpoof(id: string, type: SpoofType, skills: Skills, temperament = 1): Spoof {
+  return { id, type, skills, radius: sizeToRadius(skills.size), temperament };
 }
 
 /**
@@ -37,7 +43,10 @@ export const NEW_SPOOF_SKILL_TOTAL = NEW_SPOOF_POINTS_PER_SKILL * skillNames.len
 
 /** Generates a spoof of a type with this skill total, from a random source. */
 export function generateSpoof(id: string, type: SpoofType, total: number, random: Random): Spoof {
-  return createSpoof(id, type, generateSkills(type, total, random));
+  // Skills first, then temperament, so adding temperament left every
+  // existing spoof's skills unchanged.
+  const skills = generateSkills(type, total, random);
+  return createSpoof(id, type, skills, drawTemperament(type, random));
 }
 
 export interface Team {

@@ -2,8 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { TEST_SEED } from '../test-support/random';
 import { presetScrumEntries } from '../test-support/scrum';
 import { PROTOTYPE_SHOVE, impact } from './body';
-import { generateSpoof } from './teams';
-import { COURT_RADIUS, zoneAt, zoneMultiplier } from './court';
+import { NEW_SPOOF_SKILL_TOTAL, generateSpoof } from './teams';
+import {
+  COURT_RADIUS,
+  courtRadius,
+  courtWithMosh,
+  fitToCourt,
+  zoneAt,
+  zoneMultiplier,
+} from './court';
 import { createRandom } from './random';
 import { headForCrush, simulateScrum, type Brain, type ScrumEntry, type ScrumFrame } from './scrum';
 import { FRAMES_PER_SCRUM, MAX_BLOW_RADIUS, SCRUM_SECONDS } from './spoof-motion';
@@ -478,6 +485,118 @@ describe('simulateScrum', () => {
         brain: charge,
       });
       expect(r.finish.reduce((sum, f) => sum + f.stats.dings, 0)).toBeGreaterThan(5);
+    });
+  });
+
+  describe('on a court with a smaller mosh (#51)', () => {
+    const small = courtWithMosh(70);
+    const entries = presetScrumEntries().map((e) => ({
+      ...e,
+      position: fitToCourt(e.position.x, e.position.y, small),
+    }));
+
+    it('keeps every spoof wholly on that court in every frame', () => {
+      const r = simulateScrum(entries, { random: createRandom(TEST_SEED), court: small });
+      for (const frame of r.frames) {
+        for (const s of frame.spoofs) {
+          expect(Math.hypot(s.x, s.y) + s.radius).toBeLessThanOrEqual(courtRadius(small) + 1e-9);
+        }
+      }
+    });
+  });
+
+  describe('aggression (#51)', () => {
+    const hitsOver = (seeds: number, aggression: number, entries = presetScrumEntries()) => {
+      let total = 0;
+      for (let seed = 0; seed < seeds; seed += 1) {
+        total += simulateScrum(entries, {
+          random: createRandom(seed),
+          tuning: { aggression },
+        }).finish.reduce((sum, f) => sum + f.stats.dings, 0);
+      }
+      return total / seeds;
+    };
+
+    it('makes spoofs attack: more hits than without it', () => {
+      expect(hitsOver(30, 1)).toBeGreaterThan(hitsOver(30, 0) * 1.3);
+    });
+
+    it('is scaled by temperament: a hot team lands more hits than a calm one', () => {
+      // The same lineup, with one team's temperament at 1.8 and the other's at
+      // 0.2, then swapped, so the lineup itself can't explain the result.
+      const dingsBy = (homeTemper: number, visitorTemper: number) => {
+        const entries = presetScrumEntries().map((e) => ({
+          ...e,
+          spoof: { ...e.spoof, temperament: e.team === 'home' ? homeTemper : visitorTemper },
+        }));
+        let home = 0;
+        let visitor = 0;
+        for (let seed = 0; seed < 30; seed += 1) {
+          const r = simulateScrum(entries, {
+            random: createRandom(seed),
+            tuning: { aggression: 1 },
+          });
+          for (const f of r.finish) {
+            if (entries.find((e) => e.spoof.id === f.id)?.team === 'home') home += f.stats.dings;
+            else visitor += f.stats.dings;
+          }
+        }
+        return { home, visitor };
+      };
+      const homeHot = dingsBy(1.8, 0.2);
+      const visitorHot = dingsBy(0.2, 1.8);
+      expect(homeHot.home).toBeGreaterThan(homeHot.visitor);
+      expect(visitorHot.visitor).toBeGreaterThan(visitorHot.home);
+    });
+  });
+
+  describe('temperament in a realistic mix (#51)', () => {
+    // Random spoofs of every type, so temperaments vary as they will in play,
+    // not just one hot team against one calm team. This is where an earlier
+    // version showed no difference: everyone collided on the crush anyway.
+    it('lets hot spoofs land clearly more hits than calm ones, which keep away', () => {
+      const types = [
+        'king',
+        'queen',
+        'rook',
+        'bishop',
+        'knight',
+        'pawn-basic',
+        'pawn-noble',
+        'pawn-angry',
+      ] as const;
+      const base = presetScrumEntries();
+      let hotHits = 0;
+      let hot = 0;
+      let calmHits = 0;
+      let calm = 0;
+      for (let seed = 0; seed < 80; seed += 1) {
+        const pick = createRandom(seed * 7 + 1);
+        const entries = base.map((e, i) => ({
+          ...e,
+          spoof: generateSpoof(
+            e.spoof.id,
+            pick.pick(types),
+            NEW_SPOOF_SKILL_TOTAL,
+            createRandom(seed * 100 + i),
+          ),
+        }));
+        const r = simulateScrum(entries, {
+          random: createRandom(seed),
+          tuning: { aggression: 0.75 },
+        });
+        for (const f of r.finish) {
+          const temperament = entries.find((e) => e.spoof.id === f.id)?.spoof.temperament ?? 1;
+          if (temperament > 1.3) {
+            hotHits += f.stats.dings;
+            hot += 1;
+          } else if (temperament < 0.7) {
+            calmHits += f.stats.dings;
+            calm += 1;
+          }
+        }
+      }
+      expect(hotHits / hot).toBeGreaterThan((calmHits / calm) * 1.3);
     });
   });
 

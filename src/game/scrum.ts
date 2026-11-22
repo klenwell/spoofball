@@ -5,6 +5,7 @@ import {
   type Body,
   type CollisionRule,
 } from './body';
+import { DEFAULT_COURT, type Court } from './court';
 import type { Random } from './random';
 import {
   heedProbability,
@@ -92,12 +93,18 @@ export interface SpoofView {
   readonly velocity: Vec;
   readonly radius: number;
   readonly skills: Readonly<ScrumSkills>;
+  /** How keen it is to attack, 1 being average (#51). */
+  readonly temperament: number;
 }
 
 export interface ScrumView {
   readonly spoofs: readonly SpoofView[];
   /** Seconds since the scrum started. */
   readonly secondsGone: number;
+  /** The court being played on. Today's unless the scrum was given another. */
+  readonly court: Court;
+  /** The aggression level (see `Tuning`). */
+  readonly aggression: number;
 }
 
 /**
@@ -123,6 +130,8 @@ export interface ScrumOptions {
   readonly brain?: Brain;
   /** How lively the scrum is; `DEFAULT_TUNING` unless given. */
   readonly tuning?: Partial<Tuning>;
+  /** The court; today's (`DEFAULT_COURT`) unless given. */
+  readonly court?: Court;
 }
 
 /**
@@ -199,6 +208,7 @@ interface Runner {
   readonly id: string;
   readonly team: string;
   readonly mass: number;
+  readonly temperament: number;
   position: Vec;
   velocity: Vec;
   radius: number;
@@ -224,6 +234,7 @@ function startRunner(entry: ScrumEntry): Runner {
     id: spoof.id,
     team: entry.team,
     mass: spoof.skills.mass,
+    temperament: spoof.temperament,
     position: entry.position,
     velocity: ZERO,
     radius: spoof.radius,
@@ -244,6 +255,7 @@ function view(runner: Runner): SpoofView {
     velocity: runner.velocity,
     radius: runner.radius,
     skills: runner.skills,
+    temperament: runner.temperament,
   };
 }
 
@@ -325,6 +337,7 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
   const collision = options.collision ?? DEFAULT_COLLISION_RULE;
   const brain = options.brain ?? spoofBrain;
   const tuning: Tuning = { ...DEFAULT_TUNING, ...options.tuning };
+  const court = options.court ?? DEFAULT_COURT;
   const runners = entries.map(startRunner);
   const byId = new Map(runners.map((r) => [r.id, r]));
   const frames: ScrumFrame[] = [];
@@ -358,7 +371,12 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
 
       if (random.chance(thoughtProbability(runner.skills, secondsGone, tuning.thinkingPace))) {
         runner.stats.imps += 1;
-        const scrum: ScrumView = { spoofs: runners.map(view), secondsGone };
+        const scrum: ScrumView = {
+          spoofs: runners.map(view),
+          secondsGone,
+          court,
+          aggression: tuning.aggression,
+        };
         // Re-aim at every thought, at whatever goal it keeps or picks, as in
         // the prototype, so a spoof knocked off course heads back.
         const idea = brain(view(runner), scrum, random, runner.goal);
@@ -420,7 +438,7 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
     for (const runner of runners) {
       runner.radius = Math.min(runner.radius, MAX_BLOW_RADIUS);
       runner.velocity = limitSpeed(runner.velocity);
-      const onCourt = keepOnCourt(runner.position, runner.velocity, runner.radius);
+      const onCourt = keepOnCourt(runner.position, runner.velocity, runner.radius, court);
       runner.position = onCourt.position;
       runner.velocity = onCourt.velocity;
     }

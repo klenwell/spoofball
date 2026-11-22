@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 /**
  * A guard for docs/design.md, Decision 7: no screen ever shows a spoof's
- * skills or comps (#35). The screens and canvas drawing live in src/ui, so
+ * skills, comps (#35) or temperament (#51). The screens and canvas drawing live in src/ui, so
  * none of that code may read them. If a screen ever needs something derived
  * from skills, such as a radius, it gets it from the game model instead.
  */
@@ -20,6 +20,9 @@ const forbidden: [string, RegExp][] = [
   ['destructured skills', /[{,]\s*skills\s*[,}:=]/],
   ['comps', /\bcomps\s*\(/],
   ['type profiles', /\btypeProfiles\b/],
+  // Temperament is hidden too (#51).
+  ['the temperament module', /from ['"][./]*\/?game\/temperament['"]/],
+  ["a spoof's temperament", /\btemperament\b/],
 ];
 
 describe('UI code', () => {

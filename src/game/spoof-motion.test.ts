@@ -157,7 +157,12 @@ describe('skid', () => {
 
 describe('DEFAULT_TUNING', () => {
   it("holds the owner's picks on #49: thinking 3×, skids keep at least 10%", () => {
-    expect(DEFAULT_TUNING).toEqual({ thinkingPace: 3, skidFloor: 0.1 });
+    expect(DEFAULT_TUNING.thinkingPace).toBe(3);
+    expect(DEFAULT_TUNING.skidFloor).toBe(0.1);
+  });
+
+  it("holds the owner's pick on #51: aggression 2", () => {
+    expect(DEFAULT_TUNING.aggression).toBe(2);
   });
 });
 

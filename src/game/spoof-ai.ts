@@ -1,4 +1,4 @@
-import { COURT_RADIUS, zoneAt, zoneMultiplier } from './court';
+import { DEFAULT_COURT, courtRadius, zoneAt, zoneMultiplier, type Court } from './court';
 import type { Random } from './random';
 import { comps } from './skills';
 import { SCRUM_SECONDS, SECONDS_PER_FRAME } from './spoof-motion';
@@ -43,19 +43,47 @@ export function lookSpacing(self: SpoofView): number {
 }
 
 /**
- * What a spot is worth to this spoof, if it were sitting there: the zone's
- * multiplier times one plus the teammates covering the spot. That's the same
- * rule scoring uses (#38): overlapping teammates multiply each other's score.
+ * The temperament at which a spoof neither seeks nor avoids opponents. Below
+ * it a spoof is shy and steers around them; above it, it's drawn to them.
+ */
+export const SHY_BELOW = 0.7;
+
+/** How sharply temperament turns into appetite, either way. */
+export const APPETITE_GAIN = 2;
+
+/**
+ * How strongly a spoof is drawn to opponents (#51): the game's aggression
+ * level times how far its temperament is above `SHY_BELOW`. A hot spoof is a
+ * brawler; a calm one is shy, with a negative appetite, so it steers around
+ * opponents. The owner chose shy calm spoofs on #51 (2026-11-22): with
+ * appetite simply proportional to temperament, hot and calm spoofs landed
+ * about the same hits, because everyone collided on the crush anyway.
+ */
+export function appetite(self: SpoofView, scrum: ScrumView): number {
+  return scrum.aggression * APPETITE_GAIN * (self.temperament - SHY_BELOW);
+}
+
+/**
+ * What a spot is worth to this spoof, if it were sitting there:
+ * - the zone's multiplier times one plus the teammates covering the spot,
+ *   the same rule scoring uses (#38): overlapping teammates multiply each
+ *   other's score;
+ * - plus the pull of opponents on the spot, for knocking them off and
+ *   denying their team points: the spoof's appetite times the zone's
+ *   multiplier, for each opponent there (#51).
  */
 export function spotValue(self: SpoofView, spot: Vec, scrum: ScrumView): number {
-  const zone = zoneMultiplier[zoneAt(spot.x, spot.y)];
+  const zone = zoneMultiplier[zoneAt(spot.x, spot.y, scrum.court)];
   if (zone === 0) return 0;
   let teammates = 0;
+  let opponents = 0;
   for (const other of scrum.spoofs) {
-    if (other.id === self.id || other.team !== self.team) continue;
-    if (distance(other.position, spot) <= other.radius) teammates += 1;
+    if (other.id === self.id) continue;
+    if (distance(other.position, spot) > other.radius) continue;
+    if (other.team === self.team) teammates += 1;
+    else opponents += 1;
   }
-  return zone * (1 + teammates);
+  return zone * (1 + teammates) + appetite(self, scrum) * zone * opponents;
 }
 
 /** How many opponents cover a spot. */
@@ -92,7 +120,8 @@ function misjudge(value: number, smarts: number, random: Random): number {
 }
 
 /** The spots a spoof surveys: a square grid within its vision, on the court. */
-export function surveySpots(self: SpoofView): Vec[] {
+export function surveySpots(self: SpoofView, court: Court = DEFAULT_COURT): Vec[] {
+  const edge = courtRadius(court);
   const range = visionRadius(self);
   const spacing = lookSpacing(self);
   const steps = Math.floor(range / spacing);
@@ -102,7 +131,7 @@ export function surveySpots(self: SpoofView): Vec[] {
       const offset = { x: i * spacing, y: j * spacing };
       if (length(offset) > range) continue;
       const spot = { x: self.position.x + offset.x, y: self.position.y + offset.y };
-      if (length(spot) <= COURT_RADIUS) spots.push(spot);
+      if (length(spot) <= edge) spots.push(spot);
     }
   }
   return spots;
@@ -134,13 +163,28 @@ export function currentValue(self: SpoofView, goal: Goal, scrum: ScrumView): num
 }
 
 /**
+ * Whether a spoof charges a spot instead of just going there (#51):
+ * - when its pull toward the opponents there is at least as strong as a
+ *   teammate's would be, so a hot spoof charges even a single opponent;
+ * - or when a crowd of 2 or more is there, as in the prototype, unless the
+ *   spoof is shy: a shy spoof never charges.
+ */
+export function charges(self: SpoofView, spot: Vec, scrum: ScrumView): boolean {
+  const opponents = opponentsAt(self, spot, scrum);
+  if (opponents === 0) return false;
+  const pull = appetite(self, scrum);
+  if (pull < 0) return false;
+  return opponents >= 2 || pull * opponents >= 1;
+}
+
+/**
  * The spoof AI's brain. It surveys the spots it can see and picks the most
  * valuable, discounting far ones a little and misjudging by its smarts. It
  * keeps its current goal if that's still truly worth as much as the best new
  * spot. Otherwise:
  * - if no spot is truly worth more than where it is, it holds its spot;
- * - if the best spot is crowded with 2 or more opponents, it charges them
- *   (a crash goal, the prototype's idea);
+ * - if it would charge the opponents on its best spot (`charges`), it
+ *   makes it a crash goal, the prototype's idea;
  * - if it sees nothing of value, it gropes toward the center.
  */
 export function spoofBrain(
@@ -157,7 +201,7 @@ export function spoofBrain(
   let best: Vec | null = null;
   let bestValue = 0;
   let bestRaw = 0;
-  for (const spot of surveySpots(self)) {
+  for (const spot of surveySpots(self, scrum.court)) {
     const raw = spotValue(self, spot, scrum);
     if (raw === 0) continue;
     const value = misjudge(raw * nearness(self, spot, range), smarts, random);
@@ -180,7 +224,7 @@ export function spoofBrain(
   if (here > 0 && here >= bestRaw) {
     return { kind: 'hold', point: self.position, weight: 1, expires: null };
   }
-  if (opponentsAt(self, best, scrum) >= 2) {
+  if (charges(self, best, scrum)) {
     return { kind: 'crash', point: best, weight: 1, expires: now + CRASH_SECONDS };
   }
   return { kind: 'goto', point: best, weight: 1, expires: null };

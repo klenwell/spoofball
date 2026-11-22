@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { TEST_SEED } from '../test-support/random';
-import { COURT_RADIUS, zoneAt } from './court';
+import { COURT_RADIUS, DEFAULT_COURT, courtWithMosh, zoneAt } from './court';
 import { createRandom } from './random';
 import { skillNames, type Skills } from './skills';
 import type { ScrumView, SpoofView } from './scrum';
 import {
   CRASH_SECONDS,
+  SHY_BELOW,
+  appetite,
+  charges,
   currentValue,
   MAX_VISION_RANGE,
   heedProbability,
@@ -34,12 +37,26 @@ function spoof(
   at: Vec,
   overrides: Partial<Skills> = {},
   radius = 15,
+  temperament = 1,
 ): SpoofView {
-  return { id, team, position: at, velocity: vec(0, 0), radius, skills: skills(overrides) };
+  return {
+    id,
+    team,
+    position: at,
+    velocity: vec(0, 0),
+    radius,
+    skills: skills(overrides),
+    temperament,
+  };
 }
 
+/** A scrum with no aggression, the AI as it was before #51, unless given one. */
 function scrumOf(...spoofs: SpoofView[]): ScrumView {
-  return { spoofs, secondsGone: 0 };
+  return { spoofs, secondsGone: 0, court: DEFAULT_COURT, aggression: 0 };
+}
+
+function aggressive(aggression: number, ...spoofs: SpoofView[]): ScrumView {
+  return { ...scrumOf(...spoofs), aggression };
 }
 
 describe('visionRadius', () => {
@@ -238,5 +255,105 @@ describe('messages', () => {
   it("persuade by the sender's charisma: up to 1.5 times a goal's value", () => {
     expect(persuasion(100)).toBeCloseTo(1.5);
     expect(persuasion(50)).toBeCloseTo(0.75);
+  });
+});
+
+describe('attacking (#51)', () => {
+  const random = () => createRandom(TEST_SEED);
+
+  describe('appetite', () => {
+    it('is the level times twice how far the temperament is above 0.7', () => {
+      const hot = spoof('h', 'home', vec(0, 0), {}, 15, 1.5);
+      expect(appetite(hot, aggressive(0.8, hot))).toBeCloseTo(0.8 * 2 * (1.5 - 0.7));
+    });
+
+    it('is 0 at the neutral temperament, 0.7: neither drawn to opponents nor shy of them', () => {
+      const neutral = spoof('n', 'home', vec(0, 0), {}, 15, SHY_BELOW);
+      expect(appetite(neutral, aggressive(1, neutral))).toBe(0);
+    });
+
+    it('is negative for a calm spoof: it is shy of opponents', () => {
+      const calm = spoof('c', 'home', vec(0, 0), {}, 15, 0.3);
+      expect(appetite(calm, aggressive(1, calm))).toBeLessThan(0);
+    });
+  });
+
+  describe('spotValue', () => {
+    it('adds the pull of an opponent on the spot: appetite × zone for each one', () => {
+      const me = spoof('me', 'home', vec(60, 0), {}, 15, 1.5);
+      const scrum = aggressive(0.5, me, spoof('r', 'visitor', vec(60, 0)));
+      expect(spotValue(me, vec(60, 0), scrum)).toBeCloseTo(1 + appetite(me, scrum) * 1);
+      const inCrush = aggressive(0.5, me, spoof('r2', 'visitor', vec(0, 0)));
+      expect(spotValue(me, vec(0, 0), inCrush)).toBeCloseTo(3 + appetite(me, inCrush) * 3);
+    });
+
+    it('makes a shy spoof value a spot less when an opponent is on it', () => {
+      const shy = spoof('s', 'home', vec(60, 0), {}, 15, 0.3);
+      const empty = aggressive(1, shy);
+      const taken = aggressive(1, shy, spoof('r', 'visitor', vec(60, 0)));
+      expect(spotValue(shy, vec(60, 0), taken)).toBeLessThan(spotValue(shy, vec(60, 0), empty));
+    });
+
+    it('ignores opponents when there is no aggression, as before #51', () => {
+      const me = spoof('me', 'home', vec(60, 0));
+      expect(spotValue(me, vec(60, 0), scrumOf(me, spoof('r', 'visitor', vec(60, 0))))).toBe(1);
+    });
+  });
+
+  describe('charges', () => {
+    const rival = spoof('r', 'visitor', vec(60, 0));
+
+    it('charges a single opponent when the spoof is hot enough', () => {
+      const hot = spoof('h', 'home', vec(0, 60), {}, 15, 1.5);
+      expect(charges(hot, vec(60, 0), aggressive(1, hot, rival))).toBe(true);
+    });
+
+    it('does not charge a single opponent when the spoof is calm', () => {
+      const calm = spoof('c', 'home', vec(0, 60), {}, 15, 0.3);
+      expect(charges(calm, vec(60, 0), aggressive(1, calm, rival))).toBe(false);
+    });
+
+    it('never charges when shy, not even a crowd of 2', () => {
+      const shy = spoof('c', 'home', vec(0, 60), {}, 15, 0.3);
+      const second = spoof('r2', 'visitor', vec(62, 2));
+      expect(charges(shy, vec(61, 1), aggressive(1, shy, rival, second))).toBe(false);
+    });
+
+    it('charges a crowd of 2 at the neutral temperament, as in the prototype', () => {
+      const neutral = spoof('n', 'home', vec(0, 60), {}, 15, SHY_BELOW);
+      const second = spoof('r2', 'visitor', vec(62, 2));
+      expect(charges(neutral, vec(61, 1), aggressive(1, neutral, rival, second))).toBe(true);
+    });
+  });
+
+  describe('spoofBrain', () => {
+    it('sends a hot spoof after an opponent in the mosh rather than an empty spot', () => {
+      const hot = spoof('h', 'home', vec(-60, 0), { vision: 40 }, 15, 1.8);
+      const rival = spoof('r', 'visitor', vec(-40, 30), {}, 20);
+      const goal = spoofBrain(hot, aggressive(1.5, hot, rival), random(), null);
+      expect(goal.kind).toBe('crash');
+      expect(distance(goal.point, rival.position)).toBeLessThanOrEqual(rival.radius);
+    });
+
+    it('leaves a calm spoof uninterested in the same opponent', () => {
+      const calm = spoof('c', 'home', vec(-60, 0), { vision: 40 }, 15, 0.2);
+      const rival = spoof('r', 'visitor', vec(-40, 30), {}, 20);
+      const goal = spoofBrain(calm, aggressive(0.5, calm, rival), random(), null);
+      expect(goal.kind).not.toBe('crash');
+    });
+  });
+
+  describe('on a court with a smaller mosh', () => {
+    const small = courtWithMosh(70);
+
+    it('surveys only spots on that court', () => {
+      const me = spoof('me', 'home', vec(0, 100), { vision: 90 });
+      for (const s of surveySpots(me, small)) expect(length(s)).toBeLessThanOrEqual(120);
+    });
+
+    it("values a spot by that court's zones: radius 80 is apron there", () => {
+      const me = spoof('me', 'home', vec(0, 80));
+      expect(spotValue(me, vec(0, 80), { ...scrumOf(me), court: small })).toBe(0);
+    });
   });
 });
