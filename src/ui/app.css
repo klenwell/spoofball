@@ -407,7 +407,7 @@ body {
   color: var(--color-text-muted);
 }
 
-/* A team's header row: a little space above it, and its name in its kit. */
+/* A team's header row: a little space above it. Its kit shows in the swatch by its name. */
 .scorecard-team-head th {
   padding-top: var(--space-3);
 }
