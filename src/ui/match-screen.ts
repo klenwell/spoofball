@@ -58,7 +58,7 @@ import {
   type Hand,
 } from './mise-hand';
 import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
-import { FADED_AT_FATIGUE, drawSpoofDisc, fatigueOpacity } from './spoof-disc';
+import { drawSpoofDisc } from './spoof-disc';
 
 /**
  * The Match screen. First the mise (#39): the two teams take turns placing 3
@@ -217,42 +217,13 @@ export function createMatchScreen(): Panel {
   const nextScrumButton = el('button', 'button button-primary', 'Next scrum');
   nextScrumButton.type = 'button';
 
-  // --- Review only (#59): how see-through tired spoofs get --------------------
-  /** The fatigue at which a spoof is at its most see-through. */
-  let fadedAt = FADED_AT_FATIGUE;
-  const review = el('fieldset', 'review-controls');
-  review.hidden = !new URLSearchParams(window.location.search).has('review');
-  const fadeRow = el('label', 'review-row');
-  const fadeInput = el('input');
-  fadeInput.type = 'range';
-  fadeInput.min = '20';
-  fadeInput.max = '100';
-  fadeInput.step = '5';
-  fadeInput.value = String(fadedAt);
-  const fadeValue = el('span', 'review-value');
-  const fadeHint = el('p', 'review-seed');
-  const showFade = () => {
-    fadeValue.textContent = String(fadedAt);
-    // Spoofs typically carry 20 to 30 fatigue into a mise.
-    const at = (f: number) => `${String(Math.round(fatigueOpacity(f, fadedAt) * 100))}%`;
-    fadeHint.textContent = `A spoof at fatigue 20 is ${at(20)} opaque, at 30 ${at(30)}, at 50 ${at(50)}.`;
-  };
-  showFade();
-  fadeInput.addEventListener('input', () => {
-    fadedAt = Number(fadeInput.value);
-    showFade();
-    draw();
-  });
-  fadeRow.append(el('span', 'review-name', 'Most see-through at fatigue'), fadeInput, fadeValue);
-  review.append(el('legend', undefined, 'Review only (#59): tired spoofs'), fadeRow, fadeHint);
-
   const results = el('section', 'match-results');
   results.hidden = true;
   results.setAttribute('aria-live', 'polite');
 
   const root = el('div', 'match-screen');
   // The caption goes over the Embers' bench, inside the arena (rebuildCanvas).
-  root.append(board, clockBar, turnStrip, stage, controls, results, review);
+  root.append(board, clockBar, turnStrip, stage, controls, results);
 
   // --- Drawing -------------------------------------------------------------
   /** How tired a spoof is now, carried from earlier scrums (#40). */
@@ -300,7 +271,6 @@ export function createMatchScreen(): Panel {
           kit: kitFor(team),
           // Tired spoofs on the bench show it, so you can choose who rests.
           fatigue: Math.min(100, fatigueOf(team, spoof.id)),
-          fadedAt,
           highlighted: team === YOU && held.kind === 'picked' && held.spoof.id === spoof.id,
         });
       });
@@ -315,7 +285,6 @@ export function createMatchScreen(): Panel {
         type,
         kit: kitFor(s.team),
         fatigue: Math.min(100, s.fatigue),
-        fadedAt,
         highlighted: status === 'mise' && s.team === COMPUTER && s.id === justPlaced,
       });
     }
@@ -338,7 +307,6 @@ export function createMatchScreen(): Panel {
         type: pending.spoof.type,
         kit: kitFor(YOU),
         fatigue: Math.min(100, fatigueOf(YOU, pending.spoof.id)),
-        fadedAt,
       });
       drawGraceRing(c, v, pending.spot, pending.spoof.radius, graceProgress(hand, nowSeconds()));
     }
@@ -349,7 +317,6 @@ export function createMatchScreen(): Panel {
       type: held.spoof.type,
       kit: kitFor(YOU),
       fatigue: Math.min(100, fatigueOf(YOU, held.spoof.id)),
-      fadedAt,
     };
     if (landing?.kind === 'spot') {
       if (landing.inside) drawInsideLine(c, v, hand.mise.court);

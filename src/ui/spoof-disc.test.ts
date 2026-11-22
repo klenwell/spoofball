@@ -10,8 +10,10 @@ describe('fatigueOpacity', () => {
     expect(fatigueOpacity(100)).toBeCloseTo(MIN_FATIGUE_OPACITY);
   });
 
-  it('fades in proportion to fatigue', () => {
-    expect(fatigueOpacity(50)).toBeCloseTo(1 - 0.5 * (1 - MIN_FATIGUE_OPACITY));
+  it('fades in proportion to fatigue: 80% opaque at 20, 70% at 30, 50% at 50', () => {
+    expect(fatigueOpacity(20)).toBeCloseTo(0.8);
+    expect(fatigueOpacity(30)).toBeCloseTo(0.7);
+    expect(fatigueOpacity(50)).toBeCloseTo(0.5);
   });
 
   it('clamps fatigue outside 0 to 100', () => {
@@ -19,20 +21,10 @@ describe('fatigueOpacity', () => {
     expect(fatigueOpacity(150)).toBeCloseTo(MIN_FATIGUE_OPACITY);
   });
 
-  describe('when it reaches its most see-through sooner (#59)', () => {
-    it('fades over that range instead: halfway there at half the fatigue', () => {
-      expect(fatigueOpacity(20, 40)).toBeCloseTo(1 - 0.5 * (1 - MIN_FATIGUE_OPACITY));
-    });
-
-    it('stays at the minimum past that fatigue', () => {
-      expect(fatigueOpacity(40, 40)).toBeCloseTo(MIN_FATIGUE_OPACITY);
-      expect(fatigueOpacity(90, 40)).toBeCloseTo(MIN_FATIGUE_OPACITY);
-    });
-  });
-
-  it(`reaches its most see-through at fatigue ${String(FADED_AT_FATIGUE)} unless told otherwise`, () => {
-    expect(fatigueOpacity(FADED_AT_FATIGUE)).toBeCloseTo(MIN_FATIGUE_OPACITY);
-    expect(fatigueOpacity(FADED_AT_FATIGUE * 0.99)).toBeGreaterThan(MIN_FATIGUE_OPACITY);
+  it("reaches its most see-through at fatigue 70, the owner's pick on #59", () => {
+    expect(FADED_AT_FATIGUE).toBe(70);
+    expect(fatigueOpacity(70)).toBeCloseTo(MIN_FATIGUE_OPACITY);
+    expect(fatigueOpacity(69)).toBeGreaterThan(MIN_FATIGUE_OPACITY);
   });
 });
 
