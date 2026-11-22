@@ -121,13 +121,18 @@ function drawFadedBody(
   const layer = scratch.getContext('2d');
   if (!layer) throw new Error('Canvas 2D is not supported');
   layer.setTransform(1, 0, 0, 1, 0, 0);
-  layer.clearRect(0, 0, size, size);
+  // Clear the whole canvas, not just the part this disc uses: when the copy
+  // below is smoothed, the browser samples a pixel or two past its edge, and
+  // anything left there by a bigger disc earlier showed as thin lines (#49).
+  layer.clearRect(0, 0, scratch.width, scratch.height);
   layer.setTransform(scale, 0, 0, scale, size / 2, size / 2);
   drawBody(layer, radius, type, kit);
 
+  // Centered exactly on the disc: the layer is `size` device pixels across.
+  const across = size / scale;
   ctx.save();
   ctx.globalAlpha = opacity;
-  ctx.drawImage(scratch, 0, 0, size, size, -half, -half, size / scale, size / scale);
+  ctx.drawImage(scratch, 0, 0, size, size, -across / 2, -across / 2, across, across);
   ctx.restore();
 }
 

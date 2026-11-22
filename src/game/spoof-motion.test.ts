@@ -18,6 +18,7 @@ import {
   skid,
   steerToward,
   thoughtProbability,
+  DEFAULT_TUNING,
 } from './spoof-motion';
 import { angle, length, vec } from './vec';
 
@@ -36,14 +37,29 @@ describe('burstSpeed', () => {
 });
 
 describe('thoughtProbability', () => {
-  const perSecond = (s: Skills, secondsGone = 0) =>
-    thoughtProbability(s, secondsGone) / SECONDS_PER_FRAME;
+  // The prototype's own pace, 1×; the game runs at DEFAULT_TUNING's pace.
+  const perSecond = (s: Skills, secondsGone = 0, pace = 1) =>
+    thoughtProbability(s, secondsGone, pace) / SECONDS_PER_FRAME;
 
   it("follows the prototype's curve: about 0.4 thoughts a second at iq 1, 1 at iq 50, 4 at iq 99", () => {
     const calm = { impact: 1, constancy: 1 };
     expect(perSecond(skills({ iq: 1, ...calm }))).toBeCloseTo(0.4, 1);
     expect(perSecond(skills({ iq: 50, ...calm }))).toBeCloseTo(1, 1);
     expect(perSecond(skills({ iq: 99, ...calm }))).toBeCloseTo(4, 0);
+  });
+
+  it('scales the whole curve by the thinking pace, so smart spoofs keep the same lead', () => {
+    const calm = { impact: 1, constancy: 1 };
+    for (const iq of [1, 50, 99]) {
+      expect(perSecond(skills({ iq, ...calm }), 0, 2)).toBeCloseTo(
+        2 * perSecond(skills({ iq, ...calm })),
+      );
+    }
+  });
+
+  it('thinks at 3 times the prototype pace by default (the owner, on #49)', () => {
+    const s = skills({ iq: 50, impact: 1, constancy: 1 });
+    expect(thoughtProbability(s, 0)).toBeCloseTo(3 * thoughtProbability(s, 0, 1));
   });
 
   it('rises as the clock runs down, more with high impact and constancy', () => {
@@ -100,7 +116,7 @@ describe('skid', () => {
   it('keeps a share of the speed', () => {
     // grace 50: keep 1–50% of the speed, turn up to ±50°. Draws: keep 50%, turn 0°.
     const random = sequenceRandom([0.99, 0.5]);
-    const after = skid(vec(10, 0), skills(), random);
+    const after = skid(vec(10, 0), skills(), random, 0);
     expect(length(after)).toBeCloseTo(5);
     expect(after.y).toBeCloseTo(0);
   });
@@ -136,6 +152,25 @@ describe('skid', () => {
     const graceful = skills({ burst: 95, constancy: 95, stamina: 95 });
     const clumsy = skills({ burst: 10, constancy: 10, stamina: 10 });
     expect(averageTurn(clumsy)).toBeGreaterThan(averageTurn(graceful));
+  });
+});
+
+describe('DEFAULT_TUNING', () => {
+  it("holds the owner's picks on #49: thinking 3×, skids keep at least 10%", () => {
+    expect(DEFAULT_TUNING).toEqual({ thinkingPace: 3, skidFloor: 0.1 });
+  });
+});
+
+describe('skid with a floor', () => {
+  it('keeps at least the floor share of the speed', () => {
+    // grace 50 and the smallest prototype keep (1%): a floor of 0.5 keeps 50.5%.
+    const after = skid(vec(10, 0), skills(), sequenceRandom([0, 0.5]), 0.5);
+    expect(length(after)).toBeCloseTo(5.05);
+  });
+
+  it('keeps the prototype share when the floor is 0', () => {
+    const after = skid(vec(10, 0), skills(), sequenceRandom([0.99, 0.5]), 0);
+    expect(length(after)).toBeCloseTo(5);
   });
 });
 

@@ -56,7 +56,13 @@ describe('simulateScrum', () => {
 
   it('moves spoofs toward their goal: with a brain that always picks the crush, they close in on it', () => {
     const start = presetScrumEntries();
-    const toCrush = simulateScrum(start, { random: createRandom(TEST_SEED), brain: headForCrush });
+    // The prototype's skid, which stops a spoof cleanly at the crush: this
+    // test is about steering, not the skid floor.
+    const toCrush = simulateScrum(start, {
+      random: createRandom(TEST_SEED),
+      brain: headForCrush,
+      tuning: { skidFloor: 0 },
+    });
     const end = toCrush.frames[toCrush.frames.length - 1];
     const before = start.reduce((sum, e) => sum + Math.hypot(e.position.x, e.position.y), 0);
     const after = end?.spoofs.reduce((sum, s) => sum + Math.hypot(s.x, s.y), 0) ?? Infinity;
@@ -107,6 +113,15 @@ describe('simulateScrum', () => {
       collision: impact(1),
     });
     expect(bounce.frames).not.toEqual(shove.frames);
+  });
+
+  it('thinks at the pace it is given', () => {
+    const imps = (thinkingPace: number) =>
+      simulateScrum(presetScrumEntries(), {
+        random: createRandom(TEST_SEED),
+        tuning: { thinkingPace },
+      }).finish.reduce((sum, f) => sum + f.stats.imps, 0);
+    expect(imps(3)).toBeGreaterThan(imps(1) * 2);
   });
 
   it('uses the brain it is given to pick goals', () => {
@@ -391,24 +406,30 @@ describe('simulateScrum', () => {
 
   describe('goals', () => {
     it('as a charge are given up when they expire', () => {
-      // The first idea: charge a far spot, given up after half a second. The
-      // brain keeps whatever goal it has, so only expiry can end the charge.
-      // After it: the opposite side.
-      let calls = 0;
-      const brain: Brain = (_self, _scrum, _random, current) => {
-        if (current) return current;
-        calls += 1;
-        return calls === 1
-          ? { kind: 'crash', point: { x: 0, y: -120 }, weight: 1, expires: 0.5 }
-          : { kind: 'goto', point: { x: 0, y: 120 }, weight: 1, expires: null };
-      };
+      // The first idea: charge a far spot to the north, given up after half a
+      // second. The brain keeps whatever goal it has, so only expiry can end
+      // the charge. Every idea after it: a spot to the south. Averaged over 10
+      // seeds, because spoofs coast without friction and one can overshoot,
+      // bounce off the wall and drift north before its next thought.
       const [one] = presetScrumEntries();
       if (!one) throw new Error('no entries');
       const alone = [{ ...one, position: { x: 0, y: 0 } }];
-      const end = simulateScrum(alone, { random: createRandom(TEST_SEED), brain }).frames[
-        FRAMES_PER_SCRUM - 1
-      ];
-      expect(end?.spoofs[0]?.y).toBeGreaterThan(40);
+      let total = 0;
+      for (let seed = 0; seed < 10; seed += 1) {
+        let calls = 0;
+        const brain: Brain = (_self, _scrum, _random, current) => {
+          if (current) return current;
+          calls += 1;
+          return calls === 1
+            ? { kind: 'crash', point: { x: 0, y: -120 }, weight: 1, expires: 0.5 }
+            : { kind: 'goto', point: { x: 0, y: 120 }, weight: 1, expires: null };
+        };
+        const frames = simulateScrum(alone, { random: createRandom(seed), brain }).frames;
+        const laterHalf = frames.slice(FRAMES_PER_SCRUM / 2);
+        total += laterHalf.reduce((sum, f) => sum + (f.spoofs[0]?.y ?? 0), 0) / laterHalf.length;
+      }
+      // Without expiry, it keeps charging north: the average is below 0.
+      expect(total / 10).toBeGreaterThan(30);
     });
 
     it('are re-aimed at every thought, so a spoof knocked off course heads back', () => {
