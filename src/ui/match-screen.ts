@@ -49,15 +49,16 @@ import { drawSpoofDisc } from './spoof-disc';
 
 /**
  * The Match screen. First the mise (#39): the two teams take turns placing 3
- * spoofs each, you by tapping a spoof on your bench and then a spot on the
- * court, the Embers by themselves after a short pause. Then press Start scrum
- * and watch the 8-second scrum (#38), with a live scoreboard and clock, then
- * the result. The scrum is simulated up front, then played back at the
- * screen's frame rate. Tap the arena or Pause to pause, and leaving the tab
- * or the page pauses too.
+ * spoofs each. You drag a spoof from your bench onto the court, or tap it and
+ * then a spot (mise-hand.ts has the rules); the Embers place theirs after a
+ * short pause. A caption over the Embers' bench says what to do. Once all 6
+ * are placed, a "Scrum!" cue, then the 8-second scrum (#38) starts by itself,
+ * with a live scoreboard and clock, then the result and New match. The scrum
+ * is simulated up front, then played back at the screen's frame rate. Tap
+ * the arena or Pause to pause, and leaving the tab or the page pauses too.
  *
  * A match's random choices (the host, the turn order, the Embers' moves, the
- * scrum) all come from one seed, so with your taps it can be replayed.
+ * scrum) all come from one seed, so with your moves it can be replayed.
  */
 
 const MAX_ARENA_WIDTH = 480;
@@ -348,7 +349,7 @@ export function createMatchScreen(): Panel {
     );
   }
 
-  /** The instruction or state shown under the arena, also read out to screen readers. */
+  /** The caption over the Embers' bench: what to do, or why a spot is refused. Also read out to screen readers. */
   function miseMessage(): string {
     const turn = whoseTurn(hand.mise);
     if (!turn) return `All ${String(MISE_TURNS)} spoofs are placed. Scrum!`;
@@ -422,7 +423,7 @@ export function createMatchScreen(): Panel {
     stage.setAttribute('aria-label', `The court. ${state}`);
   }
 
-  /** Shows a message under the arena; only when it changes, so a screen reader isn't flooded mid-drag. */
+  /** Shows a caption; only when it changes, so a screen reader isn't flooded mid-drag. */
   function say(message: string): void {
     if (statusLine.textContent !== message) statusLine.textContent = message;
   }

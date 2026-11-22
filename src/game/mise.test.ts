@@ -250,6 +250,18 @@ describe('spotForTap', () => {
     expect(Math.hypot(result.spot.x - 105, result.spot.y - 27)).toBeLessThan(5);
   });
 
+  it('moves a tap as little as it can: 1.5 units into another spoof, by about 2', () => {
+    // Diagonal to the other spoof, so a search with few directions, or one
+    // that starts further out, has to move it further (#56 review).
+    const state = withPlacements(placed('visitor', 0, 0, 15));
+    const tap = { x: 28.5 * Math.SQRT1_2, y: 28.5 * Math.SQRT1_2 };
+
+    const result = spotForTap(state, 'home', tap, 15);
+
+    if (!('spot' in result)) throw new Error('refused');
+    expect(Math.hypot(result.spot.x - tap.x, result.spot.y - tap.y)).toBeLessThan(2.5);
+  });
+
   it('nudges a tap hanging just off the court back onto it', () => {
     const result = spotForTap(startMise(ORDER), 'home', { x: COURT_RADIUS - 12, y: 0 }, 15);
     if (!('spot' in result)) throw new Error('refused');
@@ -261,6 +273,21 @@ describe('spotForTap', () => {
     const result = spotForTap(state, 'home', { x: MOSH_RADIUS + 10, y: 0 }, 15);
     if (!('spot' in result)) throw new Error('refused');
     expect(isOnApron(result.spot.x, result.spot.y, 15, state.court)).toBe(true);
+  });
+
+  it('keeps to the apron when asked: a tap just inside the red line moves out onto it', () => {
+    const tap = { x: MOSH_RADIUS + 10, y: 0 };
+
+    const result = spotForTap(startMise(ORDER), 'home', tap, 15, { apronOnly: true });
+
+    if (!('spot' in result)) throw new Error('refused');
+    expect(isOnApron(result.spot.x, result.spot.y, 15, startMise(ORDER).court)).toBe(true);
+  });
+
+  it('refuses with the apron rule when asked to keep to the apron and no apron spot is near', () => {
+    expect(spotForTap(startMise(ORDER), 'home', { x: 0, y: 0 }, 15, { apronOnly: true })).toEqual({
+      refusal: 'apron-rule',
+    });
   });
 
   it('refuses a tap too far from any valid spot, giving the reason', () => {

@@ -140,9 +140,25 @@ export function checkSpot(
 /** Where a tap places a spoof: the tap itself, or the nearest valid spot within `NUDGE_LIMIT`. */
 export type TapResult = { readonly spot: Vec } | { readonly refusal: Refusal };
 
-export function spotForTap(state: MiseState, team: BenchSide, tap: Vec, radius: number): TapResult {
-  const refusal = checkSpot(state, team, tap.x, tap.y, radius);
-  if (!refusal) return { spot: tap };
+export interface TapOptions {
+  /**
+   * Accept only spots wholly on the apron, so the nudge never carries a spoof
+   * across the red line. For a spoof the red line is holding back (#39).
+   */
+  readonly apronOnly?: boolean;
+}
+
+export function spotForTap(
+  state: MiseState,
+  team: BenchSide,
+  tap: Vec,
+  radius: number,
+  options: TapOptions = {},
+): TapResult {
+  const fits = (x: number, y: number) =>
+    !checkSpot(state, team, x, y, radius) &&
+    (!options.apronOnly || isOnApron(x, y, radius, state.court));
+  if (fits(tap.x, tap.y)) return { spot: tap };
   // Search outward in rings, nearest first, so the spoof moves as little as possible.
   for (let distance = 1; distance <= NUDGE_LIMIT; distance += 1) {
     const steps = Math.max(12, Math.ceil(2 * Math.PI * distance));
@@ -150,10 +166,10 @@ export function spotForTap(state: MiseState, team: BenchSide, tap: Vec, radius: 
       const angle = (2 * Math.PI * i) / steps;
       const x = tap.x + distance * Math.cos(angle);
       const y = tap.y + distance * Math.sin(angle);
-      if (!checkSpot(state, team, x, y, radius)) return { spot: { x, y } };
+      if (fits(x, y)) return { spot: { x, y } };
     }
   }
-  return { refusal };
+  return { refusal: checkSpot(state, team, tap.x, tap.y, radius) ?? 'apron-rule' };
 }
 
 /** Places a spoof for the team whose turn it is. Throws on a move the rules don't allow. */

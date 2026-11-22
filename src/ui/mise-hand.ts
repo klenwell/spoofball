@@ -122,9 +122,11 @@ function heldBack(mise: MiseState, held: Dragging): Vec | null {
   const d = Math.hypot(p.x, p.y);
   const edge = apronEdge(mise, held.spoof);
   if (d >= edge) return null;
+  // A hair outside the apron's inner edge, so rounding never puts it inside.
+  const distance = edge + 1e-9;
   // Dead center has no direction to push back along; hold it to the east.
-  if (d === 0) return { x: edge, y: 0 };
-  return { x: (p.x * edge) / d, y: (p.y * edge) / d };
+  if (d === 0) return { x: distance, y: 0 };
+  return { x: (p.x * distance) / d, y: (p.y * distance) / d };
 }
 
 /** Whether the dragged spoof has crossed the red line: pushed past its pull, and not since back on the apron. */
@@ -143,7 +145,8 @@ function aimAt(mise: MiseState, side: BenchSide, held: Dragging): Aim {
   const back = heldBack(mise, held);
   const at = back ?? raw;
   const spoof = held.spoof;
-  const result = spotForTap(mise, side, at, spoof.radius);
+  // While the line holds it back, the nudge mustn't carry it across (#56 review).
+  const result = spotForTap(mise, side, at, spoof.radius, { apronOnly: back !== null });
   if ('refusal' in result) return { kind: 'refused', at, refusal: result.refusal };
   const inside = !isOnApron(result.spot.x, result.spot.y, spoof.radius, mise.court);
   return { kind: 'spot', spot: result.spot, inside, resisted: back !== null };
