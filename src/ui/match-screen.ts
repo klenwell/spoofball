@@ -257,11 +257,14 @@ export function createMatchScreen(): Panel {
     lastTick = now;
     seconds = advance(seconds, elapsed);
     if (isOver(seconds)) {
+      const hadFocus = document.activeElement === pauseButton;
       status = 'done';
       draw();
       updateText(true);
       updateControls();
       showResults();
+      // Pause hides at the end; keep a keyboard user on the controls.
+      if (hadFocus) startButton.focus();
       return;
     }
     draw();
@@ -270,12 +273,15 @@ export function createMatchScreen(): Panel {
   }
 
   function run(): void {
+    const hadFocus = document.activeElement === startButton;
     status = 'playing';
     lastTick = performance.now();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tick);
     updateControls();
     updateText(true);
+    // Start hides while it has focus; keep a keyboard user on the controls.
+    if (hadFocus) pauseButton.focus();
   }
 
   function start(seed: number): void {

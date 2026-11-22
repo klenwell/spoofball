@@ -19,6 +19,11 @@ describe('startFrame', () => {
       entries.map((e) => [e.position.x, e.position.y]),
     );
   });
+
+  it('carries each spoof in with the fatigue it already has', () => {
+    const tired = entries.map((e, i) => ({ ...e, fatigue: 10 + i }));
+    expect(startFrame(tired).spoofs.map((s) => s.fatigue)).toEqual(tired.map((e) => e.fatigue));
+  });
 });
 
 describe('frameAt', () => {
@@ -39,9 +44,29 @@ describe('frameAt', () => {
     expect(mid.spoofs[0]?.radius).toBeCloseTo((a.radius + b.radius) / 2);
   });
 
-  it('holds the last frame after the scrum ends, and the first before it starts', () => {
+  it('holds the last frame after the scrum ends', () => {
     expect(frameAt(frames, SCRUM_SECONDS + 3)).toEqual(frames[frames.length - 1]);
+  });
+
+  it('holds the first frame before it starts', () => {
     expect(frameAt(frames, -1)).toEqual(frames[0]);
+  });
+
+  describe('when fatigue changes between two frames', () => {
+    // Fatigue is a count, so it steps to the new value only at the next frame.
+    const tired = (fatigue: number) => ({
+      clock: 0,
+      spoofs: [{ id: 'a', team: 'home', x: 0, y: 0, radius: 15, fatigue }],
+    });
+    const pair = [tired(2), tired(3)];
+
+    it('keeps the earlier fatigue while blending', () => {
+      expect(frameAt(pair, 0.9 * SECONDS_PER_FRAME).spoofs[0]?.fatigue).toBe(2);
+    });
+
+    it('takes the new fatigue at the next frame', () => {
+      expect(frameAt(pair, SECONDS_PER_FRAME).spoofs[0]?.fatigue).toBe(3);
+    });
   });
 });
 
@@ -57,14 +82,26 @@ describe('scoresAt', () => {
   });
 });
 
-describe('advance and isOver', () => {
-  it('moves the playback clock on by real time, stopping at 8 seconds', () => {
+describe('advance', () => {
+  it('moves the playback clock on by real time', () => {
     expect(advance(1, 0.5)).toBe(1.5);
+  });
+
+  it('stops at the end of the scrum, 8 seconds', () => {
     expect(advance(7.9, 0.5)).toBe(SCRUM_SECONDS);
-    expect(isOver(advance(7.9, 0.5))).toBe(true);
   });
 
   it('ignores time going backwards', () => {
     expect(advance(2, -1)).toBe(2);
+  });
+});
+
+describe('isOver', () => {
+  it('is true at the end of the scrum', () => {
+    expect(isOver(SCRUM_SECONDS)).toBe(true);
+  });
+
+  it('is false before it', () => {
+    expect(isOver(SCRUM_SECONDS - 0.01)).toBe(false);
   });
 });

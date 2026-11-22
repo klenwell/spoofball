@@ -115,6 +115,15 @@ describe('simulateScrum', () => {
     expect(bounce.frames).not.toEqual(shove.frames);
   });
 
+  it('thinks at the pace it is given', () => {
+    const imps = (thinkingPace: number) =>
+      simulateScrum(presetScrumEntries(), {
+        random: createRandom(TEST_SEED),
+        tuning: { thinkingPace },
+      }).finish.reduce((sum, f) => sum + f.stats.imps, 0);
+    expect(imps(3)).toBeGreaterThan(imps(1) * 2);
+  });
+
   it('uses the brain it is given to pick goals', () => {
     const corner = { x: 0, y: 120 };
     const entries = presetScrumEntries();

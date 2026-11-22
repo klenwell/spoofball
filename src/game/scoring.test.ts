@@ -96,6 +96,21 @@ describe('finalScores', () => {
     });
   });
 
+  it('gives each spoof its exact score from the last frame, not the live estimate', () => {
+    // The known layout above happens to score the same on the live grid, so
+    // check real end positions, where the two differ.
+    for (let seed = 0; seed < 10; seed += 1) {
+      const last = simulateScrum(presetScrumEntries(), { random: createRandom(seed) }).frames.at(
+        -1,
+      );
+      if (!last) throw new Error('no frames');
+      const { spoofs } = finalScores(last);
+      for (const s of last.spoofs) {
+        expect(spoofs[s.id], `seed ${String(seed)}`).toBe(exactScore(s, last.spoofs));
+      }
+    }
+  });
+
   it("adds up a team's spoofs", () => {
     const r = simulateScrum(presetScrumEntries(), { random: createRandom(TEST_SEED) });
     const last = r.frames[r.frames.length - 1];
