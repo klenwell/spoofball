@@ -12,19 +12,7 @@ import { drawArena, drawSpoofInArena } from './arena';
 import { arenaHeightFor, fitArena, type ArenaView } from './arena-view';
 import { createCanvas } from './canvas';
 import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
-import {
-  DEFAULT_IMPACT_CUE,
-  IMPACT_CUES,
-  IMPACT_SECONDS,
-  drawImpactRing,
-  impactsAt,
-  showsRing,
-  showsSquash,
-  squashOf,
-  withSquash,
-  type Impact,
-  type ImpactCue,
-} from './impacts';
+import { drawImpactRing, impactsAt, type Impact } from './impacts';
 import { drawSpoofDisc } from './spoof-disc';
 
 /**
@@ -72,17 +60,6 @@ interface Played {
   readonly final: Scores;
 }
 
-function isReview(): boolean {
-  return new URLSearchParams(window.location.search).has('review');
-}
-
-const CUE_NAMES: Record<ImpactCue, string> = {
-  ring: 'Ring burst',
-  squash: 'Squash',
-  both: 'Both',
-  none: 'None',
-};
-
 function play(seed: number): Played {
   const result = simulateScrum(ENTRIES, { random: createRandom(seed) });
   const last = result.frames[result.frames.length - 1];
@@ -105,8 +82,6 @@ export function createMatchScreen(): Panel {
   let lastTick = 0;
   let scrum: Played | null = null;
   let raf = 0;
-  let cue: ImpactCue = DEFAULT_IMPACT_CUE;
-  let cueSeconds = IMPACT_SECONDS;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   // --- Scoreboard ---------------------------------------------------------
@@ -153,53 +128,8 @@ export function createMatchScreen(): Panel {
   results.hidden = true;
   results.setAttribute('aria-live', 'polite');
 
-  // --- Review-only controls (#53), with ?review in the address --------------
-  const review = el('fieldset', 'review-controls');
-  review.hidden = !isReview();
-  const cueRow = el('div', 'review-row');
-  cueRow.append(el('span', 'review-name', 'Hit cue'));
-  for (const option of IMPACT_CUES) {
-    const label = el('label', 'review-choice');
-    const radio = el('input');
-    radio.type = 'radio';
-    radio.name = 'impact-cue';
-    radio.value = option;
-    radio.checked = option === cue;
-    radio.addEventListener('change', () => {
-      cue = option;
-      draw();
-    });
-    label.append(radio, ` ${CUE_NAMES[option]}`);
-    cueRow.append(label);
-  }
-  const lengthRow = el('label', 'review-row');
-  const lengthInput = el('input');
-  lengthInput.type = 'range';
-  lengthInput.min = '0.1';
-  lengthInput.max = '0.4';
-  lengthInput.step = '0.05';
-  lengthInput.value = cueSeconds.toFixed(2);
-  const lengthValue = el('span', 'review-value', `${cueSeconds.toFixed(2)} s`);
-  lengthInput.addEventListener('input', () => {
-    cueSeconds = Number(lengthInput.value);
-    lengthValue.textContent = `${cueSeconds.toFixed(2)} s`;
-    draw();
-  });
-  lengthRow.append(el('span', 'review-name', 'Cue length'), lengthInput, lengthValue);
-  const replayButton = el('button', 'button', 'Replay this scrum');
-  replayButton.type = 'button';
-  replayButton.disabled = true;
-  const seedText = el('p', 'review-seed', 'Start a scrum, then replay it with another cue.');
-  review.append(
-    el('legend', undefined, 'Review only (#53): showing hits'),
-    cueRow,
-    lengthRow,
-    replayButton,
-    seedText,
-  );
-
   const root = el('div', 'match-screen');
-  root.append(board, clockBar, stage, controls, results, review);
+  root.append(board, clockBar, stage, controls, results);
 
   // --- Drawing -------------------------------------------------------------
   function current(): ScrumFrame {
@@ -229,32 +159,27 @@ export function createMatchScreen(): Panel {
         });
       }
     }
-    const reduced = reducedMotion.matches;
-    const impacts = showingImpacts();
-    const squash = showsSquash(cue, reduced);
     for (const s of current().spoofs) {
       const type = typeOf.get(s.id);
       if (!type) continue;
-      const center = { x: v.cx + s.x * v.scale, y: v.cy + s.y * v.scale };
-      withSquash(c, center, s.radius * v.scale, squash ? squashOf(s, impacts) : null, () => {
-        drawSpoofInArena(c, v, {
-          x: s.x,
-          y: s.y,
-          radius: s.radius,
-          type,
-          kit: kitFor(s.team),
-          fatigue: Math.min(100, s.fatigue),
-        });
+      drawSpoofInArena(c, v, {
+        x: s.x,
+        y: s.y,
+        radius: s.radius,
+        type,
+        kit: kitFor(s.team),
+        fatigue: Math.min(100, s.fatigue),
       });
     }
-    // Rings go on top, so a hit shows even where discs overlap.
-    if (showsRing(cue)) for (const impact of impacts) drawImpactRing(c, v, impact, reduced);
+    // Hit cues go on top, so a hit shows even where discs overlap.
+    const reduced = reducedMotion.matches;
+    for (const impact of showingImpacts()) drawImpactRing(c, v, impact, reduced);
   }
 
   /** The hit cues showing now. None before a scrum or once it's over, so the final picture is clear. */
   function showingImpacts(): Impact[] {
     if (!scrum || status === 'done' || status === 'ready') return [];
-    return impactsAt(scrum.frames, seconds, cueSeconds);
+    return impactsAt(scrum.frames, seconds);
   }
 
   function rebuildCanvas(): void {
@@ -373,8 +298,6 @@ export function createMatchScreen(): Panel {
   function start(seed: number): void {
     scrum = play(seed);
     seconds = 0;
-    replayButton.disabled = false;
-    seedText.textContent = `Seed ${String(seed)}. Replay it to compare cues on the same scrum.`;
     results.hidden = true;
     run();
   }
@@ -397,9 +320,6 @@ export function createMatchScreen(): Panel {
     start(newSeed());
   });
   pauseButton.addEventListener('click', togglePause);
-  replayButton.addEventListener('click', () => {
-    if (scrum) start(scrum.seed);
-  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) pause();
   });

@@ -1,17 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { Hit, ScrumFrame, SpoofFrame } from '../game/scrum';
+import type { Hit, ScrumFrame } from '../game/scrum';
 import { SECONDS_PER_FRAME } from '../game/spoof-motion';
-import {
-  IMPACT_SECONDS,
-  SQUASH_DEPTH,
-  impactsAt,
-  ringAt,
-  showsRing,
-  showsSquash,
-  squashOf,
-  squashPivot,
-  type Impact,
-} from './impacts';
+import { IMPACT_SECONDS, impactsAt, ringAt } from './impacts';
 
 const hit = (hitter = 'a', hitee = 'b', x = 0, y = 0): Hit => ({ hitter, hit: hitee, x, y });
 
@@ -19,15 +9,6 @@ const hit = (hitter = 'a', hitee = 'b', x = 0, y = 0): Hit => ({ hitter, hit: hi
 function framesWith(count: number, hitsOn: Record<number, Hit[]>): ScrumFrame[] {
   return Array.from({ length: count }, (_, k) => ({ clock: 0, spoofs: [], hits: hitsOn[k] ?? [] }));
 }
-
-const spoofAt = (id: string, x: number, y: number): SpoofFrame => ({
-  id,
-  team: 'home',
-  x,
-  y,
-  radius: 10,
-  fatigue: 0,
-});
 
 describe('impactsAt', () => {
   const frames = framesWith(100, { 10: [hit()] });
@@ -47,10 +28,10 @@ describe('impactsAt', () => {
     expect(impactsAt(frames, hitTime + IMPACT_SECONDS / 2)[0]?.age).toBeCloseTo(0.5);
   });
 
-  it('ends the cue after its length, about a sixth of a second', () => {
-    expect(IMPACT_SECONDS).toBeCloseTo(1 / 6);
+  it("ends the cue after its length: a quarter of a second, the owner's pick", () => {
+    expect(IMPACT_SECONDS).toBe(0.25);
     expect(impactsAt(frames, hitTime + IMPACT_SECONDS * 0.99)).toHaveLength(1);
-    expect(impactsAt(frames, hitTime + IMPACT_SECONDS)).toEqual([]);
+    expect(impactsAt(frames, hitTime + IMPACT_SECONDS * 1.001)).toEqual([]);
   });
 
   it('takes the length it is given', () => {
@@ -87,35 +68,10 @@ describe('impactsAt', () => {
       }
       for (let k = 1; k < 99; k += 1) {
         expect(seen.get(`h${String(k)}`), `${String(rate)} fps`).toBeGreaterThanOrEqual(
-          Math.floor(rate / 6) - 1,
+          Math.floor(rate * IMPACT_SECONDS) - 1,
         );
       }
     }
-  });
-});
-
-describe('cue styles', () => {
-  it('draws the ring for "ring" and "both" only', () => {
-    expect([showsRing('ring'), showsRing('both'), showsRing('squash'), showsRing('none')]).toEqual([
-      true,
-      true,
-      false,
-      false,
-    ]);
-  });
-
-  it('squashes for "squash" and "both" only', () => {
-    expect([
-      showsSquash('squash', false),
-      showsSquash('both', false),
-      showsSquash('ring', false),
-      showsSquash('none', false),
-    ]).toEqual([true, true, false, false]);
-  });
-
-  it('never squashes when the player has asked for reduced motion', () => {
-    expect(showsSquash('squash', true)).toBe(false);
-    expect(showsSquash('both', true)).toBe(false);
   });
 });
 
@@ -143,50 +99,5 @@ describe('ringAt', () => {
   it('with reduced motion, stays one size and only fades', () => {
     expect(ringAt(0, true).radius).toBe(ringAt(0.9, true).radius);
     expect(ringAt(0.5, true).opacity).toBeCloseTo(0.5);
-  });
-});
-
-describe('squashOf', () => {
-  const impact = (age: number, x: number, y: number, hitter = 'a', hitee = 'b'): Impact => ({
-    hitter,
-    hit: hitee,
-    x,
-    y,
-    age,
-  });
-
-  it('leaves a spoof alone when it is in no showing impact', () => {
-    expect(squashOf(spoofAt('c', 0, 0), [impact(0, 10, 0)])).toBeNull();
-  });
-
-  it('squashes both the hitter and the one hit', () => {
-    expect(squashOf(spoofAt('a', 0, 0), [impact(0, 10, 0)])).not.toBeNull();
-    expect(squashOf(spoofAt('b', 20, 0), [impact(0, 10, 0)])).not.toBeNull();
-  });
-
-  it('flattens a spoof toward where it was hit', () => {
-    expect(squashOf(spoofAt('a', 0, 0), [impact(0, 0, 10)])?.angle).toBeCloseTo(Math.PI / 2);
-    expect(squashOf(spoofAt('b', 20, 0), [impact(0, 10, 0)])?.angle).toBeCloseTo(Math.PI);
-  });
-
-  it('is deepest at the hit and eases back as the cue ends', () => {
-    expect(squashOf(spoofAt('a', 0, 0), [impact(0, 10, 0)])?.amount).toBeCloseTo(SQUASH_DEPTH);
-    expect(squashOf(spoofAt('a', 0, 0), [impact(0.75, 10, 0)])?.amount).toBeCloseTo(
-      SQUASH_DEPTH / 4,
-    );
-  });
-
-  it('follows the freshest hit when a spoof is in two at once', () => {
-    const squash = squashOf(spoofAt('a', 0, 0), [impact(0.8, 10, 0), impact(0.1, 0, 10, 'c', 'a')]);
-    expect(squash?.angle).toBeCloseTo(Math.PI / 2);
-    expect(squash?.amount).toBeCloseTo(SQUASH_DEPTH * 0.9);
-  });
-});
-
-describe('squashPivot', () => {
-  it("is the disc's edge on the side it was hit, so that edge stays touching", () => {
-    const pivot = squashPivot({ x: 100, y: 50 }, 20, { angle: Math.PI / 2, amount: 0.2 });
-    expect(pivot.x).toBeCloseTo(100);
-    expect(pivot.y).toBeCloseTo(70);
   });
 });
