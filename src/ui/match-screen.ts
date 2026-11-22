@@ -147,6 +147,12 @@ export function createMatchScreen(): Panel {
   let hand: Hand = startHand(nextMise(match));
   /** The match score before the scrum being played, to add its live score to. */
   let scoreBefore: Readonly<Record<BenchSide, number>> = { home: 0, visitor: 0 };
+  /**
+   * The match as it was before the scrum being played. The match itself
+   * already includes the break's recovery, which the bench shouldn't show
+   * until the scrum is over (#57 review).
+   */
+  let matchBefore: Match = match;
   let miseRaf = 0;
   /** The Embers' latest placement, outlined so you can see where it went. */
   let justPlaced: string | null = null;
@@ -213,7 +219,8 @@ export function createMatchScreen(): Panel {
   // --- Drawing -------------------------------------------------------------
   /** How tired a spoof is now, carried from earlier scrums (#40). */
   function fatigueOf(team: BenchSide, id: string): number {
-    return match.spoofs[team].find((m) => m.spoof.id === id)?.fatigue ?? 0;
+    const now = status === 'playing' || status === 'paused' ? matchBefore : match;
+    return now.spoofs[team].find((m) => m.spoof.id === id)?.fatigue ?? 0;
   }
 
   /** Where each spoof is: on the court if placed (or playing), otherwise in its seat. */
@@ -709,6 +716,7 @@ export function createMatchScreen(): Panel {
     // Simulated from the match's seed; the starting frame shows each spoof as tired as it is.
     const entries = scrumEntries(match, hand.mise);
     scoreBefore = matchScore(match);
+    matchBefore = match;
     match = playScrum(match, hand.mise);
     const played = match.scrums[match.scrums.length - 1];
     if (!played) throw new Error('No scrum was played');

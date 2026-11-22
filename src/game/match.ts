@@ -75,8 +75,13 @@ export function matchRandom(
   scrum = 0,
 ): Random {
   const purposes = { host: 1, order: 2, moves: 3, scrum: 4, recovery: 5 } as const;
-  // A large odd multiplier spreads nearby seeds apart; >>> 0 keeps it a 32-bit integer.
-  return createRandom((match.seed * 2654435761 + purposes[purpose] * 97 + scrum * 7919) >>> 0);
+  // A large odd multiplier spreads nearby seeds apart. Math.imul keeps the
+  // product in 32-bit integers: a plain multiply passes 2^53 for most seeds
+  // and rounds away the purpose and scrum, so every purpose drew the same
+  // numbers (#57 review). >>> 0 makes it unsigned.
+  return createRandom(
+    (Math.imul(match.seed, 2654435761) + purposes[purpose] * 97 + scrum * 7919) >>> 0,
+  );
 }
 
 function freshSpoof(spoof: Spoof): MatchSpoof {
@@ -152,14 +157,17 @@ export function recover(
 ): { skills: ScrumSkills; fatigue: number } {
   const comp = clampSkill(Math.round((core.stamina * 1 + core.impact * 0.5) / 1.5));
   const most = Math.min(comp, cap);
-  const least = Math.min(Math.round(comp * core.constancy * 0.01 * 0.5), most * 0.9);
+  // At most half of comp (constancy tops out at 99), so always below `most`
+  // with this game's caps of 66 and 100. The prototype also held it under
+  // 90% of the most, which could never bind here, so that's left out.
+  const least = Math.round(comp * core.constancy * 0.01 * 0.5);
   const skills = { ...current };
   let lost = 0;
   let regained = 0;
   for (const name of TIRING_SKILLS) {
     const loss = core[name] - current[name];
     if (loss <= 0) continue;
-    const share = random.int(Math.ceil(least), Math.max(Math.ceil(least), most)) * 0.01;
+    const share = random.int(least, most) * 0.01;
     skills[name] = clampSkill(current[name] + loss * share);
     lost += loss;
     regained += loss * share;

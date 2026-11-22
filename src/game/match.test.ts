@@ -6,6 +6,7 @@ import {
   REST_RECOVERY_CAP,
   SCRUMS_PER_MATCH,
   isMatchOver,
+  matchRandom,
   matchRecord,
   matchScore,
   miseRandom,
@@ -94,6 +95,36 @@ const tired = (core: Skills) => ({
 const regained = (core: number, before: number, after: number) =>
   (after - before) / (core - before);
 
+describe('matchRandom', () => {
+  // Seeds across the whole 32-bit range, as the screen draws them.
+  const bigSeeds = Array.from({ length: 4000 }, (_, i) => Math.imul(i + 1, 2246822519) >>> 0);
+
+  it('gives each purpose its own numbers, even for a large seed (#57 review)', () => {
+    const match = { seed: 3_000_000_000 };
+    const purposes = ['host', 'order', 'moves', 'scrum', 'recovery'] as const;
+
+    const firsts = purposes.map((purpose) => matchRandom(match, purpose).next());
+
+    expect(new Set(firsts).size).toBe(purposes.length);
+  });
+
+  it("spreads the first scrum's turn order evenly over the allowed orders, whoever hosts", () => {
+    const counts = new Map<string, number>();
+    for (const seed of bigSeeds) {
+      const match = startMatch(HOME, VISITOR, seed);
+      const key = `${match.host}:${nextMise(match).order.join()}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    // 9 orders for each host: about 4000 / 18 = 222 each.
+    expect(counts.size).toBe(18);
+    for (const n of counts.values()) {
+      expect(n).toBeGreaterThan(150);
+      expect(n).toBeLessThan(300);
+    }
+  });
+});
+
 describe('startMatch', () => {
   it('starts every spoof fresh: no fatigue, its own skills', () => {
     const match = startMatch(HOME, VISITOR, TEST_SEED);
@@ -128,9 +159,12 @@ describe('a match', () => {
     expect(() => nextMise(match)).toThrow(/over/);
   });
 
-  it('gives each scrum its own mise, with the host placing last', () => {
-    const match = computerMatch(TEST_SEED);
-    for (const scrum of match.scrums) expect(scrum.mise.order[5]).toBe(match.host);
+  it('gives each scrum its own mise, with the host placing last, whichever team hosts', () => {
+    const matches = Array.from({ length: 8 }, (_, seed) => computerMatch(seed));
+    expect(new Set(matches.map((m) => m.host))).toEqual(new Set(['home', 'visitor']));
+    for (const match of matches) {
+      for (const scrum of match.scrums) expect(scrum.mise.order[5]).toBe(match.host);
+    }
   });
 
   it('draws a new turn order for each scrum', () => {
@@ -221,6 +255,25 @@ describe('a match', () => {
     expect(matchRecord(computerMatch(TEST_SEED + 1))).not.toEqual(
       matchRecord(computerMatch(TEST_SEED)),
     );
+  });
+
+  it('gives both teams the break: a spoof that played comes out of it less tired', () => {
+    for (const side of ['home', 'visitor'] as const) {
+      let match = startMatch(HOME, VISITOR, TEST_SEED);
+      match = playScrum(match, computerMise(match));
+      const finish = match.scrums[0]?.result.finish;
+      const tiredOnes = match.spoofs[side].filter((m) => {
+        const f = finish?.find((x) => x.id === m.spoof.id);
+        return f && f.fatigue > 2;
+      });
+
+      expect(tiredOnes.length, side).toBeGreaterThan(0);
+      for (const m of tiredOnes) {
+        expect(m.fatigue, `${side} ${m.spoof.id}`).toBeLessThan(
+          finish?.find((x) => x.id === m.spoof.id)?.fatigue ?? 0,
+        );
+      }
+    }
   });
 
   it("doesn't recover after the last scrum: the match is over", () => {
