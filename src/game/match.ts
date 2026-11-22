@@ -260,6 +260,44 @@ export function matchScore(match: Match): Readonly<Record<BenchSide, number>> {
   return { home: sum(by.home), visitor: sum(by.visitor) };
 }
 
+/** A spoof's line in a scrum's result: its points, or null if it sat the scrum out. */
+export interface SpoofScrumLine {
+  readonly id: string;
+  readonly type: Spoof['type'];
+  readonly points: number | null;
+}
+
+/** One played scrum's result (#58): its score, the match score after it, and each spoof's points. */
+export interface ScrumSummary {
+  /** Which scrum, from 1. */
+  readonly scrum: number;
+  readonly score: Readonly<Record<BenchSide, number>>;
+  /** The match score after this scrum. */
+  readonly matchScore: Readonly<Record<BenchSide, number>>;
+  /** Every spoof of each team, in team order. Outcomes only: no skills. */
+  readonly spoofs: Readonly<Record<BenchSide, readonly SpoofScrumLine[]>>;
+}
+
+/** The result of played scrum `n` (from 0). */
+export function scrumSummary(match: Match, n: number): ScrumSummary {
+  const by = scoreByScrum(match);
+  if (n < 0 || n >= by.home.length)
+    throw new RangeError(`Scrum ${String(n + 1)} hasn't been played`);
+  const upTo = (xs: readonly number[]) => xs.slice(0, n + 1).reduce((a, b) => a + b, 0);
+  const lines = (side: BenchSide) =>
+    match.spoofs[side].map((m) => ({
+      id: m.spoof.id,
+      type: m.spoof.type,
+      points: m.points[n] ?? null,
+    }));
+  return {
+    scrum: n + 1,
+    score: { home: by.home[n] ?? 0, visitor: by.visitor[n] ?? 0 },
+    matchScore: { home: upTo(by.home), visitor: upTo(by.visitor) },
+    spoofs: { home: lines('home'), visitor: lines('visitor') },
+  };
+}
+
 /** The result for a side, once the match is over: an equal total is a tie, with no overtime. */
 export type Outcome = 'won' | 'lost' | 'tied';
 
