@@ -4,10 +4,11 @@ import type { SpoofType } from './spoof-types';
 import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Lineup, type Spoof, type Team } from './teams';
 
 /**
- * Two preset teams for the Match screen's static court (#22), until the
- * Expansion epic lets you build your own. The lineups show the moment a scrum
- * starts: each team has placed 3 spoofs on the court, following the mise
- * rule (at least 2 on the apron, at most 1 anywhere), and 2 wait on its bench.
+ * Two preset teams for the Match screen, until the Expansion epic lets you
+ * build your own. Since #39 the Match screen places them with the mise; the
+ * fixed lineups here are a ready-made scrum for tests (presetScrumEntries):
+ * each team has 3 spoofs on the court, following the mise rule (at least 2 on
+ * the apron, at most 1 anywhere), and 2 on its bench.
  * Positions are in court units (court radius 130, y down). They were moved
  * onto the smaller mosh with `fitToCourt` when the owner picked it on #51.
  */

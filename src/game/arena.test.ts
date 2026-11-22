@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  BENCH_HALF_WIDTH,
   BENCH_RADIUS,
   SEATS_PER_BENCH,
   SEAT_RADIUS,
   arenaBounds,
   benchRadius,
   benchSeats,
+  isOnBench,
+  seatAt,
 } from './arena';
 import { COURT_RADIUS, courtRadius, courtWithMosh } from './court';
 import { MAX_SPOOF_RADIUS } from './spoof-types';
@@ -122,5 +125,48 @@ describe('the arena on a court with a smaller mosh (#51)', () => {
     const smaller = arenaBounds(small);
     expect(smaller.maxX - smaller.minX).toBeLessThan(big.maxX - big.minX);
     expect(smaller.maxY - smaller.minY).toBeLessThan(big.maxY - big.minY);
+  });
+});
+
+describe('seatAt', () => {
+  it("finds the seat under a point, on that side's bench", () => {
+    const seat = benchSeats('home')[3];
+    if (!seat) throw new Error('no seat');
+    expect(seatAt('home', seat.x + SEAT_RADIUS - 1, seat.y)?.index).toBe(3);
+  });
+
+  it("is null off a seat, or on the other side's bench", () => {
+    const seat = benchSeats('home')[3];
+    if (!seat) throw new Error('no seat');
+    expect(seatAt('home', seat.x + SEAT_RADIUS + 1, seat.y)).toBeNull();
+    expect(seatAt('visitor', seat.x, seat.y)).toBeNull();
+    expect(seatAt('home', 0, 0)).toBeNull();
+  });
+});
+
+describe('isOnBench', () => {
+  const seats = benchSeats('home');
+  const first = seats[0];
+  const middle = seats[2];
+  if (!first || !middle) throw new Error('no seats');
+
+  it('is true on any seat, and between seats', () => {
+    for (const seat of seats) expect(isOnBench('home', seat.x, seat.y)).toBe(true);
+    const second = seats[1];
+    if (!second) throw new Error('no seat');
+    expect(isOnBench('home', (first.x + second.x) / 2, (first.y + second.y) / 2)).toBe(true);
+  });
+
+  it("is false on the court, past the bench's band, or on the other bench", () => {
+    expect(isOnBench('home', 0, 0)).toBe(false);
+    expect(isOnBench('home', middle.x, middle.y + BENCH_HALF_WIDTH + 1)).toBe(false);
+    expect(isOnBench('visitor', middle.x, middle.y)).toBe(false);
+  });
+
+  it('is false well past the end seats, at the same distance from the center', () => {
+    const angle = Math.atan2(first.y, first.x) + 0.6;
+    expect(isOnBench('home', BENCH_RADIUS * Math.cos(angle), BENCH_RADIUS * Math.sin(angle))).toBe(
+      false,
+    );
   });
 });

@@ -176,6 +176,12 @@ body {
   line-height: 1.1;
 }
 
+.scoreboard-unit {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
 .scoreboard-middle {
   display: flex;
   flex-direction: column;
@@ -193,6 +199,8 @@ body {
 .scoreboard-clock {
   font-family: var(--font-numeric);
   font-size: var(--text-sm);
+  /* "Turn 2 of 6" stays on one line, even on a small phone. */
+  white-space: nowrap;
 }
 
 .clock-bar {
@@ -206,6 +214,61 @@ body {
   height: 100%;
   width: 100%;
   background: var(--color-accent);
+}
+
+/* The mise's 6 turns (#39): a dot per turn in the team's kit, filled once taken. */
+.mise-turns {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mise-turn {
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 3px solid;
+  border-radius: var(--radius-circle);
+  background: var(--color-surface);
+}
+
+.mise-turn-now {
+  outline: 2px solid var(--color-highlight);
+  outline-offset: 2px;
+}
+
+/*
+ * What to do now, or why a spot was refused, over the Embers' bench, so it's
+ * on screen whenever the arena is (the owner, #39). Presses pass through it
+ * to the arena. Read out to screen readers. match-screen.ts sets its top (the
+ * bench's middle seat), width (the bench's) and type size (with the arena).
+ */
+.match-status {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  /* 80% white, so the bench shows through (the owner, 2026-11-22). The text
+     itself stays fully opaque. */
+  background: rgb(255 255 255 / 0.8);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
+}
+
+.match-status:empty {
+  display: none;
+}
+
+/* The arena: the canvas, with the caption laid over it. */
+.arena-frame {
+  position: relative;
 }
 
 .match-swatch {
@@ -222,6 +285,17 @@ body {
 
 .match-stage canvas {
   cursor: pointer;
+}
+
+/* During the mise, a drag on the arena moves a spoof, not the page (#39). */
+.match-stage.is-placing canvas {
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+}
+
+.match-stage.is-your-turn canvas {
+  cursor: grab;
 }
 
 .match-controls {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arenaHeightFor, fitArena } from './arena-view';
+import { arenaHeightFor, courtPointAt, fitArena } from './arena-view';
 
 const square = { minX: -100, maxX: 100, minY: -100, maxY: 100 };
 const tall = { minX: -100, maxX: 100, minY: -150, maxY: 150 };
@@ -34,5 +34,13 @@ describe('arenaHeightFor', () => {
   it('keeps the arena proportions at a given width', () => {
     expect(arenaHeightFor(tall, 200, 0)).toBe(300);
     expect(arenaHeightFor(tall, 216, 8)).toBe(316);
+  });
+});
+
+describe('courtPointAt', () => {
+  it('turns a point on the canvas back into court units', () => {
+    const view = { scale: 2, cx: 200, cy: 150 };
+    expect(courtPointAt(view, 200, 150)).toEqual({ x: 0, y: 0 });
+    expect(courtPointAt(view, 260, 110)).toEqual({ x: 30, y: -20 });
   });
 });
