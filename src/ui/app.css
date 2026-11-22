@@ -291,6 +291,48 @@ body {
   font-family: var(--font-numeric);
 }
 
+/* Review-only controls (#53), shown with ?review in the address. */
+.review-controls {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--color-court-edge);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.review-controls legend {
+  color: var(--color-text-muted);
+}
+
+.review-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+}
+
+.review-row input[type='range'] {
+  flex: 1;
+}
+
+.review-name {
+  min-width: 6rem;
+}
+
+.review-choice {
+  white-space: nowrap;
+}
+
+.review-value {
+  font-family: var(--font-numeric);
+}
+
+.review-seed {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
 .app-footer {
   display: flex;
   flex-wrap: wrap;
