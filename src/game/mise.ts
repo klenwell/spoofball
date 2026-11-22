@@ -108,8 +108,7 @@ export type Refusal = 'off-court' | 'overlap' | 'apron-rule';
 export const REFUSAL_TEXT: Readonly<Record<Refusal, string>> = {
   'off-court': 'Place it wholly on the court.',
   overlap: 'That spot overlaps another spoof.',
-  'apron-rule':
-    'Only one of your three can go inside the red line. Place this one on the gray apron.',
+  'apron-rule': 'Only one of your three can go inside the red line. This one goes on the apron.',
 };
 
 /** How many of its spoofs a team may still place off the apron: 1 until it has used its spot inside. */

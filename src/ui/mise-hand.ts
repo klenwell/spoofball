@@ -1,5 +1,6 @@
 import { isOnBench, seatAt, type BenchSide } from '../game/arena';
 import {
+  insideSpotsLeft,
   isOnApron,
   placeSpoof,
   spotForTap,
@@ -32,11 +33,12 @@ export const GRACE_SECONDS = 1;
 
 /**
  * How far past the red line a spoof dragged from the apron must be pushed
- * before it crosses, in court units (the owner, 2026-11-22). Until then it
- * stays on the apron, against the line, so your one spot inside is never
- * used by accident.
+ * before it crosses, in court units (the owner, 2026-11-22: 12, then a little
+ * more). Until then it stays on the apron, against the line, so your one spot
+ * inside is never used by accident. Once that spot is used, the line stops a
+ * dragged spoof altogether.
  */
-export const RED_LINE_PULL = 12;
+export const RED_LINE_PULL = 18;
 
 /** How far a press may move, in court units, and still count as a tap rather than a drag. */
 export const TAP_SLOP = 4;
@@ -71,6 +73,8 @@ export type Held =
       readonly lift: number;
       /** Whether it has been pushed past the red line's pull, so it may go inside. */
       readonly crossed: boolean;
+      /** Whether it may cross at all: false once your one spot inside is used. */
+      readonly canCross: boolean;
     };
 
 export interface Hand {
@@ -117,12 +121,15 @@ function heldBack(mise: MiseState, held: Dragging): Vec | null {
   const p = heldPoint(held);
   const d = Math.hypot(p.x, p.y);
   const edge = apronEdge(mise, held.spoof);
-  if (d === 0 || d >= edge) return null;
+  if (d >= edge) return null;
+  // Dead center has no direction to push back along; hold it to the east.
+  if (d === 0) return { x: edge, y: 0 };
   return { x: (p.x * edge) / d, y: (p.y * edge) / d };
 }
 
 /** Whether the dragged spoof has crossed the red line: pushed past its pull, and not since back on the apron. */
 function crossedNow(mise: MiseState, held: Dragging): boolean {
+  if (!held.canCross) return false;
   const p = heldPoint(held);
   const d = Math.hypot(p.x, p.y);
   const edge = apronEdge(mise, held.spoof);
@@ -190,6 +197,7 @@ export function press(
         lift,
         // Already inside the red line, it moves freely there.
         crossed: !isOnApron(pending.spot.x, pending.spot.y, pending.spoof.radius, hand.mise.court),
+        canCross: insideSpotsLeft(hand.mise, side) > 0,
       },
     };
   }
@@ -209,6 +217,7 @@ export function press(
         wasPicked,
         lift,
         crossed: false,
+        canCross: insideSpotsLeft(hand.mise, side) > 0,
       },
     };
   }

@@ -176,6 +176,12 @@ body {
   line-height: 1.1;
 }
 
+.scoreboard-unit {
+  grid-column: 1 / -1;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
 .scoreboard-middle {
   display: flex;
   flex-direction: column;
@@ -231,10 +237,25 @@ body {
   outline-offset: 2px;
 }
 
-/* What to do now, or why a tap was refused. Read out to screen readers. */
+/*
+ * What to do now, or why a tap was refused, above the arena so it's seen
+ * (the owner, #39). Read out to screen readers. It always keeps room for
+ * three lines, the longest any caption runs to on a phone 320 to 390 px wide
+ * (measured), so the arena never jumps under your finger as the text changes.
+ */
 .match-status {
-  min-height: 1.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 3 lines, the padding and the border (box-sizing is border-box). */
+  min-height: calc(3 * 1.35em + 2 * var(--space-2) + 2px);
   margin: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  line-height: 1.35;
   text-align: center;
 }
 
@@ -258,6 +279,7 @@ body {
 .match-stage.is-placing canvas {
   cursor: default;
   touch-action: none;
+  user-select: none;
 }
 
 .match-stage.is-your-turn canvas {

@@ -154,8 +154,10 @@ export function createMatchScreen(): Panel {
     swatch.style.borderColor = kitFor(lineup.side).trim;
     swatch.setAttribute('aria-hidden', 'true');
     const score = el('span', 'scoreboard-score', '0');
-    block.append(swatch, el('span', 'scoreboard-name', lineup.team.name), score);
-    return { block, score };
+    // What the number counts: spoofs left to place in the mise, then points.
+    const unit = el('span', 'scoreboard-unit', 'to place');
+    block.append(swatch, el('span', 'scoreboard-name', lineup.team.name), score, unit);
+    return { block, score, unit };
   };
   const home = side(PRESET_HOME);
   const visitor = side(PRESET_VISITOR);
@@ -197,7 +199,8 @@ export function createMatchScreen(): Panel {
   results.setAttribute('aria-live', 'polite');
 
   const root = el('div', 'match-screen');
-  root.append(board, clockBar, turnStrip, stage, statusLine, controls, results);
+  // The caption sits above the arena, where you'll see it (the owner, #39).
+  root.append(board, clockBar, turnStrip, statusLine, stage, controls, results);
 
   // --- Drawing -------------------------------------------------------------
   /** Where each spoof is: on the court if placed (or playing), otherwise in its seat. */
@@ -342,19 +345,21 @@ export function createMatchScreen(): Panel {
     if (landing?.kind === 'refused') return REFUSAL_TEXT[landing.refusal];
     if (landing?.kind === 'spot') {
       if (landing.inside) return 'Your one spot inside the red line.';
-      if (landing.resisted && insideSpotsLeft(hand.mise, YOU) > 0) {
-        return 'Push past the red line to use your one spot inside.';
+      if (landing.resisted) {
+        return insideSpotsLeft(hand.mise, YOU) > 0
+          ? 'Push past the red line to use your one spot inside.'
+          : 'Your spot inside the red line is used, so it stops at the line.';
       }
       return 'Let go to place it here.';
     }
     if (hand.refusal) return REFUSAL_TEXT[hand.refusal];
     if (hand.pending) {
-      return 'Placed. Drag it to move it, or back to your bench, before the ring fills.';
+      return 'Placed. Before the ring fills, you can drag it elsewhere or back to your bench.';
     }
     if (held.kind === 'picked') {
       return `Tap the court to place your ${avatarName(held.spoof.type).toLowerCase()}, or drag it there.`;
     }
-    return 'Your turn: drag a spoof from your bench onto the court, or tap it, then tap a spot.';
+    return 'Your turn: drag a spoof from your bench onto the court, or tap it and then a spot.';
   }
 
   let lastLabelSecond = -1;
@@ -363,8 +368,10 @@ export function createMatchScreen(): Panel {
       middleLabel.textContent = 'Mise';
       const turn = Math.min(hand.mise.placements.length + 1, MISE_TURNS);
       clockText.textContent = `Turn ${String(turn)} of ${String(MISE_TURNS)}`;
-      home.score.textContent = `${String(leftToPlace(hand.mise, 'home'))} to place`;
-      visitor.score.textContent = `${String(leftToPlace(hand.mise, 'visitor'))} to place`;
+      home.score.textContent = String(leftToPlace(hand.mise, 'home'));
+      visitor.score.textContent = String(leftToPlace(hand.mise, 'visitor'));
+      home.unit.textContent = 'to place';
+      visitor.unit.textContent = 'to place';
       clockBar.hidden = true;
       drawTurns();
       const state =
@@ -385,6 +392,8 @@ export function createMatchScreen(): Panel {
       status === 'done' && scrum ? scrum.final : scrum ? scoresAt(scrum.live, seconds) : null;
     home.score.textContent = String(scores?.teams.home ?? 0);
     visitor.score.textContent = String(scores?.teams.visitor ?? 0);
+    home.unit.textContent = 'points';
+    visitor.unit.textContent = 'points';
     clockText.textContent = `${left.toFixed(1)} s`;
     clockFill.style.width = `${String((left / SCRUM_SECONDS) * 100)}%`;
     const whole = Math.floor(seconds);
@@ -532,6 +541,10 @@ export function createMatchScreen(): Panel {
 
   function onPointerDown(event: PointerEvent): void {
     if (status !== 'mise' || !canvas) return;
+    // No text selection or native drag from a press on the arena: with a
+    // mouse, a selection made while dragging a spoof turned the next press
+    // into a drag of the selected text, and the game never saw it.
+    event.preventDefault();
     if (whoseTurn(hand.mise) !== YOU) {
       say(`Wait for the ${nameOf(COMPUTER)} to place their spoof.`);
       return;
@@ -582,7 +595,7 @@ export function createMatchScreen(): Panel {
     if (isOver(seconds)) {
       const hadFocus = document.activeElement === pauseButton;
       status = 'done';
-      say('');
+      say('Scrum over. The final score is below.');
       refresh();
       showResults();
       // Pause hides at the end; keep a keyboard user on the controls.
@@ -597,6 +610,7 @@ export function createMatchScreen(): Panel {
   function run(): void {
     const hadFocus = document.activeElement === newMatchButton;
     status = 'playing';
+    say('Tap the court, or Pause, to pause.');
     lastTick = performance.now();
     cancelAnimationFrame(raf);
     raf = requestAnimationFrame(tick);
@@ -611,7 +625,6 @@ export function createMatchScreen(): Panel {
     scrum = play(miseEntries(hand.mise, TEAMS), random.int(1, 2 ** 31 - 1));
     seconds = 0;
     results.hidden = true;
-    say('');
     run();
     // If you left the page during the cue, it starts paused.
     if (document.hidden) pause();
@@ -620,6 +633,7 @@ export function createMatchScreen(): Panel {
   function pause(): void {
     if (status !== 'playing') return;
     status = 'paused';
+    say('Paused. Tap the court, or Resume, to carry on.');
     cancelAnimationFrame(raf);
     updateControls();
     updateText(true);

@@ -64,12 +64,8 @@ describe('dragging a spoof from the bench', () => {
   });
 
   it('says why a spot is refused while dragging over it', () => {
-    let mise = startMise(['home', 'home', 'visitor', 'visitor', 'visitor', 'home']);
-    const first = TEAM[0];
-    if (!first) throw new Error('no spoof');
-    mise = placeSpoof(mise, first, 'home', CENTER);
-    const held = drag(press(startHand(mise), 'home', TEAM, seat(1)), { x: 45, y: 0 });
-    expect(aim(held, 'home')).toMatchObject({ kind: 'refused', refusal: 'apron-rule' });
+    const held = drag(press(fresh(), 'home', TEAM, seat(1)), { x: COURT_RADIUS + 40, y: 0 });
+    expect(aim(held, 'home')).toMatchObject({ kind: 'refused', refusal: 'off-court' });
   });
 
   it('lands where you let go, even if the last move was reported somewhere else', () => {
@@ -277,7 +273,7 @@ describe("the red line's resistance", () => {
     points.reduce((hand, at) => drag(hand, at), press(fresh(), 'home', TEAM, seat(0)));
 
   it(`holds a spoof from the apron on the apron until it's pushed ${String(RED_LINE_PULL)} units past the line, even with the spot inside unused`, () => {
-    expect(RED_LINE_PULL).toBe(12);
+    expect(RED_LINE_PULL).toBe(18);
     const held = aim(dragged(apron(0), east(edge - RED_LINE_PULL + 1)), 'home');
     expect(held).toMatchObject({ kind: 'spot', inside: false, resisted: true });
     if (held?.kind !== 'spot') throw new Error('no spot');
@@ -317,5 +313,60 @@ describe("the red line's resistance", () => {
   it("doesn't hold back a tap: it goes where you aim", () => {
     const placed = tap(tap(fresh(), seat(0)), east(edge - 5));
     expect(placed.pending?.spot.x).toBeCloseTo(edge - 5);
+  });
+});
+
+describe('once your one spot inside the red line is used', () => {
+  const first = TEAM[0];
+  const second = TEAM[1];
+  if (!first || !second) throw new Error('no spoofs');
+  const used = startHand(
+    placeSpoof(
+      startMise(['home', 'home', 'visitor', 'visitor', 'visitor', 'home']),
+      first,
+      'home',
+      CENTER,
+    ),
+  );
+  const edge = MOSH_RADIUS + second.radius;
+  const east = (d: number) => ({ x: d, y: 0 });
+
+  it('stops a dragged spoof at the line, however far it is pushed', () => {
+    const pushed = drag(
+      drag(press(used, 'home', TEAM, seat(1)), apron(0)),
+      east(edge - RED_LINE_PULL - 20),
+    );
+    const landing = aim(pushed, 'home');
+    expect(landing).toMatchObject({ kind: 'spot', inside: false, resisted: true });
+    if (landing?.kind !== 'spot') throw new Error('no spot');
+    expect(Math.hypot(landing.spot.x, landing.spot.y)).toBeCloseTo(edge);
+  });
+
+  it('places it against the line when let go there', () => {
+    const at = east(45);
+    const placed = release(
+      drag(drag(press(used, 'home', TEAM, seat(1)), apron(0)), at),
+      'home',
+      at,
+      0,
+    );
+    expect(placed.pending?.spot.x).toBeCloseTo(edge);
+  });
+
+  it('stops even a spoof dragged straight to the center, on its line from the center', () => {
+    const at = { x: 0, y: 20 };
+    const landing = aim(drag(press(used, 'home', TEAM, seat(1)), at), 'home');
+    if (landing?.kind !== 'spot') throw new Error('no spot');
+    expect(landing.spot.x).toBeCloseTo(0);
+    expect(landing.spot.y).toBeCloseTo(edge);
+  });
+
+  it('holds a spoof dragged to the exact center against the line too', () => {
+    const landing = aim(drag(press(used, 'home', TEAM, seat(1)), CENTER), 'home');
+    expect(landing).toMatchObject({ kind: 'spot', inside: false });
+  });
+
+  it('still refuses a tap well inside the line, with the reason', () => {
+    expect(tap(tap(used, seat(1)), east(45)).refusal).toBe('apron-rule');
   });
 });
