@@ -12,6 +12,7 @@ import { drawArena, drawSpoofInArena } from './arena';
 import { arenaHeightFor, fitArena, type ArenaView } from './arena-view';
 import { createCanvas } from './canvas';
 import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
+import { drawImpactRing, impactsAt, type Impact } from './impacts';
 import { drawSpoofDisc } from './spoof-disc';
 
 /**
@@ -81,6 +82,7 @@ export function createMatchScreen(): Panel {
   let lastTick = 0;
   let scrum: Played | null = null;
   let raf = 0;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   // --- Scoreboard ---------------------------------------------------------
   const board = el('div', 'scoreboard');
@@ -169,6 +171,15 @@ export function createMatchScreen(): Panel {
         fatigue: Math.min(100, s.fatigue),
       });
     }
+    // Hit cues go on top, so a hit shows even where discs overlap.
+    const reduced = reducedMotion.matches;
+    for (const impact of showingImpacts()) drawImpactRing(c, v, impact, reduced);
+  }
+
+  /** The hit cues showing now. None before a scrum or once it's over, so the final picture is clear. */
+  function showingImpacts(): Impact[] {
+    if (!scrum || status === 'done' || status === 'ready') return [];
+    return impactsAt(scrum.frames, seconds);
   }
 
   function rebuildCanvas(): void {

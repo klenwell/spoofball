@@ -56,6 +56,7 @@ describe('frameAt', () => {
     // Fatigue is a count, so it steps to the new value only at the next frame.
     const tired = (fatigue: number) => ({
       clock: 0,
+      hits: [],
       spoofs: [{ id: 'a', team: 'home', x: 0, y: 0, radius: 15, fatigue }],
     });
     const pair = [tired(2), tired(3)];

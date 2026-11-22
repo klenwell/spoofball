@@ -67,7 +67,7 @@ describe('exactScore', () => {
       const b = at('b', 'home', 60, 0, 20);
       const each = Math.round(2 * area(20) * SCORING_COEFFICIENT);
       expect(exactScore(a, [a, b])).toBe(each);
-      expect(finalScores({ clock: 0, spoofs: [a, b] }).teams.home).toBe(2 * each);
+      expect(finalScores({ clock: 0, spoofs: [a, b], hits: [] }).teams.home).toBe(2 * each);
     });
   });
 
@@ -84,6 +84,7 @@ describe('finalScores', () => {
   it('scores a known layout: one lone spoof in the mosh, one on the crush, one on the apron', () => {
     const frame = {
       clock: 0,
+      hits: [],
       spoofs: [
         at('m', 'home', 60, 0, 20),
         at('c', 'home', 0, 0, 10),
@@ -188,7 +189,7 @@ describe('scoring on a court with a smaller mosh (#51)', () => {
 
   it('passes the court through to the final and live scores', () => {
     const s = at('s', 'home', 0, 85, 12);
-    const frame = { clock: 0, spoofs: [s] };
+    const frame = { clock: 0, spoofs: [s], hits: [] };
     expect(finalScores(frame, small).teams.home).toBe(0);
     expect(liveScores([frame], small)[0]?.teams.home).toBe(0);
   });

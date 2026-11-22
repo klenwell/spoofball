@@ -13,6 +13,7 @@ import { SCRUM_SECONDS, SECONDS_PER_FRAME } from '../game/spoof-motion';
 export function startFrame(entries: readonly ScrumEntry[]): ScrumFrame {
   return {
     clock: SCRUM_SECONDS,
+    hits: [],
     spoofs: entries.map((e) => ({
       id: e.spoof.id,
       team: e.team,
@@ -51,6 +52,9 @@ export function frameAt(frames: readonly ScrumFrame[], seconds: number): ScrumFr
   const t = position - index;
   return {
     clock: from.clock + (to.clock - from.clock) * t,
+    // Hits aren't blended, and nothing reads them here: `impactsAt` (impacts.ts)
+    // times their cues from `frames`. This only fills the type.
+    hits: from.hits,
     spoofs: from.spoofs.map((s, i) => {
       const next = to.spoofs[i];
       return next ? blend(s, next, t) : s;

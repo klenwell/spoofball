@@ -183,10 +183,30 @@ export interface SpoofFrame {
   readonly fatigue: number;
 }
 
+/**
+ * A hit: two opponents coming into contact (#53). The same hits are counted
+ * in the stats, a ding for the hitter and a dong for the one hit.
+ */
+export interface Hit {
+  /** The spoof moving harder toward the other: it gave the hit. */
+  readonly hitter: string;
+  /** The spoof that took the hit. */
+  readonly hit: string;
+  /** Where they touched, in court units: on the line between their centers. */
+  readonly x: number;
+  readonly y: number;
+}
+
 export interface ScrumFrame {
   /** Seconds left on the clock after this frame. */
   readonly clock: number;
   readonly spoofs: readonly SpoofFrame[];
+  /**
+   * The hits that started this frame: only new contacts, not every frame two
+   * spoofs stay pressed together. For drawing them (#53); playing a scrum
+   * doesn't read them.
+   */
+  readonly hits: readonly Hit[];
 }
 
 /** A spoof as the scrum ends, for carrying fatigue and tired skills forward (#40). */
@@ -269,9 +289,10 @@ function toBody(runner: Runner): Body {
   };
 }
 
-function snapshot(runners: readonly Runner[], clock: number): ScrumFrame {
+function snapshot(runners: readonly Runner[], clock: number, hits: readonly Hit[]): ScrumFrame {
   return {
     clock,
+    hits,
     spoofs: runners.map((r) => ({
       id: r.id,
       team: r.team,
@@ -320,15 +341,27 @@ function pairKey(a: Runner, b: Runner): string {
 
 /**
  * Who hit whom: the one moving harder toward the other gives the hit (a
- * ding) and the other takes it (a dong).
+ * ding) and the other takes it (a dong). Returns them as [hitter, hit].
  */
-function countHit(a: Runner, b: Runner): void {
+function countHit(a: Runner, b: Runner): [Runner, Runner] {
   const aToB = subtract(b.position, a.position);
   const aPush = dot(a.velocity, aToB);
   const bPush = -dot(b.velocity, aToB);
   const [hitter, hit] = aPush >= bPush ? [a, b] : [b, a];
   hitter.stats.dings += 1;
   hit.stats.dongs += 1;
+  return [hitter, hit];
+}
+
+/** Where two touching spoofs meet: on the line between their centers, at the first one's edge. */
+function contactPoint(a: Runner, b: Runner): Vec {
+  const apart = distance(a.position, b.position);
+  if (apart === 0) return a.position;
+  const t = a.radius / apart;
+  return {
+    x: a.position.x + (b.position.x - a.position.x) * t,
+    y: a.position.y + (b.position.y - a.position.y) * t,
+  };
 }
 
 export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOptions): ScrumResult {
@@ -415,6 +448,7 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
 
     // 3. Collisions between opponents, counting each new contact as a hit.
     const touching = new Set<string>();
+    const hits: Hit[] = [];
     for (let i = 0; i < runners.length; i += 1) {
       for (let j = i + 1; j < runners.length; j += 1) {
         const a = runners[i];
@@ -422,7 +456,7 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
         if (!a || !b || !collides(toBody(a), toBody(b))) continue;
         const key = pairKey(a, b);
         touching.add(key);
-        if (!contacts.has(key)) countHit(a, b);
+        const struck = contacts.has(key) ? null : countHit(a, b);
         a.justHit = true;
         b.justHit = true;
         const [bodyA, bodyB] = resolveCollision(toBody(a), toBody(b), collision);
@@ -430,6 +464,8 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
         a.velocity = bodyA.velocity;
         b.position = bodyB.position;
         b.velocity = bodyB.velocity;
+        // Placed once they're pushed apart, so it sits where their edges meet.
+        if (struck) hits.push({ hitter: struck[0].id, hit: struck[1].id, ...contactPoint(a, b) });
       }
     }
     contacts = touching;
@@ -456,7 +492,7 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
     }
 
     const clock = SCRUM_SECONDS - (frame + 1) * SECONDS_PER_FRAME;
-    frames.push(snapshot(runners, Math.max(0, clock)));
+    frames.push(snapshot(runners, Math.max(0, clock), hits));
   }
 
   return {

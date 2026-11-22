@@ -276,6 +276,77 @@ describe('simulateScrum', () => {
       expect(statsOf(r, 'mover').dings).toBeLessThan(5);
     });
 
+    describe('hits on the frames, for drawing them (#53)', () => {
+      const hitsIn = (r: ReturnType<typeof simulateScrum>) => r.frames.flatMap((f) => f.hits);
+
+      it('records a hit on the frame where contact starts, with who hit whom', () => {
+        const brain: Brain = (self, scrum, random, current) =>
+          self.id === 'mover'
+            ? (current ?? { kind: 'goto', point: { x: 0, y: 0 }, weight: 1, expires: null })
+            : hold(self, scrum, random, current);
+        const r = simulateScrum(
+          [entry('mover', 'home', { x: 0, y: -80 }), entry('still', 'visitor', { x: 0, y: 0 })],
+          { random: createRandom(TEST_SEED), brain },
+        );
+        const hits = hitsIn(r);
+        expect(hits.length).toBe(statsOf(r, 'mover').dings);
+        expect(hits.length).toBeGreaterThan(0);
+        expect(hits.every((h) => h.hitter === 'mover' && h.hit === 'still')).toBe(true);
+      });
+
+      it("puts a hit where the two touch: at each one's edge, on the line between their centers", () => {
+        const brain: Brain = (self, scrum, random, current) =>
+          self.id === 'mover'
+            ? (current ?? { kind: 'goto', point: { x: 0, y: 0 }, weight: 1, expires: null })
+            : hold(self, scrum, random, current);
+        const r = simulateScrum(
+          [entry('mover', 'home', { x: 30, y: -80 }), entry('still', 'visitor', { x: 0, y: 0 })],
+          { random: createRandom(TEST_SEED), brain },
+        );
+        const frame = r.frames.find((f) => f.hits.length > 0);
+        const hit = frame?.hits[0];
+        if (!frame || !hit) throw new Error('no hit');
+        const mover = at(frame, 'mover');
+        const still = at(frame, 'still');
+        expect(Math.hypot(hit.x - mover.x, hit.y - mover.y)).toBeCloseTo(mover.radius, 6);
+        expect(Math.hypot(hit.x - still.x, hit.y - still.y)).toBeCloseTo(still.radius, 6);
+      });
+
+      it('records one hit for a long contact, not one for every frame it lasts', () => {
+        const brain: Brain = (self, scrum, random, current) =>
+          self.id === 'mover'
+            ? (current ?? { kind: 'goto', point: { x: 0, y: 60 }, weight: 1, expires: null })
+            : hold(self, scrum, random, current);
+        const r = simulateScrum(
+          [
+            entry('mover', 'home', { x: 0, y: -60 }, { mass: 1 }),
+            entry('wall', 'visitor', { x: 0, y: 0 }, { mass: 99 }),
+          ],
+          { random: createRandom(TEST_SEED), brain, collision: PROTOTYPE_SHOVE },
+        );
+        expect(hitsIn(r).length).toBeLessThan(5);
+        expect(hitsIn(r).length).toBe(statsOf(r, 'mover').dings);
+      });
+
+      it('matches the stats in real scrums: each ding and dong is one hit on the frames', () => {
+        for (let seed = 0; seed < 10; seed += 1) {
+          const r = run(seed);
+          const hits = hitsIn(r);
+          for (const f of r.finish) {
+            expect(hits.filter((h) => h.hitter === f.id).length).toBe(f.stats.dings);
+            expect(hits.filter((h) => h.hit === f.id).length).toBe(f.stats.dongs);
+          }
+        }
+      });
+
+      it('records hits only between opponents', () => {
+        const teamOf = new Map(presetScrumEntries().map((e) => [e.spoof.id, e.team]));
+        const hits = hitsIn(run());
+        expect(hits.length).toBeGreaterThan(0);
+        expect(hits.every((h) => teamOf.get(h.hitter) !== teamOf.get(h.hit))).toBe(true);
+      });
+    });
+
     it('adds a dove, not a tree, for a frame overlapping exactly 1 teammate', () => {
       const r = simulateScrum(
         [entry('a', 'home', { x: -5, y: 0 }), entry('b', 'home', { x: 5, y: 0 })],
