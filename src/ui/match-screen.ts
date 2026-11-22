@@ -1,5 +1,5 @@
 import { matchKits, type Kit } from '../design/kits';
-import { arenaBounds, benchSeats, seatAt, type BenchSide } from '../game/arena';
+import { arenaBounds, benchSeats, type BenchSide } from '../game/arena';
 import {
   REFUSAL_TEXT,
   computerMove,
@@ -8,11 +8,9 @@ import {
   leftToPlace,
   miseEntries,
   placeSpoof,
-  spotForTap,
   startMise,
   whoseTurn,
   MISE_TURNS,
-  type MiseState,
 } from '../game/mise';
 import { PRESET_HOME, PRESET_VISITOR } from '../game/preset-teams';
 import { createRandom, type Random } from '../game/random';
@@ -26,6 +24,19 @@ import { drawArena, drawSpoofInArena } from './arena';
 import { arenaHeightFor, courtPointAt, fitArena, type ArenaView } from './arena-view';
 import { createCanvas } from './canvas';
 import { drawImpactRing, impactsAt, type Impact } from './impacts';
+import { drawGraceRing, drawInsideLine, drawPlacingHalo, drawRefusedRing } from './mise-draw';
+import {
+  aim,
+  cancel,
+  drag,
+  graceProgress,
+  heldPoint,
+  press,
+  release,
+  startHand,
+  tick as tickHand,
+  type Hand,
+} from './mise-hand';
 import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
 import { drawSpoofDisc } from './spoof-disc';
 
@@ -47,6 +58,16 @@ const MAX_ARENA_WIDTH = 480;
 const MAX_STEP_SECONDS = 0.1;
 /** How long the Embers wait before placing a spoof, so you can follow them. */
 const COMPUTER_PAUSE_MS = 900;
+/**
+ * How far above a finger a dragged spoof is held, in court units, so the
+ * finger doesn't hide where it will land. A mouse drags it right under the pointer.
+ */
+const TOUCH_LIFT = 30;
+/** A spoof being dragged to a spot that isn't allowed is drawn this faint. */
+const REFUSED_OPACITY = 0.45;
+
+/** Seconds on the page's clock, for the grace period. */
+const nowSeconds = () => performance.now() / 1000;
 
 type Status = 'mise' | 'ready' | 'playing' | 'paused' | 'done';
 
@@ -107,8 +128,9 @@ export function createMatchScreen(): Panel {
   let lastTick = 0;
   let raf = 0;
   let random: Random = createRandom(1);
-  let mise: MiseState = startMise(drawOrder('visitor', random));
-  let picked: Spoof | null = null;
+  /** The mise, and your spoof in hand: picked, dragged, or placed and still movable. */
+  let hand: Hand = startHand(startMise(drawOrder('visitor', random)));
+  let miseRaf = 0;
   /** The Embers' latest placement, outlined so you can see where it went. */
   let justPlaced: string | null = null;
   let computerTimer = 0;
@@ -172,7 +194,7 @@ export function createMatchScreen(): Panel {
   /** Where each spoof is: on the court if placed (or playing), otherwise in its seat. */
   function onCourt(): ScrumFrame['spoofs'] {
     if (scrum) return frameAt(scrum.frames, seconds).spoofs;
-    return mise.placements.map((p) => ({
+    return hand.mise.placements.map((p) => ({
       id: p.spoofId,
       team: p.team,
       x: p.x,
@@ -190,6 +212,10 @@ export function createMatchScreen(): Panel {
     drawArena(c, v);
     const spoofs = onCourt();
     const playing = new Set(spoofs.map((s) => `${s.team}|${s.id}`));
+    // Your spoof in hand, or placed but not locked in, has left its seat too.
+    const held = hand.held;
+    if (held.kind === 'dragging') playing.add(`${YOU}|${held.spoof.id}`);
+    if (hand.pending) playing.add(`${YOU}|${hand.pending.spoof.id}`);
     // Spoofs not on the court wait in their seats: spoof k in seat k.
     for (const team of SIDES) {
       const seats = benchSeats(team);
@@ -202,7 +228,7 @@ export function createMatchScreen(): Panel {
           radius: spoof.radius,
           type: spoof.type,
           kit: kitFor(team),
-          highlighted: picked?.id === spoof.id && team === YOU,
+          highlighted: team === YOU && held.kind === 'picked' && held.spoof.id === spoof.id,
         });
       });
     }
@@ -219,9 +245,42 @@ export function createMatchScreen(): Panel {
         highlighted: status === 'mise' && s.team === COMPUTER && s.id === justPlaced,
       });
     }
+    if (status === 'mise') drawHand(c, v);
     // Hit cues go on top, so a hit shows even where discs overlap.
     const reduced = reducedMotion.matches;
     for (const impact of showingImpacts()) drawImpactRing(c, v, impact, reduced);
+  }
+
+  /** Your spoof placed but not locked in, with its grace ring, and the one you're dragging. */
+  function drawHand(c: CanvasRenderingContext2D, v: ArenaView): void {
+    const pending = hand.pending;
+    const held = hand.held;
+    const draggingPending = held.kind === 'dragging' && held.from === 'pending';
+    if (pending && !draggingPending) {
+      drawSpoofInArena(c, v, {
+        ...pending.spot,
+        radius: pending.spoof.radius,
+        type: pending.spoof.type,
+        kit: kitFor(YOU),
+      });
+      drawGraceRing(c, v, pending.spot, pending.spoof.radius, graceProgress(hand, nowSeconds()));
+    }
+    if (held.kind !== 'dragging') return;
+    const landing = aim(hand, YOU);
+    const disc = { radius: held.spoof.radius, type: held.spoof.type, kit: kitFor(YOU) };
+    if (landing?.kind === 'spot') {
+      if (landing.inside) drawInsideLine(c, v, hand.mise.court);
+      drawPlacingHalo(c, v, landing.spot, held.spoof.radius);
+      drawSpoofInArena(c, v, { ...landing.spot, ...disc });
+    } else if (landing?.kind === 'refused') {
+      c.save();
+      c.globalAlpha = REFUSED_OPACITY;
+      drawSpoofInArena(c, v, { ...landing.at, ...disc });
+      c.restore();
+      drawRefusedRing(c, v, landing.at, held.spoof.radius);
+    } else {
+      drawSpoofInArena(c, v, { ...heldPoint(held), ...disc });
+    }
   }
 
   /** The hit cues showing now: only while a scrum plays or is paused. */
@@ -238,7 +297,11 @@ export function createMatchScreen(): Panel {
     canvas = made.canvas;
     ctx = made.ctx;
     view = fitArena(bounds, width, height);
-    canvas.addEventListener('click', onArenaTap);
+    canvas.addEventListener('click', onArenaClick);
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerCancel);
     stage.replaceChildren(canvas);
     draw();
   }
@@ -247,12 +310,12 @@ export function createMatchScreen(): Panel {
   function drawTurns(): void {
     turnStrip.hidden = status !== 'mise' && status !== 'ready';
     turnStrip.replaceChildren(
-      ...mise.order.map((team, turn) => {
+      ...hand.mise.order.map((team, turn) => {
         const dot = el('li', 'mise-turn');
         const kit = kitFor(team);
         dot.style.borderColor = kit.trim;
-        if (turn < mise.placements.length) dot.style.background = kit.fill;
-        if (turn === mise.placements.length) dot.classList.add('mise-turn-now');
+        if (turn < hand.mise.placements.length) dot.style.background = kit.fill;
+        if (turn === hand.mise.placements.length) dot.classList.add('mise-turn-now');
         return dot;
       }),
     );
@@ -260,30 +323,43 @@ export function createMatchScreen(): Panel {
 
   /** The instruction or state shown under the arena, also read out to screen readers. */
   function miseMessage(): string {
-    const turn = whoseTurn(mise);
+    const turn = whoseTurn(hand.mise);
     if (!turn) return `All ${String(MISE_TURNS)} spoofs are placed. Press Start scrum.`;
     if (turn === COMPUTER) return `The ${nameOf(COMPUTER)} are placing a spoof…`;
-    if (!picked) return 'Your turn: tap a spoof on your bench.';
-    return `Your turn: tap the court to place your ${avatarName(picked.type).toLowerCase()}, or pick another.`;
+    const held = hand.held;
+    const landing = aim(hand, YOU);
+    if (landing?.kind === 'bench') return 'Let go to put it back on your bench.';
+    if (landing?.kind === 'refused') return REFUSAL_TEXT[landing.refusal];
+    if (landing?.kind === 'spot') {
+      return landing.inside ? 'Your one spot inside the red line.' : 'Let go to place it here.';
+    }
+    if (hand.refusal) return REFUSAL_TEXT[hand.refusal];
+    if (hand.pending) {
+      return 'Placed. Drag it to move it, or back to your bench, before the ring fills.';
+    }
+    if (held.kind === 'picked') {
+      return `Tap the court to place your ${avatarName(held.spoof.type).toLowerCase()}, or drag it there.`;
+    }
+    return 'Your turn: drag a spoof from your bench onto the court, or tap it, then tap a spot.';
   }
 
   let lastLabelSecond = -1;
   function updateText(force = false): void {
     if (status === 'mise' || status === 'ready') {
       middleLabel.textContent = 'Mise';
-      const turn = Math.min(mise.placements.length + 1, MISE_TURNS);
+      const turn = Math.min(hand.mise.placements.length + 1, MISE_TURNS);
       clockText.textContent = `Turn ${String(turn)} of ${String(MISE_TURNS)}`;
-      home.score.textContent = `${String(leftToPlace(mise, 'home'))} to place`;
-      visitor.score.textContent = `${String(leftToPlace(mise, 'visitor'))} to place`;
+      home.score.textContent = `${String(leftToPlace(hand.mise, 'home'))} to place`;
+      visitor.score.textContent = `${String(leftToPlace(hand.mise, 'visitor'))} to place`;
       clockBar.hidden = true;
       drawTurns();
       const state =
         status === 'ready'
           ? 'The mise is over.'
-          : `Turn ${String(turn)} of ${String(MISE_TURNS)}: the ${nameOf(whoseTurn(mise) ?? YOU)} place a spoof.`;
+          : `Turn ${String(turn)} of ${String(MISE_TURNS)}: the ${nameOf(whoseTurn(hand.mise) ?? YOU)} place a spoof.`;
       stage.setAttribute(
         'aria-label',
-        `The court. ${state} ${nameOf('home')} have ${String(leftToPlace(mise, 'home'))} to place, ${nameOf('visitor')} ${String(leftToPlace(mise, 'visitor'))}.`,
+        `The court. ${state} ${nameOf('home')} have ${String(leftToPlace(hand.mise, 'home'))} to place, ${nameOf('visitor')} ${String(leftToPlace(hand.mise, 'visitor'))}.`,
       );
       return;
     }
@@ -309,8 +385,9 @@ export function createMatchScreen(): Panel {
     stage.setAttribute('aria-label', `The court. ${state}`);
   }
 
+  /** Shows a message under the arena; only when it changes, so a screen reader isn't flooded mid-drag. */
   function say(message: string): void {
-    statusLine.textContent = message;
+    if (statusLine.textContent !== message) statusLine.textContent = message;
   }
 
   function showResults(): void {
@@ -354,7 +431,11 @@ export function createMatchScreen(): Panel {
     pauseButton.hidden = !(status === 'playing' || status === 'paused');
     pauseButton.textContent = status === 'paused' ? 'Resume' : 'Pause';
     pauseButton.setAttribute('aria-pressed', String(status === 'paused'));
-    if (canvas) canvas.style.cursor = status === 'mise' && whoseTurn(mise) === YOU ? 'pointer' : '';
+    // On the stage, which outlives the canvas: the canvas is rebuilt when the
+    // page resizes. While you place, a drag on the arena moves a spoof rather
+    // than scrolling the page (app.css).
+    stage.classList.toggle('is-placing', status === 'mise');
+    stage.classList.toggle('is-your-turn', status === 'mise' && whoseTurn(hand.mise) === YOU);
   }
 
   function refresh(): void {
@@ -367,11 +448,11 @@ export function createMatchScreen(): Panel {
   function newMatch(): void {
     window.clearTimeout(computerTimer);
     cancelAnimationFrame(raf);
+    cancelAnimationFrame(miseRaf);
     random = createRandom(newSeed());
     // The host places last; picked at random each match (docs/design.md).
     const host = random.pick(SIDES);
-    mise = startMise(drawOrder(host, random));
-    picked = null;
+    hand = startHand(startMise(drawOrder(host, random)));
     justPlaced = null;
     scrum = null;
     seconds = 0;
@@ -384,7 +465,7 @@ export function createMatchScreen(): Panel {
 
   /** Moves the mise on: the Embers play after a pause; on your turn it waits for a tap. */
   function nextTurn(): void {
-    if (isMiseOver(mise)) {
+    if (isMiseOver(hand.mise)) {
       const hadFocus = document.activeElement === pauseButton;
       status = 'ready';
       say(miseMessage());
@@ -392,10 +473,10 @@ export function createMatchScreen(): Panel {
       if (hadFocus) startButton.focus();
       return;
     }
-    if (whoseTurn(mise) !== COMPUTER) return;
+    if (whoseTurn(hand.mise) !== COMPUTER) return;
     computerTimer = window.setTimeout(() => {
-      const move = computerMove(mise, COMPUTER, TEAMS[COMPUTER], random);
-      mise = placeSpoof(mise, move.spoof, COMPUTER, move.spot);
+      const move = computerMove(hand.mise, COMPUTER, TEAMS[COMPUTER], random);
+      hand = { ...hand, mise: placeSpoof(hand.mise, move.spoof, COMPUTER, move.spot) };
       justPlaced = move.spoof.id;
       say(miseMessage());
       refresh();
@@ -403,45 +484,80 @@ export function createMatchScreen(): Panel {
     }, COMPUTER_PAUSE_MS);
   }
 
-  function onMiseTap(px: number, py: number): void {
-    if (!view) return;
-    if (whoseTurn(mise) !== YOU) {
+  /** Shows the hand's state: redraws, and says what to do. */
+  function showHand(): void {
+    draw();
+    say(miseMessage());
+  }
+
+  /**
+   * Runs while a spoof is in hand or placed but not locked in: redraws the
+   * grace ring, and locks the spoof in once its grace period is over.
+   */
+  function miseLoop(): void {
+    cancelAnimationFrame(miseRaf);
+    const step = () => {
+      if (status !== 'mise') return;
+      const placed = hand.mise.placements.length;
+      hand = tickHand(hand, YOU, nowSeconds());
+      if (hand.mise.placements.length > placed) {
+        justPlaced = null;
+        say(miseMessage());
+        refresh();
+        nextTurn();
+        return;
+      }
+      draw();
+      if (hand.pending || hand.held.kind === 'dragging') miseRaf = requestAnimationFrame(step);
+    };
+    miseRaf = requestAnimationFrame(step);
+  }
+
+  function pointAt(event: PointerEvent) {
+    return view ? courtPointAt(view, event.offsetX, event.offsetY) : null;
+  }
+
+  function onPointerDown(event: PointerEvent): void {
+    if (status !== 'mise' || !canvas) return;
+    if (whoseTurn(hand.mise) !== YOU) {
       say(`Wait for the ${nameOf(COMPUTER)} to place their spoof.`);
       return;
     }
-    const point = courtPointAt(view, px, py);
-    const seat = seatAt(YOU, point.x, point.y);
-    if (seat) {
-      const spoof = TEAMS[YOU][seat.index];
-      const placed = mise.placements.some((p) => p.team === YOU && p.spoofId === spoof?.id);
-      if (spoof && !placed) {
-        // Tapping the picked spoof again puts it back down.
-        picked = picked?.id === spoof.id ? null : spoof;
-        say(miseMessage());
-        draw();
-      }
-      return;
-    }
-    if (!picked) {
-      say('Tap a spoof on your bench first.');
-      return;
-    }
-    const result = spotForTap(mise, YOU, point, picked.radius);
-    if ('refusal' in result) {
-      say(REFUSAL_TEXT[result.refusal]);
-      return;
-    }
-    mise = placeSpoof(mise, picked, YOU, result.spot);
-    picked = null;
-    justPlaced = null;
-    say(miseMessage());
-    refresh();
-    nextTurn();
+    const point = pointAt(event);
+    if (!point) return;
+    hand = press(hand, YOU, TEAMS[YOU], point, event.pointerType === 'touch' ? TOUCH_LIFT : 0);
+    // Keep getting this pointer's moves even if it leaves the canvas.
+    canvas.setPointerCapture(event.pointerId);
+    showHand();
+    miseLoop();
   }
 
-  function onArenaTap(event: MouseEvent): void {
-    if (status === 'mise') onMiseTap(event.offsetX, event.offsetY);
-    else togglePause();
+  function onPointerMove(event: PointerEvent): void {
+    if (status !== 'mise' || hand.held.kind !== 'dragging') return;
+    const point = pointAt(event);
+    if (!point) return;
+    hand = drag(hand, point);
+    showHand();
+  }
+
+  function onPointerUp(event: PointerEvent): void {
+    if (status !== 'mise' || whoseTurn(hand.mise) !== YOU) return;
+    const point = pointAt(event);
+    if (!point) return;
+    hand = release(hand, YOU, point, nowSeconds());
+    showHand();
+    miseLoop();
+  }
+
+  function onPointerCancel(): void {
+    if (status !== 'mise') return;
+    hand = cancel(hand);
+    showHand();
+  }
+
+  /** A click on the arena pauses or resumes a scrum. During the mise, pointer events handle it. */
+  function onArenaClick(): void {
+    if (status === 'playing' || status === 'paused') togglePause();
   }
 
   // --- Playback loop ---------------------------------------------------------
@@ -479,7 +595,7 @@ export function createMatchScreen(): Panel {
 
   function startScrum(): void {
     // The scrum's seed comes from the match's, after the mise's choices.
-    scrum = play(miseEntries(mise, TEAMS), random.int(1, 2 ** 31 - 1));
+    scrum = play(miseEntries(hand.mise, TEAMS), random.int(1, 2 ** 31 - 1));
     seconds = 0;
     results.hidden = true;
     say('');

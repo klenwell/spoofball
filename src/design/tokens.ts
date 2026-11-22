@@ -52,6 +52,12 @@ export const palette = {
   white: '#FFFFFF',
   /** The ring around a selected spoof. Dark, so it reads on the white court and on any team color. */
   highlight: '#1B1F24',
+  /**
+   * The halo around a spoof being placed on a spot it may go (#39). At least
+   * 3:1 on the mosh and the apron; it's drawn on a white edge, so it reads on
+   * the red crush too, where green and red are about as bright.
+   */
+  placeOk: '#13803F',
 } as const;
 
 export const teamColorNames = [

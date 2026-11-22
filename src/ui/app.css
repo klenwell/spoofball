@@ -254,6 +254,16 @@ body {
   cursor: pointer;
 }
 
+/* During the mise, a drag on the arena moves a spoof, not the page (#39). */
+.match-stage.is-placing canvas {
+  cursor: default;
+  touch-action: none;
+}
+
+.match-stage.is-your-turn canvas {
+  cursor: grab;
+}
+
 .match-controls {
   display: flex;
   justify-content: center;

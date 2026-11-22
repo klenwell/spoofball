@@ -59,6 +59,11 @@ describe('page colors', () => {
     });
   });
 
+  it('the placing halo has at least 3:1 contrast on the mosh and the apron', () => {
+    expect(contrastRatio(palette.placeOk, palette.mosh)).toBeGreaterThanOrEqual(3);
+    expect(contrastRatio(palette.placeOk, palette.apron)).toBeGreaterThanOrEqual(3);
+  });
+
   it("the court's edge has at least 3:1 contrast on the page, so you can see where the court ends", () => {
     expect(contrastRatio(palette.courtEdge, palette.background)).toBeGreaterThanOrEqual(3);
   });

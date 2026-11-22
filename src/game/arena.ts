@@ -78,6 +78,24 @@ export function seatAt(
   return benchSeats(side, court).find((s) => Math.hypot(s.x - x, s.y - y) <= SEAT_RADIUS) ?? null;
 }
 
+/**
+ * Whether a point in court units is on a side's bench: within the band the
+ * seats sit in, between its end seats (and a seat's width beyond them).
+ */
+export function isOnBench(
+  side: BenchSide,
+  x: number,
+  y: number,
+  court: Court = DEFAULT_COURT,
+): boolean {
+  if (Math.abs(Math.hypot(x, y) - benchRadius(court)) > BENCH_HALF_WIDTH) return false;
+  const [start, end] = benchArc(side, court);
+  const slack = seatSpacing(court) / 2;
+  const angle = Math.atan2(y, x);
+  // The benches are centered straight below and above the court, so neither arc crosses ±π.
+  return angle >= start - slack && angle <= end + slack;
+}
+
 export interface Bounds {
   minX: number;
   minY: number;
