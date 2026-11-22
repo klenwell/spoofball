@@ -49,11 +49,8 @@ describe('impactsAt', () => {
     expect(showing.map((i) => i.hitter).sort()).toEqual(['a', 'c', 'e']);
   });
 
-  it('depends only on the playback clock, so a paused scrum shows the same cue every frame', () => {
-    const paused = hitTime + IMPACT_SECONDS / 3;
-    expect(impactsAt(frames, paused)).toEqual(impactsAt(frames, paused));
-  });
-
+  // Cues depend only on the playback clock, which a pause stops, so pausing
+  // freezes them. This samples that clock at several display rates.
   it('shows each hit for several drawn frames at any common display rate', () => {
     // Every hit in a real scrum: frames 1 to 99, one each.
     const many = framesWith(

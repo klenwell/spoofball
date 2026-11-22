@@ -52,7 +52,8 @@ export function frameAt(frames: readonly ScrumFrame[], seconds: number): ScrumFr
   const t = position - index;
   return {
     clock: from.clock + (to.clock - from.clock) * t,
-    // Hits aren't blended: `impactsAt` (impacts.ts) times their cues.
+    // Hits aren't blended, and nothing reads them here: `impactsAt` (impacts.ts)
+    // times their cues from `frames`. This only fills the type.
     hits: from.hits,
     spoofs: from.spoofs.map((s, i) => {
       const next = to.spoofs[i];
