@@ -18,6 +18,7 @@ import {
   scoreByScrum,
   scrumEntries,
   scrumNumber,
+  scrumSummary,
   startMatch,
   type Match,
   type MatchSpoof,
@@ -381,6 +382,53 @@ describe('restBetweenScrums', () => {
     expect(regained(core.burst, core.burst - 40, played.skills.burst)).toBeCloseTo(0.66);
     // 99% back resting, then 66% of what's left at the break.
     expect(regained(core.burst, core.burst - 40, rested.skills.burst)).toBeCloseTo(1 - 0.01 * 0.34);
+  });
+});
+
+describe('scrumSummary', () => {
+  const match = computerMatch(TEST_SEED);
+
+  it("gives each team's score in that scrum, and the match score after it", () => {
+    const second = scrumSummary(match, 1);
+
+    expect(second.scrum).toBe(2);
+    expect(second.score).toEqual({
+      home: match.scrums[1]?.scores.teams.home,
+      visitor: match.scrums[1]?.scores.teams.visitor,
+    });
+    const by = scoreByScrum(match);
+    expect(second.matchScore).toEqual({
+      home: (by.home[0] ?? 0) + (by.home[1] ?? 0),
+      visitor: (by.visitor[0] ?? 0) + (by.visitor[1] ?? 0),
+    });
+  });
+
+  it('lists every spoof of both teams with its points, and null for one that sat the scrum out', () => {
+    const first = scrumSummary(match, 0);
+    const placed = match.scrums[0]?.mise.placements ?? [];
+
+    for (const side of ['home', 'visitor'] as const) {
+      expect(first.spoofs[side].map((l) => l.id)).toEqual(
+        match.teams[side].spoofs.map((s) => s.id),
+      );
+      for (const line of first.spoofs[side]) {
+        const played = placed.some((p) => p.team === side && p.spoofId === line.id);
+        if (played) expect(line.points).toBe(match.scrums[0]?.scores.spoofs[line.id]);
+        else expect(line.points).toBeNull();
+      }
+    }
+  });
+
+  it('shows outcomes only, never skills', () => {
+    expect(JSON.stringify(scrumSummary(match, 0))).not.toMatch(
+      /"(skills|stamina|burst|iq|growth|temperament|fatigue)"/,
+    );
+  });
+
+  it("refuses a scrum that hasn't been played", () => {
+    const fresh = startMatch(HOME, VISITOR, TEST_SEED);
+    expect(() => scrumSummary(fresh, 0)).toThrow(RangeError);
+    expect(() => scrumSummary(match, 3)).toThrow(RangeError);
   });
 });
 

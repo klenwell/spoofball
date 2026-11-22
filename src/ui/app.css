@@ -272,6 +272,85 @@ body {
   display: none;
 }
 
+/*
+ * A scrum's result, over the court during the break (#58): see-through, so
+ * the court shows, with each spoof's points and Next scrum. match-screen.ts
+ * sets its top (the court's center), width (the court's) and type size.
+ */
+.scrum-result {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  /* 80% white, the owner's pick on #58: the court shows through, and the text reads clearly. */
+  background: rgb(255 255 255 / 0.8);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  font-weight: 600;
+  text-align: center;
+}
+
+.scrum-result-title {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 1em;
+}
+
+.scrum-result-score {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 1.35em;
+}
+
+.scrum-result-match {
+  margin: 0;
+  font-size: 0.9em;
+}
+
+.scrum-result-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.scrum-result-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.scrum-result-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 0;
+}
+
+.scrum-result-name {
+  flex: 1;
+  text-align: left;
+}
+
+.scrum-result-points {
+  font-family: var(--font-numeric);
+}
+
+.scrum-result-out {
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+.scrum-result .button {
+  min-width: 0;
+}
+
 /* The arena: the canvas, with the caption laid over it. */
 .arena-frame {
   position: relative;
