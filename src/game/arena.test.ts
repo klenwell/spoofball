@@ -107,8 +107,14 @@ describe('the arena on a court with a smaller mosh (#51)', () => {
     }
   });
 
-  it("keeps the seats as far apart as on today's court, so they don't overlap", () => {
+  it("keeps the seats as far apart as on the game's court, so they don't overlap", () => {
     expect(neighbourGap(benchSeats('home', small))).toBeCloseTo(neighbourGap(benchSeats('home')));
+  });
+
+  it("spaces the game's seats as on the prototype's court: 17° apart at radius 190 (#52 review)", () => {
+    const prototypeGap = 2 * 190 * Math.sin((17 * Math.PI) / 360);
+    expect(neighbourGap(benchSeats('home'))).toBeCloseTo(prototypeGap);
+    expect(neighbourGap(benchSeats('visitor'))).toBeCloseTo(prototypeGap);
   });
 
   it('shrinks the bounds with the court', () => {

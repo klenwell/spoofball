@@ -107,6 +107,12 @@ describe('fitToCourt', () => {
     expect(back.y).toBeCloseTo(105);
   });
 
+  it("squeezes a mosh spot measured on a court other than the prototype's (#52 review)", () => {
+    // From mosh 80 to mosh 70: 60 from the center is 35 into 55 of mosh, so 25 + 35 × 45/55.
+    const { y } = fitToCourt(0, 60, small, DEFAULT_COURT);
+    expect(y).toBeCloseTo(25 + (35 * 45) / 55);
+  });
+
   it('leaves the crush where it is', () => {
     expect(fitToCourt(0, 20, small)).toEqual({ x: 0, y: 20 });
   });

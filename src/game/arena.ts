@@ -1,4 +1,4 @@
-import { DEFAULT_COURT, courtRadius, type Court } from './court';
+import { DEFAULT_COURT, PROTOTYPE_COURT, courtRadius, type Court } from './court';
 import { MAX_SPOOF_RADIUS } from './spoof-types';
 
 /**
@@ -16,18 +16,23 @@ export const SEAT_RADIUS = MAX_SPOOF_RADIUS + 1;
 export function benchRadius(court: Court = DEFAULT_COURT): number {
   return courtRadius(court) + 15 + SEAT_RADIUS;
 }
-/** Today's bench radius, 190. */
+/** The game's bench radius, 170 (190 on the prototype's court). */
 export const BENCH_RADIUS = benchRadius(DEFAULT_COURT);
-/** Angle between neighboring seats on today's court, as in the prototype (seatRotationDegrees). */
+/** Angle between neighboring seats on the prototype's court (seatRotationDegrees). */
 export const SEAT_SPACING_DEGREES = 17;
 
 /**
- * Angle between neighboring seats on a court: the same distance apart as on
- * today's court, so seats on a smaller court (#51) don't squeeze together.
+ * How far apart neighboring seats' centers are, on every court: as on the
+ * prototype's court, 17° apart at radius 190, about 56.2 units. Measured on
+ * the prototype's court, not the game's, so seats don't squeeze together on
+ * a smaller mosh (#51).
  */
+export const SEAT_GAP =
+  2 * benchRadius(PROTOTYPE_COURT) * Math.sin((SEAT_SPACING_DEGREES * Math.PI) / 360);
+
+/** Angle between neighboring seats on a court, keeping them `SEAT_GAP` apart. */
 export function seatSpacing(court: Court = DEFAULT_COURT): number {
-  const apart = 2 * BENCH_RADIUS * Math.sin((SEAT_SPACING_DEGREES * Math.PI) / 360);
-  return 2 * Math.asin(apart / (2 * benchRadius(court)));
+  return 2 * Math.asin(SEAT_GAP / (2 * benchRadius(court)));
 }
 /** Half the bench's thickness: the seat plus a margin. */
 export const BENCH_HALF_WIDTH = SEAT_RADIUS + 6;

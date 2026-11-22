@@ -41,6 +41,13 @@ describe('drawTemperament', () => {
     }
   });
 
+  it('varies within a type: spoofs of one type differ (#52 review)', () => {
+    const values = Array.from({ length: 100 }, (_, seed) =>
+      drawTemperament('rook', createRandom(seed)),
+    );
+    expect(Math.max(...values) - Math.min(...values)).toBeGreaterThan(1.5 * TEMPERAMENT_SPREAD);
+  });
+
   it("centers on the type's average", () => {
     const random = createRandom(TEST_SEED);
     let sum = 0;
