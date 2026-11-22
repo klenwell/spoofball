@@ -33,12 +33,12 @@ export const GRACE_SECONDS = 1;
 
 /**
  * How far past the red line a spoof dragged from the apron must be pushed
- * before it crosses, in court units (the owner, 2026-11-22: 12, then a little
- * more). Until then it stays on the apron, against the line, so your one spot
+ * before it crosses, in court units (the owner, 2026-11-22: 12, then 18, then
+ * 24). Until then it stays on the apron, against the line, so your one spot
  * inside is never used by accident. Once that spot is used, the line stops a
  * dragged spoof altogether.
  */
-export const RED_LINE_PULL = 18;
+export const RED_LINE_PULL = 24;
 
 /** How far a press may move, in court units, and still count as a tap rather than a drag. */
 export const TAP_SLOP = 4;

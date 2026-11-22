@@ -1,5 +1,5 @@
 import { matchKits, type Kit } from '../design/kits';
-import { arenaBounds, benchSeats, type BenchSide } from '../game/arena';
+import { BENCH_HALF_WIDTH, arenaBounds, benchSeats, type BenchSide } from '../game/arena';
 import {
   REFUSAL_TEXT,
   computerMove,
@@ -199,8 +199,8 @@ export function createMatchScreen(): Panel {
   results.setAttribute('aria-live', 'polite');
 
   const root = el('div', 'match-screen');
-  // The caption sits above the arena, where you'll see it (the owner, #39).
-  root.append(board, clockBar, turnStrip, statusLine, stage, controls, results);
+  // The caption goes over the Embers' bench, inside the arena (rebuildCanvas).
+  root.append(board, clockBar, turnStrip, stage, controls, results);
 
   // --- Drawing -------------------------------------------------------------
   /** Where each spoof is: on the court if placed (or playing), otherwise in its seat. */
@@ -315,7 +315,21 @@ export function createMatchScreen(): Panel {
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerCancel);
-    stage.replaceChildren(canvas);
+    // The caption sits over the Embers' bench, where you'll see it whenever
+    // the arena is on screen (the owner, #39): centered on the bench's middle
+    // seat, and as wide as the bench. It lets every press through to the arena.
+    const seats = benchSeats(COMPUTER);
+    const middle = seats[Math.floor(seats.length / 2)];
+    const xs = seats.map((seat) => seat.x);
+    const benchWidth = Math.max(...xs) - Math.min(...xs) + 2 * BENCH_HALF_WIDTH;
+    statusLine.style.top = `${String(view.cy + (middle?.y ?? 0) * view.scale)}px`;
+    statusLine.style.width = `${String(benchWidth * view.scale * 0.94)}px`;
+    // Its type scales with the arena, so the longest caption still fits on the
+    // bench on a small phone: 12 px at the smallest, 16 px at full size.
+    statusLine.style.fontSize = `${String(Math.min(16, Math.max(12, view.scale * 12.5)))}px`;
+    const frame = el('div', 'arena-frame');
+    frame.append(canvas, statusLine);
+    stage.replaceChildren(frame);
     draw();
   }
 

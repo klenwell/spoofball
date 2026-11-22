@@ -273,7 +273,7 @@ describe("the red line's resistance", () => {
     points.reduce((hand, at) => drag(hand, at), press(fresh(), 'home', TEAM, seat(0)));
 
   it(`holds a spoof from the apron on the apron until it's pushed ${String(RED_LINE_PULL)} units past the line, even with the spot inside unused`, () => {
-    expect(RED_LINE_PULL).toBe(18);
+    expect(RED_LINE_PULL).toBe(24);
     const held = aim(dragged(apron(0), east(edge - RED_LINE_PULL + 1)), 'home');
     expect(held).toMatchObject({ kind: 'spot', inside: false, resisted: true });
     if (held?.kind !== 'spot') throw new Error('no spot');
