@@ -220,6 +220,12 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
       nameInput.focus();
       return;
     }
+    if (savedTeam) confirmReplace.open(nameInput.value.trim());
+    else createAndPlay();
+  });
+
+  /** Makes the team from the form, saves it, and plays it. */
+  function createAndPlay(): void {
     const team = createTeam(
       { name: nameInput.value, color: color(), logo: logo() },
       createRandom(newSeed()),
@@ -237,8 +243,54 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
     unsaved = team;
     setStorageNotice(`${STORAGE_PROBLEM_TEXT[result.problem]} ${PLAY_ANYWAY_TEXT}`);
     submit.textContent = 'Play anyway';
-  });
+  }
+
+  const confirmReplace = replaceDialog(savedTeam, createAndPlay);
+  element.append(confirmReplace.element);
 
   update();
   return { element, heading };
+}
+
+/**
+ * The last check before a new team replaces your saved one (the owner, #71
+ * QA). A modal `<dialog>`: the browser keeps focus inside it, and Escape or
+ * "Keep" closes it with nothing changed. "Keep" has focus first, so a stray
+ * Enter doesn't replace anything.
+ */
+function replaceDialog(savedTeam: Team | null, onReplace: () => void) {
+  const element = el('dialog', 'confirm-dialog');
+  const title = el('h2', 'confirm-title');
+  title.id = `${element.className}-title-${String(fieldIds)}`;
+  const body = el('p', 'confirm-body');
+  body.id = `${element.className}-body-${String(fieldIds)}`;
+  element.setAttribute('aria-labelledby', title.id);
+  element.setAttribute('aria-describedby', body.id);
+  const actions = el('div', 'confirm-actions');
+  const keep = el('button', 'button');
+  keep.type = 'button';
+  const replace = el('button', 'button button-primary', 'Replace team');
+  replace.type = 'button';
+  actions.append(keep, replace);
+  element.append(title, body, actions);
+
+  keep.addEventListener('click', () => {
+    element.close();
+  });
+  replace.addEventListener('click', () => {
+    element.close();
+    onReplace();
+  });
+
+  return {
+    element,
+    open(newName: string): void {
+      if (!savedTeam) return;
+      title.textContent = `Replace ${savedTeam.name}?`;
+      body.textContent = `${newName} will take the place of your saved team, ${savedTeam.logo} ${savedTeam.name}, and its spoofs. This can't be undone.`;
+      keep.textContent = `Keep ${savedTeam.name}`;
+      element.showModal();
+      keep.focus();
+    },
+  };
 }
