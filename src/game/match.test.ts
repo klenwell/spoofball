@@ -705,6 +705,12 @@ describe('matchRecord', () => {
     expect(record.result).toBe(outcomeFor(match, 'home'));
   });
 
+  it("records each spoof's name as it was at match time, both teams in order (#28)", () => {
+    expect(record.spoofs.map((s) => s.name)).toEqual(
+      [...HOME.spoofs, ...VISITOR.spoofs].map((s) => s.name),
+    );
+  });
+
   it("records every spoof's scrums played, points and behavior stats", () => {
     expect(record.spoofs).toHaveLength(HOME.spoofs.length + VISITOR.spoofs.length);
     for (const s of record.spoofs) {

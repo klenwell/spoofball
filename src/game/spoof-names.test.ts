@@ -68,7 +68,7 @@ describe('drawSpoofName', () => {
   it("steers clear of a renamed spoof's words too, and copes with odd spacing", () => {
     const random = createRandom(TEST_SEED);
     for (let i = 0; i < 100; i += 1) {
-      expect(drawSpoofName(random, ['  Lucky   ', 'Mabel'])).not.toMatch(/Lucky|Mabel/);
+      expect(drawSpoofName(random, ['  Lucky\tMabel  '])).not.toMatch(/Lucky|Mabel/);
     }
   });
 
