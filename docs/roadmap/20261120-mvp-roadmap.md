@@ -93,6 +93,8 @@ What a player gets: **a full, styled match between two preset teams.**
   - the new placement rules;
   - 3 scrums, a scoreboard and a result screen, using two preset teams.
 
+  **Playable in `v0.2.0`:** a whole match of the Comets against the Embers, on a phone or desktop. You place your spoofs in each mise, by dragging or tapping. Then each scrum plays itself, with a live scoreboard and pause. Fatigue carries between scrums, a result shows after each one, and a scorecard ends the match. The rules are in [design](../design.md#match-1).
+
 ### Your Team (`v0.3.0`)
 
 What a player gets: **create and draft your own team, play matches, and see stats that last.**
