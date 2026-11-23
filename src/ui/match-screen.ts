@@ -880,18 +880,38 @@ export function createMatchScreen(yourTeam: Team): Panel {
     if (status === 'break') beginMise();
   });
   pauseButton.addEventListener('click', togglePause);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pause();
-  });
+  /** Removes the listeners on the page, so a screen that's done with can be let go. */
+  const listening = new AbortController();
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.hidden) pause();
+    },
+    { signal: listening.signal },
+  );
 
   let lastWidth = -1;
-  new ResizeObserver(() => {
+  const resizing = new ResizeObserver(() => {
     if (stage.clientWidth === lastWidth) return;
     lastWidth = stage.clientWidth;
     rebuildCanvas();
-  }).observe(stage);
+  });
+  resizing.observe(stage);
 
   newMatch();
 
-  return { element: root, hide: pause };
+  /**
+   * Stops everything for good when the team changes (#78 review): the
+   * Embers' and the "Scrum!" cue's timer, both animation loops, and the
+   * listeners. Without it, leaving during the cue started a scrum offscreen.
+   */
+  function dispose(): void {
+    window.clearTimeout(computerTimer);
+    cancelAnimationFrame(raf);
+    cancelAnimationFrame(miseRaf);
+    listening.abort();
+    resizing.disconnect();
+  }
+
+  return { element: root, hide: pause, dispose };
 }

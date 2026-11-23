@@ -28,6 +28,8 @@ export interface Panel {
   readonly element: HTMLElement;
   /** Called when the player leaves the screen, for example to pause a scrum. */
   readonly hide?: () => void;
+  /** Called when the screen is thrown away (the team changed), to stop its timers and listeners. */
+  readonly dispose?: () => void;
   /** The screen's own heading, for screens without the shell's (splash, create). */
   readonly heading?: HTMLElement;
 }
@@ -112,6 +114,8 @@ export function mountAppShell(root: HTMLElement): void {
     shownPanel?.hide?.();
     shownPanel = undefined;
     team = next;
+    // The old team's screens stop for good, so none keeps running offscreen.
+    for (const built of builtPanels.values()) built.dispose?.();
     builtPanels = new Map();
     badgeLogo.textContent = next.logo;
     badgeName.textContent = next.name;

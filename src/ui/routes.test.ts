@@ -6,7 +6,7 @@ const opening = { hasTeam: true, opening: true };
 const noTeam = { hasTeam: false, opening: false };
 
 describe('routeFromHash', () => {
-  describe('with no team in play', () => {
+  describe('when no team is in play', () => {
     it.each(['', '#/match', '#/stats', START_HASH, '#/nope'])(
       'opens the splash screen for %j',
       (hash) => {
@@ -20,7 +20,7 @@ describe('routeFromHash', () => {
     });
   });
 
-  describe('with a team in play', () => {
+  describe('when a team is in play', () => {
     it('opens the tab the hash names, or Match', () => {
       expect(routeFromHash('#/stats', later)).toEqual({ screen: 'tab', tab: 'stats' });
       expect(routeFromHash('', later)).toEqual({ screen: 'tab', tab: 'match' });
