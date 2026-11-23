@@ -77,7 +77,7 @@ src/
 
 - **Game logic never touches the DOM,** so it stays fast to test in Node, and a match can be replayed from its seed.
 - **Tests sit next to the code they test,** as `*.test.ts` files.
-- **Use the game's own words** for names in code and docs: spoof, match, scrum, expansion, pharm, kit and so on. They're defined in the [glossary](docs/design.md#glossary).
+- **Use the game's own words** for names in code and docs: spoof, match, scrum, draft, pharm, kit and so on. They're defined in the [glossary](docs/design.md#glossary).
 
 ## Environment
 

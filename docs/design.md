@@ -81,16 +81,16 @@ These were chosen by the owner from a set of mockup comparisons.
    - **Warm-ups:** every candidate moves on its own in a small round cell, so you can scan the pool like a scout.
    - **Drills:** tap a spoof to open a small drill court with 2–3 short drills, such as _sprint_ (dash across and back), _blow_ (grow from its smallest size) and _hold_ (stay in the mosh while a dummy pushes). Each is a few seconds, with no numbers.
    - **Some randomness,** like a real combine: a spoof shows its traits, but not a perfectly repeatable test.
-   - **The combine reuses the match simulation,** so a spoof behaves in drills exactly as it will in a match. So Expansion, which builds the combine, depends on the Match epic.
+   - **The combine reuses the match simulation,** so a spoof behaves in drills exactly as it will in a match. So the Draft (New Team) epic, which builds the combine, depends on the Match epic.
    - **Scouting in Pharm:** you can run drills on your own spoofs before replacing one. Replacing uses a small pool of 3 prospects. The prototype's pharm had this idea, but felt clunky, so the owner wants it **clean and easy to use**.
 
 ## Wireframes
 
 Low-fidelity phone sketches (#20), to guide the epics that build each screen. They're gray boxes and labels, not designs. Solid discs are yours (home kit) and hollow discs the visitor's (away kit). Regenerate them with `python3 docs/design/wireframes.py docs/design`.
 
-### Expansion
+### Draft (New Team)
 
-![Expansion wireframes](design/wireframe-expansion.svg)
+![Draft (New Team) wireframes](design/wireframe-draft.svg)
 
 1. **Your team:** a name (up to 16 characters, as in the prototype), one of the 8 colors, and an emoji logo, with a preview.
 2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell. Picked cells are outlined, and a strip at the bottom fills to 5.
@@ -184,7 +184,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 - **Scoring follows the prototype** (`scorekeeper.py`). A scrum scores a snapshot of where the spoofs end up: the court area each covers, × 0.002, × the zone multiplier, × **how many teammates cover the same spot**, the spoof itself included. So 2 overlapping teammates score 4× for the team where they overlap, and 3 score 9×: overlapping teammates is part of the game. Opponents on the same spot don't change it. A match usually totals 10–100 points. (Corrected on #34: the first version of this line left out the teammate bonus.)
 - **Watching controls: pause only.** Tap to pause and resume. Speed controls and replays wait until after the MVP. Replays are possible because a match can be replayed from its seed.
 
-### Expansion
+### Draft (New Team)
 
 - **Spoofs have names.** It's its own story, #28.
 - **The team logo comes from a curated set of emoji,** shown as a grid. Computer teams draw from the same set.
@@ -216,31 +216,30 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 
 ## Glossary
 
-| Term             | Meaning                                                                                                                                                                                  |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Spoof**        | A player: a 2D disc. A team has 5. (The prototype called them "rooks".)                                                                                                                  |
-| **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry       |
-| **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                               |
-| **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a match                                                                                       |
-| **Match**        | A whole contest against one other team, played over 3 scrums                                                                                                                             |
-| **Scrum**        | One period of a match: the mise, then 8 seconds of the spoofs playing on their own. (The prototype called it a round)                                                                    |
-| **Mise**         | Placing spoofs before a scrum, the teams taking turns. The prototype's term                                                                                                              |
-| **Arena**        | The whole playing area: the court and both benches                                                                                                                                       |
-| **Court**        | The circular playing area, made of the apron, the mosh and the crush. Where a spoof is on the court sets its score                                                                       |
-| **Apron**        | The court's gray outer ring. Scores nothing (×0). Spoofs start each scrum here                                                                                                           |
-| **Mosh**         | The court's large white circle. Scores ×1                                                                                                                                                |
-| **Crush**        | The red spot at the center of the mosh. Scores ×3                                                                                                                                        |
-| **Bench**        | A team's curved row of seats beside the court: the visitor's above, yours below                                                                                                          |
-| **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 5                                                                                                  |
-| **Kit**          | How a team's discs look in a match: **home** (filled with the team color) or **away** (white, trimmed in the team color). Your team always wears home, and the visitor always wears away |
-| **Expansion**    | Creating your team: name, color and emoji logo, then the draft. In sports, a league adds new teams through expansion                                                                     |
-| **Draft**        | Picking your 5 spoofs from a generated pool of 15                                                                                                                                        |
-| **Combine**      | How you draft: candidate spoofs show their abilities by moving, in warm-ups and drills, like the NFL Scouting Combine                                                                    |
-| **Warm-up**      | A candidate moving on its own in a small round cell, so you can compare a whole pool at a glance                                                                                         |
-| **Drill**        | A short exercise on a small court (sprint, blow, hold) that shows one or two of a spoof's traits, without numbers                                                                        |
-| **Temperament**  | A spoof's hidden keenness to attack: hot spoofs go after opponents, calm ones are shy of them. Not a skill; never shown                                                                  |
-| **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                      |
-| **Draft pick**   | What replacing a spoof costs. A team holds up to 3 and gets one back after each loss                                                                                                     |
-| **Prospect**     | A candidate to replace a spoof in Pharm. You choose from 3                                                                                                                               |
-| **Host**         | The team that places last in each mise. For now picked at random each match                                                                                                              |
-| **Stats**        | Your team's record and each spoof's numbers across matches                                                                                                                               |
+| Term             | Meaning                                                                                                                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Spoof**        | A player: a 2D disc. A team has 5. (The prototype called them "rooks".)                                                                                                                                 |
+| **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry                      |
+| **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                                              |
+| **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a match                                                                                                      |
+| **Match**        | A whole contest against one other team, played over 3 scrums                                                                                                                                            |
+| **Scrum**        | One period of a match: the mise, then 8 seconds of the spoofs playing on their own. (The prototype called it a round)                                                                                   |
+| **Mise**         | Placing spoofs before a scrum, the teams taking turns. The prototype's term                                                                                                                             |
+| **Arena**        | The whole playing area: the court and both benches                                                                                                                                                      |
+| **Court**        | The circular playing area, made of the apron, the mosh and the crush. Where a spoof is on the court sets its score                                                                                      |
+| **Apron**        | The court's gray outer ring. Scores nothing (×0). Spoofs start each scrum here                                                                                                                          |
+| **Mosh**         | The court's large white circle. Scores ×1                                                                                                                                                               |
+| **Crush**        | The red spot at the center of the mosh. Scores ×3                                                                                                                                                       |
+| **Bench**        | A team's curved row of seats beside the court: the visitor's above, yours below                                                                                                                         |
+| **Seat**         | A spot on a bench where a spoof waits before it's placed on the court. Each bench has 5                                                                                                                 |
+| **Kit**          | How a team's discs look in a match: **home** (filled with the team color) or **away** (white, trimmed in the team color). Your team always wears home, and the visitor always wears away                |
+| **Draft**        | Creating your team: its name, color and emoji logo, then picking its 5 spoofs from a generated pool in the combine. The epic that builds it is Draft (New Team) (#69), named Expansion until 2026-11-23 |
+| **Combine**      | How you draft: candidate spoofs show their abilities by moving, in warm-ups and drills, like the NFL Scouting Combine                                                                                   |
+| **Warm-up**      | A candidate moving on its own in a small round cell, so you can compare a whole pool at a glance                                                                                                        |
+| **Drill**        | A short exercise on a small court (sprint, blow, hold) that shows one or two of a spoof's traits, without numbers                                                                                       |
+| **Temperament**  | A spoof's hidden keenness to attack: hot spoofs go after opponents, calm ones are shy of them. Not a skill; never shown                                                                                 |
+| **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                                     |
+| **Draft pick**   | What replacing a spoof costs. A team holds up to 3 and gets one back after each loss                                                                                                                    |
+| **Prospect**     | A candidate to replace a spoof in Pharm. You choose from 3                                                                                                                                              |
+| **Host**         | The team that places last in each mise. For now picked at random each match                                                                                                                             |
+| **Stats**        | Your team's record and each spoof's numbers across matches                                                                                                                                              |

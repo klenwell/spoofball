@@ -121,11 +121,11 @@ def sheet(frames, path, caption):
     Path(path).write_text(svg)
 
 
-# --- Expansion --------------------------------------------------------------
+# --- Draft (New Team) --------------------------------------------------------------
 
-def expansion():
+def draft():
     a = Frame('1 · Your team')
-    a.header('Expansion', 'A new team joins the league')
+    a.header('Draft (New Team)', 'A new team joins the league')
     a.text(16, 92, 'Team name', size=11, color=MID)
     a.box(16, 100, W - 32, 40, 'up to 16 characters', fill='#ffffff')
     a.text(16, 168, 'Color', size=11, color=MID)
@@ -308,7 +308,7 @@ def stats():
     a = Frame('1 · Team')
     a.circle(36, 40, 20, fill=FILL, stroke=INK, width=2)
     a.text(64, 36, 'Comets', size=18, weight=700)
-    a.text(64, 54, 'joined through expansion · Nov 2026', size=11, color=MID)
+    a.text(64, 54, 'joined the league · Nov 2026', size=11, color=MID)
     for i, (k, v) in enumerate([('Record', '3–2–1'), ('Matches', '6'), ('Pts / match', '46'), ('Best', '71')]):
         x = 16 + (i % 2) * 138
         y = 76 + (i // 2) * 58
@@ -350,8 +350,8 @@ def stats():
 def main(out):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
-    sheet(expansion(), out / 'wireframe-expansion.svg',
-          'Expansion: create your team, then draft 5 spoofs through the combine. Phone layout. Solid discs are yours.')
+    sheet(draft(), out / 'wireframe-draft.svg',
+          'Draft (New Team): create your team, then draft 5 spoofs through the combine. Phone layout. Solid discs are yours.')
     sheet(match(), out / 'wireframe-match.svg',
           'Match: place spoofs (the mise), watch the scrum, see the result. Solid discs are yours, hollow discs the visitor.')
     sheet(pharm(), out / 'wireframe-pharm.svg',
