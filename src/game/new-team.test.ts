@@ -54,6 +54,13 @@ describe('newTeamSpoofs', () => {
     expect(spoofs.reduce((sum, s) => sum + skillTotal(s.skills), 0)).toBe(NEW_TEAM_SKILL_TOTAL);
   });
 
+  it('names every spoof, with no word used twice on a team', () => {
+    for (const spoofs of manyTeams()) {
+      const words = spoofs.flatMap((s) => s.name.split(' '));
+      expect(new Set(words).size).toBe(words.length);
+    }
+  });
+
   it('always has at least 2 pawns and at least 1 spoof that is not a pawn', () => {
     for (const spoofs of manyTeams()) {
       const pawns = spoofs.filter((s) => s.type.startsWith('pawn')).length;

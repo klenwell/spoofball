@@ -23,13 +23,29 @@ const PRESET_SPREAD_PER_SKILL = 2;
 const PRESET_TOTAL_SPREAD = PRESET_SPREAD_PER_SKILL * skillNames.length;
 
 /**
- * Each preset spoof's hidden skills come from the generator with a fixed seed
- * (#35), so they're the same on every load and in every test.
+ * Each preset spoof's hidden skills and name come from the generator with a
+ * fixed seed (#35, #28), so they're the same on every load and in every test.
  */
-function presetSpoof(id: string, type: SpoofType, seed: number): Spoof {
+function presetSpoof(id: string, type: SpoofType, seed: number, takenNames: string[]): Spoof {
   const random = createRandom(seed);
   const total = NEW_SPOOF_SKILL_TOTAL + random.int(-PRESET_TOTAL_SPREAD, PRESET_TOTAL_SPREAD);
-  return generateSpoof(id, type, total, random);
+  return generateSpoof(id, type, total, random, takenNames);
+}
+
+/** A preset team's spoofs, in order, each named unlike the ones before it. */
+function presetSpoofs(specs: readonly (readonly [string, SpoofType, number])[]): Spoof[] {
+  const spoofs: Spoof[] = [];
+  for (const [id, type, seed] of specs) {
+    spoofs.push(
+      presetSpoof(
+        id,
+        type,
+        seed,
+        spoofs.map((s) => s.name),
+      ),
+    );
+  }
+  return spoofs;
 }
 
 /** The Spoofs: the team you play as without creating your own (#71), the Comets until v0.2.0. */
@@ -37,26 +53,26 @@ export const SPOOFS: Team = {
   name: 'Spoofs',
   color: 'blue',
   logo: '👻',
-  spoofs: [
-    presetSpoof('c1', 'queen', 101),
-    presetSpoof('c2', 'rook', 102),
-    presetSpoof('c3', 'bishop', 103),
-    presetSpoof('c4', 'pawn-basic', 104),
-    presetSpoof('c5', 'pawn-noble', 105),
-  ],
+  spoofs: presetSpoofs([
+    ['c1', 'queen', 101],
+    ['c2', 'rook', 102],
+    ['c3', 'bishop', 103],
+    ['c4', 'pawn-basic', 104],
+    ['c5', 'pawn-noble', 105],
+  ]),
 };
 
 export const EMBERS: Team = {
   name: 'Embers',
   color: 'orange',
   logo: '🔥',
-  spoofs: [
-    presetSpoof('e1', 'king', 201),
-    presetSpoof('e2', 'knight', 202),
-    presetSpoof('e3', 'knight', 203),
-    presetSpoof('e4', 'rook', 204),
-    presetSpoof('e5', 'pawn-basic', 205),
-  ],
+  spoofs: presetSpoofs([
+    ['e1', 'king', 201],
+    ['e2', 'knight', 202],
+    ['e3', 'knight', 203],
+    ['e4', 'rook', 204],
+    ['e5', 'pawn-basic', 205],
+  ]),
 };
 
 /** Your team: home kit, bench below the court. */

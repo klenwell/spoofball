@@ -186,7 +186,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 
 ### Draft (New Team)
 
-- **Spoofs have names.** It's its own story, #28.
+- **Spoofs have names** (#28). A name is a playful word and a first name, such as "Dizzy Gus": up to 16 characters, different from every other on its team, ignoring case, and with no word used twice on a team. Every spoof gets one when it's made, computer teams' included, from the same seed as its skills. It shows on the scrum result and the match scorecard, and the combine shows it when it arrives. The word lists are in `src/game/spoof-names.ts`, for the owner's review. You can rename a spoof when you draft it (#72), and later in Pharm.
 - **The team logo comes from a curated set of 24 emoji,** shown as a grid (the owner picked them on #77 and #71). Computer teams draw from the same set.
 - **The game opens on a splash screen** when there's no saved team (#71): **Create your team**, or a quick start, **Play as Spoofs**, which saves nothing. The **Spoofs** (👻, blue) are the default team, the Comets until v0.2.0. The header shows the team in play and links back to the splash screen to switch.
 - **Until the combine (#72), a new team gets 5 generated spoofs,** as the prototype's new teams did (`Team.new`): 2,640 skill points shared out, 2 pawns on the smallest shares, 1 other type on the largest, and 2 of any type. Unlike the prototype, they keep the roster rules (at most 1 royal, at most 2 of each face type).

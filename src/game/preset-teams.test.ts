@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { SEATS_PER_BENCH } from './arena';
 import { isOnCourt, zoneAt } from './court';
-import { PRESET_HOME, PRESET_VISITOR } from './preset-teams';
+import { EMBERS, PRESET_HOME, PRESET_VISITOR, SPOOFS } from './preset-teams';
 import { sizeToRadius, skillTotal, typeProfiles } from './skills';
 import { MAX_SPOOF_RADIUS, MIN_SPOOF_RADIUS } from './spoof-types';
-import { FACE_TYPES, ROYAL_TYPES, SPOOFS_PER_TEAM, type Lineup } from './teams';
+import { FACE_TYPES, ROYAL_TYPES, SPOOFS_PER_TEAM, teamProblems, type Lineup } from './teams';
 
 const lineups = [PRESET_HOME, PRESET_VISITOR];
 
@@ -30,6 +30,11 @@ describe('the preset lineups', () => {
     it(`has ${String(SPOOFS_PER_TEAM)} spoofs with unique ids`, () => {
       expect(spoofs).toHaveLength(SPOOFS_PER_TEAM);
       expect(new Set(spoofs.map((s) => s.id)).size).toBe(SPOOFS_PER_TEAM);
+    });
+
+    it('names every spoof, each name different', () => {
+      expect(teamProblems(lineup.team)).toEqual([]);
+      expect(new Set(spoofs.map((s) => s.name)).size).toBe(SPOOFS_PER_TEAM);
     });
 
     it('mixes spoof types', () => {
@@ -102,5 +107,29 @@ describe('the preset lineups', () => {
         );
       }
     }
+  });
+});
+
+describe('the preset spoof names', () => {
+  it('are fixed, like the rest of the preset spoofs (#28)', () => {
+    // Listed here so a change to the word lists that renames them shows up in review.
+    expect(SPOOFS.spoofs.map((s) => s.name)).toMatchInlineSnapshot(`
+      [
+        "Jazzy Boris",
+        "Dizzy Milo",
+        "Mighty Gertie",
+        "Breezy Dot",
+        "Spooky Archie",
+      ]
+    `);
+    expect(EMBERS.spoofs.map((s) => s.name)).toMatchInlineSnapshot(`
+      [
+        "Misty Iggy",
+        "Wobbly Clem",
+        "Sunny Pudding",
+        "Fancy Tater",
+        "Sneaky Mabel",
+      ]
+    `);
   });
 });

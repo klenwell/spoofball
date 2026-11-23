@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { blockedStorage, fullStorage, memoryStorage } from '../test-support/storage';
 import { SPOOFS } from '../game/preset-teams';
-import type { Team } from '../game/teams';
+import { teamProblems, type Spoof, type Team } from '../game/teams';
 import {
   SAVE_VERSION,
   STORAGE_KEY,
@@ -27,7 +27,12 @@ interface LooseRecord {
     name: string;
     color: string;
     logo: string;
-    spoofs: { type: string; skills: Partial<Record<string, number>>; temperament?: unknown }[];
+    spoofs: {
+      name?: unknown;
+      type: string;
+      skills: Partial<Record<string, number>>;
+      temperament?: unknown;
+    }[];
   };
 }
 
@@ -59,11 +64,17 @@ describe('saveTeam and loadTeam', () => {
     saveTeam(store, SPOOFS);
 
     expect([...store.items.keys()]).toEqual([STORAGE_KEY]);
-    expect(SAVE_VERSION).toBe(1);
+    expect(SAVE_VERSION).toBe(2);
     expect(JSON.parse(store.items.get(STORAGE_KEY) ?? '')).toMatchObject({
-      version: 1,
+      version: 2,
       team: { name: 'Spoofs', color: 'blue', logo: '👻' },
     });
+  });
+
+  it("save each spoof's name (#28)", () => {
+    const record = JSON.parse(savedJson()) as LooseRecord;
+
+    expect(record.team.spoofs.map((s) => s.name)).toEqual(SPOOFS.spoofs.map((s) => s.name));
   });
 
   it("save a spoof's radius as its size: the radius is worked out again on load", () => {
@@ -123,6 +134,13 @@ describe('loadTeam', () => {
         () => storeWith((r) => (firstSpoof(r).temperament = 'hot')),
       ],
       ['a temperament out of range', () => storeWith((r) => (firstSpoof(r).temperament = 50))],
+      ['a spoof with no name', () => storeWith((r) => delete firstSpoof(r).name)],
+      ['a spoof name that is not text', () => storeWith((r) => (firstSpoof(r).name = 7))],
+      ['a spoof name too long', () => storeWith((r) => (firstSpoof(r).name = 'B'.repeat(17)))],
+      [
+        'two spoofs with one name',
+        () => storeWith((r) => (firstSpoof(r).name = r.team.spoofs[1]?.name)),
+      ],
     ];
 
     it.each(cases)('reports it as unreadable: %s', (_what, makeStore) => {
@@ -137,6 +155,78 @@ describe('loadTeam', () => {
 
       expect(store.items.get(STORAGE_KEY)).toBe(before);
     });
+  });
+
+  describe('a team saved by version 1, before spoofs had names', () => {
+    /** The Spoofs as version 1 saved them: no names. */
+    const versionOne = () =>
+      storeWith((r) => {
+        r.version = 1;
+        for (const spoof of r.team.spoofs) delete spoof.name;
+      });
+
+    it('loads, with a name for every spoof, and says it was upgraded', () => {
+      const result = loadTeam(versionOne());
+
+      expect(result).toMatchObject({ ok: true, upgraded: true });
+      const team = result.ok ? result.team : null;
+      expect(team && teamProblems(team)).toEqual([]);
+      const traits = (spoofs: readonly Spoof[]) => spoofs.map((spoof) => ({ ...spoof, name: '' }));
+      expect(team && traits(team.spoofs)).toEqual(traits(SPOOFS.spoofs));
+    });
+
+    it('gets the same names on every load, without being written back', () => {
+      const store = versionOne();
+      const before = store.items.get(STORAGE_KEY);
+      const names = () => {
+        const result = loadTeam(store);
+        return result.ok ? result.team.spoofs.map((s) => s.name) : [];
+      };
+
+      expect(names()).toEqual(names());
+      expect(store.items.get(STORAGE_KEY)).toBe(before);
+    });
+
+    it('names each spoof unlike the others, with no word used twice', () => {
+      for (let n = 0; n < 40; n += 1) {
+        const store = storeWith((r) => {
+          r.version = 1;
+          r.team.name = `Owls ${String(n)}`;
+          for (const spoof of r.team.spoofs) delete spoof.name;
+        });
+        const result = loadTeam(store);
+        const words = result.ok ? result.team.spoofs.flatMap((s) => s.name.split(' ')) : [];
+        expect(new Set(words).size).toBe(10);
+      }
+    });
+
+    it('gets different names from a different team', () => {
+      const other = storeWith((r) => {
+        r.version = 1;
+        r.team.name = 'Owls';
+        for (const spoof of r.team.spoofs) delete spoof.name;
+      });
+      const names = (store: ReturnType<typeof memoryStorage>) => {
+        const result = loadTeam(store);
+        return result.ok ? result.team.spoofs.map((s) => s.name) : [];
+      };
+
+      expect(names(other)).not.toEqual(names(versionOne()));
+    });
+
+    it('keeps its names once saved again in the current version', () => {
+      const store = versionOne();
+      const first = loadTeam(store);
+      if (!first.ok) throw new Error('not loaded');
+
+      saveTeam(store, first.team);
+
+      expect(loadTeam(store)).toEqual({ ok: true, team: first.team });
+    });
+  });
+
+  it('loads a current record without calling it upgraded', () => {
+    expect(loadTeam(memoryStorage({ [STORAGE_KEY]: savedJson() }))).not.toHaveProperty('upgraded');
   });
 
   it('leaves a record from a newer version alone, and says so', () => {

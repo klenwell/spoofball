@@ -297,6 +297,7 @@ body {
   border-radius: var(--radius-lg);
   font-weight: 600;
   text-align: center;
+  container: scrum-result / inline-size;
 }
 
 .scrum-result-title {
@@ -319,9 +320,21 @@ body {
 
 .scrum-result-teams {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* minmax(0, …), so a long spoof name wraps instead of widening its column. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   width: 100%;
+}
+
+/*
+ * On a narrow court (a phone), the teams stack, so each row has the panel's
+ * width for a spoof's name and points (#28).
+ */
+@container scrum-result (max-width: 22rem) {
+  .scrum-result-teams {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
 }
 
 .scrum-result-list {
@@ -340,6 +353,16 @@ body {
 .scrum-result-name {
   flex: 1;
   text-align: left;
+}
+
+/*
+ * A spoof's name (#28): up to 16 characters, which on a phone can be wider
+ * than its row. It wraps, at a space if it has one, so the points beside it
+ * stay in view.
+ */
+.spoof-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .scrum-result-points {
@@ -389,6 +412,11 @@ body {
 
 .scorecard-table .scorecard-label {
   text-align: left;
+}
+
+/* A spoof's row label may wrap (see .spoof-name); the points never do. */
+.scorecard-table tbody .scorecard-label {
+  white-space: normal;
 }
 
 /* A spoof's disc and name, side by side, inside its table cell. */

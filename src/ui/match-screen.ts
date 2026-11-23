@@ -112,6 +112,17 @@ function avatarName(type: SpoofType): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
+/**
+ * A spoof's name, for its row in a scrum's result or on the scorecard (#28).
+ * Its mark shows its type to the eye; a screen reader hears the type after the
+ * name, since the mark is a picture it skips.
+ */
+function spoofLabel(spoof: { readonly name: string; readonly type: SpoofType }): HTMLElement {
+  const label = el('span', 'spoof-name', spoof.name);
+  label.append(el('span', 'visually-hidden', `, ${avatarName(spoof.type).toLowerCase()}`));
+  return label;
+}
+
 /** A scrum being played back: its frames, live scores and final score. */
 interface Played {
   readonly frames: readonly ScrumFrame[];
@@ -418,7 +429,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
       return 'Placed. Before the ring fills, you can drag it elsewhere or back to your bench.';
     }
     if (held.kind === 'picked') {
-      return `Tap the court to place your ${avatarName(held.spoof.type).toLowerCase()}, or drag it there.`;
+      return `Tap the court to place ${held.spoof.name}, your ${avatarName(held.spoof.type).toLowerCase()}, or drag it there.`;
     }
     return 'Your turn: drag a spoof from your bench onto the court, or tap it and then a spot.';
   }
@@ -583,7 +594,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
         disc.setAttribute('aria-hidden', 'true');
         drawSpoofDisc(discCtx, { x: 8, y: 8, radius: 6.5, type: spoof.type, kit: kitFor(side) });
         const who = el('span', 'scorecard-spoof');
-        who.append(disc, el('span', undefined, avatarName(spoof.type)));
+        who.append(disc, spoofLabel(spoof));
         name.append(who);
         row.append(name);
         for (const points of spoof.byScrum) row.append(pointsCell(points));
@@ -662,7 +673,9 @@ export function createMatchScreen(yourTeam: Team): Panel {
           line.points === null
             ? el('span', 'scrum-result-out', 'sat out')
             : el('span', 'scrum-result-points', String(line.points));
-        item.append(disc, el('span', 'scrum-result-name', avatarName(line.type)), points);
+        const label = spoofLabel(line);
+        label.classList.add('scrum-result-name');
+        item.append(disc, label, points);
         list.append(item);
       }
       teams.append(list);

@@ -585,6 +585,14 @@ describe('scrumSummary', () => {
     }
   });
 
+  it("gives each spoof's name and type, for its row", () => {
+    for (const side of ['home', 'visitor'] as const) {
+      expect(scrumSummary(match, 0).spoofs[side].map((l) => [l.name, l.type])).toEqual(
+        match.teams[side].spoofs.map((s) => [s.name, s.type]),
+      );
+    }
+  });
+
   it('shows outcomes only, never skills', () => {
     expect(JSON.stringify(scrumSummary(match, 0))).not.toMatch(
       /"(skills|stamina|burst|iq|growth|temperament|fatigue)"/,
@@ -630,6 +638,14 @@ describe('matchScorecard', () => {
 
   it('gives the home result, as outcomeFor does', () => {
     expect(card.outcome).toBe(outcomeFor(match, 'home'));
+  });
+
+  it("gives each spoof's name and type, for its row", () => {
+    for (const side of ['home', 'visitor'] as const) {
+      expect(card.teams[side].lines.map((l) => [l.name, l.type])).toEqual(
+        match.teams[side].spoofs.map((s) => [s.name, s.type]),
+      );
+    }
   });
 
   it("gives both teams' names, scores by scrum and totals", () => {
@@ -687,6 +703,12 @@ describe('matchRecord', () => {
     expect(record.scoreByScrum).toEqual(scoreByScrum(match));
     expect(record.score).toEqual(matchScore(match));
     expect(record.result).toBe(outcomeFor(match, 'home'));
+  });
+
+  it("records each spoof's name as it was at match time, both teams in order (#28)", () => {
+    expect(record.spoofs.map((s) => s.name)).toEqual(
+      [...HOME.spoofs, ...VISITOR.spoofs].map((s) => s.name),
+    );
   });
 
   it("records every spoof's scrums played, points and behavior stats", () => {

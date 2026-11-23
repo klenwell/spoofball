@@ -318,6 +318,7 @@ export function matchScore(match: Match): Readonly<Record<BenchSide, number>> {
 /** A spoof's line in a scrum's result: its points, or null if it sat the scrum out. */
 export interface SpoofScrumLine {
   readonly id: string;
+  readonly name: string;
   readonly type: Spoof['type'];
   readonly points: number | null;
 }
@@ -342,6 +343,7 @@ export function scrumSummary(match: Match, n: number): ScrumSummary {
   const lines = (side: BenchSide) =>
     match.spoofs[side].map((m) => ({
       id: m.spoof.id,
+      name: m.spoof.name,
       type: m.spoof.type,
       points: m.points[n] ?? null,
     }));
@@ -367,6 +369,7 @@ export function outcomeFor(match: Match, side: BenchSide): Outcome {
 /** A spoof's line on the match scorecard: its points in each scrum (null if it sat out), and its total. */
 export interface ScorecardLine {
   readonly id: string;
+  readonly name: string;
   readonly type: Spoof['type'];
   readonly byScrum: readonly (number | null)[];
   readonly total: number;
@@ -396,6 +399,7 @@ export function matchScorecard(match: Match): Scorecard {
     total: total[side],
     lines: match.spoofs[side].map((m) => ({
       id: m.spoof.id,
+      name: m.spoof.name,
       type: m.spoof.type,
       byScrum: m.points,
       total: m.points.reduce<number>((a, p) => a + (p ?? 0), 0),
@@ -423,6 +427,8 @@ export interface MatchRecord {
   readonly spoofs: readonly {
     readonly team: BenchSide;
     readonly id: string;
+    /** The spoof's name when the match was played: a spoof can be renamed later. */
+    readonly name: string;
     readonly scrumsPlayed: number;
     readonly points: number;
     readonly pointsByScrum: readonly (number | null)[];
@@ -444,6 +450,7 @@ export function matchRecord(match: Match): MatchRecord {
       match.spoofs[team].map((m) => ({
         team,
         id: m.spoof.id,
+        name: m.spoof.name,
         scrumsPlayed: m.points.filter((p) => p !== null).length,
         points: m.points.reduce<number>((a, p) => a + (p ?? 0), 0),
         pointsByScrum: m.points,

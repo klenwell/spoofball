@@ -3,8 +3,11 @@ import { TEST_SEED } from '../test-support/random';
 import { createRandom } from './random';
 import { generateSkills, sizeToRadius, skillTotal } from './skills';
 import { TEAM_LOGOS } from './logos';
+import { drawSpoofName } from './spoof-names';
+import { drawTemperament } from './temperament';
 import { SPOOFS, EMBERS } from './preset-teams';
 import {
+  MAX_SPOOF_NAME_LENGTH,
   MAX_TEAM_NAME_LENGTH,
   NEW_SPOOF_SKILL_TOTAL,
   SPOOFS_PER_TEAM,
@@ -23,7 +26,7 @@ describe('createSpoof', () => {
       NEW_SPOOF_SKILL_TOTAL,
       createRandom(TEST_SEED),
     ).skills;
-    const spoof = createSpoof('a', 'king', skills);
+    const spoof = createSpoof('a', 'Dizzy Gus', 'king', skills);
     expect(spoof.radius).toBe(sizeToRadius(skills.size));
   });
 });
@@ -42,6 +45,33 @@ describe('generateSpoof', () => {
   });
 });
 
+describe('a spoof name', () => {
+  it('keeps the name it is made with', () => {
+    const skills = generateSpoof('x', 'rook', 520, createRandom(TEST_SEED)).skills;
+    expect(createSpoof('a', 'Wobbly Ida', 'rook', skills).name).toBe('Wobbly Ida');
+  });
+
+  it('comes from the generator last, so the skills and temperament are the same as without it', () => {
+    const random = createRandom(TEST_SEED);
+    const spoof = generateSpoof('a', 'knight', NEW_SPOOF_SKILL_TOTAL, random);
+    const replay = createRandom(TEST_SEED);
+    const skills = generateSkills('knight', NEW_SPOOF_SKILL_TOTAL, replay);
+    const temperament = drawTemperament('knight', replay);
+    expect(spoof.skills).toEqual(skills);
+    expect(spoof.temperament).toBe(temperament);
+    expect(spoof.name).toBe(drawSpoofName(replay));
+  });
+
+  it("is unlike the taken names it's given", () => {
+    const random = createRandom(TEST_SEED);
+    const taken = ['Dizzy Gus'];
+    for (let i = 0; i < 50; i += 1) {
+      const spoof = generateSpoof('a', 'rook', 520, random, taken);
+      expect(spoof.name).not.toMatch(/Dizzy|Gus/);
+    }
+  });
+});
+
 describe('temperament on a spoof', () => {
   it('is 1, average, when a spoof is made without one', () => {
     const skills = generateSpoof(
@@ -50,7 +80,7 @@ describe('temperament on a spoof', () => {
       NEW_SPOOF_SKILL_TOTAL,
       createRandom(TEST_SEED),
     ).skills;
-    expect(createSpoof('a', 'rook', skills).temperament).toBe(1);
+    expect(createSpoof('a', 'Dizzy Gus', 'rook', skills).temperament).toBe(1);
   });
 
   it('comes from the generator, after the skills, so the skills are the same as without it', () => {
@@ -102,6 +132,25 @@ describe('teamProblems', () => {
     expect(teamProblems({ ...valid, spoofs: valid.spoofs.slice(1) })).not.toEqual([]);
     expect(teamProblems({ ...valid, spoofs: [...valid.spoofs, first] })).not.toEqual([]);
     expect(teamProblems(withSpoof({ ...first, id: valid.spoofs[1]?.id ?? '' }))).not.toEqual([]);
+  });
+
+  it(`gives every spoof a name of 1 to ${String(MAX_SPOOF_NAME_LENGTH)} characters, with no spaces at either end`, () => {
+    expect(MAX_SPOOF_NAME_LENGTH).toBe(16);
+    expect(teamProblems(withSpoof({ ...first, name: 'B' }))).toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, name: 'B'.repeat(16) }))).toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, name: '🦉'.repeat(16) }))).toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, name: '' }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, name: 'B'.repeat(17) }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, name: ' Bo' }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, name: 'Bo ' }))).not.toEqual([]);
+  });
+
+  it('needs every spoof name on a team to be different, ignoring case', () => {
+    const other = valid.spoofs[1]?.name ?? '';
+    expect(teamProblems(withSpoof({ ...first, name: other }))).toContain('Two spoofs share a name');
+    expect(teamProblems(withSpoof({ ...first, name: other.toUpperCase() }))).toContain(
+      'Two spoofs share a name',
+    );
   });
 
   it('checks each spoof: id, type, skills from 1 to 99, radius and temperament', () => {

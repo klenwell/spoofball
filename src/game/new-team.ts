@@ -16,7 +16,7 @@ import {
 
 /**
  * A new player's team (#71): the name, color and logo they chose, and 5
- * generated spoofs at a new team's strength. It follows the prototype's
+ * generated spoofs at a new team's strength, each with its own name. It follows the prototype's
  * `Team.new` (backgammon-chrome, models/team.py) until the combine (#72)
  * lets the player draft their own.
  */
@@ -100,10 +100,12 @@ export function newTeamSpoofs(random: Random): Spoof[] {
     [spoofTypes, fourth],
   ];
   const taken: SpoofType[] = [];
-  const spoofs = plan.map(([options, total], i) => {
+  const spoofs: Spoof[] = [];
+  plan.forEach(([options, total], i) => {
     const type = random.pick(allowed(options, taken));
     taken.push(type);
-    return generateSpoof(`s${String(i + 1)}`, type, total, random);
+    const names = spoofs.map((s) => s.name);
+    spoofs.push(generateSpoof(`s${String(i + 1)}`, type, total, random, names));
   });
   return shuffled(spoofs, random);
 }
