@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { blockedStorage, fullStorage, memoryStorage } from '../test-support/storage';
-import { COMETS } from '../game/preset-teams';
+import { SPOOFS } from '../game/preset-teams';
 import type { Team } from '../game/teams';
 import {
   SAVE_VERSION,
@@ -12,7 +12,7 @@ import {
 } from './saved-team';
 
 /** A saved record's JSON, from a team as `saveTeam` would write it. */
-function savedJson(team: Team = COMETS): string {
+function savedJson(team: Team = SPOOFS): string {
   const store = memoryStorage();
   saveTeam(store, team);
   const text = store.items.get(STORAGE_KEY);
@@ -49,20 +49,20 @@ describe('saveTeam and loadTeam', () => {
   it('load a saved team back unchanged: name, color, logo and spoofs with their hidden traits', () => {
     const store = memoryStorage();
 
-    expect(saveTeam(store, COMETS)).toEqual({ ok: true });
-    expect(loadTeam(store)).toEqual({ ok: true, team: COMETS });
+    expect(saveTeam(store, SPOOFS)).toEqual({ ok: true });
+    expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
   });
 
   it(`write one versioned record under "${STORAGE_KEY}"`, () => {
     const store = memoryStorage();
 
-    saveTeam(store, COMETS);
+    saveTeam(store, SPOOFS);
 
     expect([...store.items.keys()]).toEqual([STORAGE_KEY]);
     expect(SAVE_VERSION).toBe(1);
     expect(JSON.parse(store.items.get(STORAGE_KEY) ?? '')).toMatchObject({
       version: 1,
-      team: { name: 'Comets', color: 'blue', logo: '☄️' },
+      team: { name: 'Spoofs', color: 'blue', logo: '👻' },
     });
   });
 
@@ -74,9 +74,9 @@ describe('saveTeam and loadTeam', () => {
 
   it('replace the saved team with a new one', () => {
     const store = memoryStorage();
-    saveTeam(store, COMETS);
+    saveTeam(store, SPOOFS);
 
-    saveTeam(store, { ...COMETS, name: 'Owls' });
+    saveTeam(store, { ...SPOOFS, name: 'Owls' });
 
     expect(loadTeam(store)).toMatchObject({ ok: true, team: { name: 'Owls' } });
   });
@@ -153,7 +153,7 @@ describe('saveTeam', () => {
     const store = memoryStorage({ [STORAGE_KEY]: savedJson() });
     const before = store.items.get(STORAGE_KEY);
 
-    const result = saveTeam(store, { ...COMETS, name: '' });
+    const result = saveTeam(store, { ...SPOOFS, name: '' });
 
     expect(result).toMatchObject({ ok: false, problem: 'invalid' });
     expect(result.ok ? [] : result.details).toContain('The name must be 1–16 characters');
@@ -161,20 +161,20 @@ describe('saveTeam', () => {
   });
 
   it('reports storage that is missing or blocked, without throwing', () => {
-    expect(saveTeam(null, COMETS)).toEqual({ ok: false, problem: 'unavailable' });
-    expect(saveTeam(blockedStorage(), COMETS)).toEqual({ ok: false, problem: 'unavailable' });
+    expect(saveTeam(null, SPOOFS)).toEqual({ ok: false, problem: 'unavailable' });
+    expect(saveTeam(blockedStorage(), SPOOFS)).toEqual({ ok: false, problem: 'unavailable' });
   });
 
   it('reports full storage', () => {
-    expect(saveTeam(fullStorage(), COMETS)).toEqual({ ok: false, problem: 'full' });
+    expect(saveTeam(fullStorage(), SPOOFS)).toEqual({ ok: false, problem: 'full' });
   });
 
   it('replaces data that couldn’t be read', () => {
     const store = memoryStorage({ [STORAGE_KEY]: '{not json' });
 
-    saveTeam(store, COMETS);
+    saveTeam(store, SPOOFS);
 
-    expect(loadTeam(store)).toEqual({ ok: true, team: COMETS });
+    expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
   });
 });
 
@@ -190,6 +190,12 @@ describe('STORAGE_PROBLEM_TEXT', () => {
     ] as const) {
       expect(STORAGE_PROBLEM_TEXT[problem].length).toBeGreaterThan(10);
     }
+  });
+
+  it('tells a player with an unreadable save what to do', () => {
+    expect(STORAGE_PROBLEM_TEXT.unreadable).toBe(
+      "Your saved team couldn't be read, so you'll need to create a new one.",
+    );
   });
 });
 

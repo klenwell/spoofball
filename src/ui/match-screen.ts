@@ -26,15 +26,16 @@ import {
   whoseTurn,
   MISE_TURNS,
 } from '../game/mise';
-import { PRESET_HOME, PRESET_VISITOR } from '../game/preset-teams';
+import { EMBERS } from '../game/preset-teams';
 import type { Random } from '../game/random';
 import { liveScores, type Scores } from '../game/scoring';
 import type { ScrumEntry, ScrumFrame } from '../game/scrum';
 import { avatarOf, type SpoofType } from '../game/spoof-types';
 import { SCRUM_SECONDS } from '../game/spoof-motion';
-import type { Lineup, Spoof } from '../game/teams';
+import type { Spoof, Team } from '../game/teams';
 import type { Panel } from './app-shell';
 import { drawArena, drawSpoofInArena } from './arena';
+import { el, newSeed } from './dom';
 import { arenaHeightFor, courtPointAt, fitArena, type ArenaView } from './arena-view';
 import { createCanvas } from './canvas';
 import { drawImpactRing, impactsAt, type Impact } from './impacts';
@@ -104,25 +105,7 @@ type Status = 'mise' | 'ready' | 'playing' | 'paused' | 'settling' | 'break' | '
 
 const YOU: BenchSide = 'home';
 const COMPUTER: BenchSide = 'visitor';
-const LINEUPS: Readonly<Record<BenchSide, Lineup>> = { home: PRESET_HOME, visitor: PRESET_VISITOR };
-const TEAMS: Readonly<Record<BenchSide, readonly Spoof[]>> = {
-  home: PRESET_HOME.team.spoofs,
-  visitor: PRESET_VISITOR.team.spoofs,
-};
 const SIDES: readonly BenchSide[] = ['home', 'visitor'];
-
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function newSeed(): number {
-  const values = new Uint32Array(1);
-  crypto.getRandomValues(values);
-  return values[0] ?? 1;
-}
 
 function avatarName(type: SpoofType): string {
   const name = avatarOf(type);
@@ -137,17 +120,23 @@ interface Played {
   readonly entries: readonly ScrumEntry[];
 }
 
-export function createMatchScreen(): Panel {
-  const kits = matchKits(PRESET_HOME.team.color, PRESET_VISITOR.team.color);
+/** The Match screen for your team (home) against the Embers (#71: your own team, or the Spoofs). */
+export function createMatchScreen(yourTeam: Team): Panel {
+  const teamOf: Readonly<Record<BenchSide, Team>> = { home: yourTeam, visitor: EMBERS };
+  const TEAMS: Readonly<Record<BenchSide, readonly Spoof[]>> = {
+    home: yourTeam.spoofs,
+    visitor: EMBERS.spoofs,
+  };
+  const kits = matchKits(yourTeam.color, EMBERS.color);
   const kitFor = (side: string): Kit => (side === 'home' ? kits.home : kits.visitor);
   const typeOf = new Map(SIDES.flatMap((side) => TEAMS[side].map((s) => [s.id, s.type] as const)));
-  const nameOf = (side: BenchSide) => LINEUPS[side].team.name;
+  const nameOf = (side: BenchSide) => teamOf[side].name;
 
   let status: Status = 'mise';
   let seconds = 0;
   let lastTick = 0;
   let raf = 0;
-  let match: Match = startMatch(PRESET_HOME.team, PRESET_VISITOR.team, 1);
+  let match: Match = startMatch(yourTeam, EMBERS, 1);
   /** The Embers' moves in this scrum's mise, from the match's seed. */
   let moves: Random = miseRandom(match);
   /** The mise, and your spoof in hand: picked, dragged, or placed and still movable. */
@@ -168,20 +157,20 @@ export function createMatchScreen(): Panel {
 
   // --- Scoreboard ---------------------------------------------------------
   const board = el('div', 'scoreboard');
-  const side = (lineup: Lineup) => {
-    const block = el('div', `scoreboard-team scoreboard-${lineup.side}`);
+  const side = (bench: BenchSide) => {
+    const block = el('div', `scoreboard-team scoreboard-${bench}`);
     const swatch = el('span', 'match-swatch');
-    swatch.style.background = kitFor(lineup.side).fill;
-    swatch.style.borderColor = kitFor(lineup.side).trim;
+    swatch.style.background = kitFor(bench).fill;
+    swatch.style.borderColor = kitFor(bench).trim;
     swatch.setAttribute('aria-hidden', 'true');
     const score = el('span', 'scoreboard-score', '0');
     // What the number counts: spoofs left to place in the mise, then points.
     const unit = el('span', 'scoreboard-unit', 'to place');
-    block.append(swatch, el('span', 'scoreboard-name', lineup.team.name), score, unit);
+    block.append(swatch, el('span', 'scoreboard-name', nameOf(bench)), score, unit);
     return { block, score, unit };
   };
-  const home = side(PRESET_HOME);
-  const visitor = side(PRESET_VISITOR);
+  const home = side('home');
+  const visitor = side('visitor');
   const middle = el('div', 'scoreboard-middle');
   const middleLabel = el('span', 'scoreboard-label', 'Mise');
   const clockText = el('span', 'scoreboard-clock', '');
@@ -633,7 +622,7 @@ export function createMatchScreen(): Panel {
     window.clearTimeout(computerTimer);
     cancelAnimationFrame(raf);
     cancelAnimationFrame(miseRaf);
-    match = startMatch(PRESET_HOME.team, PRESET_VISITOR.team, newSeed());
+    match = startMatch(yourTeam, EMBERS, newSeed());
     beginMise();
   }
 
@@ -891,18 +880,38 @@ export function createMatchScreen(): Panel {
     if (status === 'break') beginMise();
   });
   pauseButton.addEventListener('click', togglePause);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) pause();
-  });
+  /** Removes the listeners on the page, so a screen that's done with can be let go. */
+  const listening = new AbortController();
+  document.addEventListener(
+    'visibilitychange',
+    () => {
+      if (document.hidden) pause();
+    },
+    { signal: listening.signal },
+  );
 
   let lastWidth = -1;
-  new ResizeObserver(() => {
+  const resizing = new ResizeObserver(() => {
     if (stage.clientWidth === lastWidth) return;
     lastWidth = stage.clientWidth;
     rebuildCanvas();
-  }).observe(stage);
+  });
+  resizing.observe(stage);
 
   newMatch();
 
-  return { element: root, hide: pause };
+  /**
+   * Stops everything for good when the team changes (#78 review): the
+   * Embers' and the "Scrum!" cue's timer, both animation loops, and the
+   * listeners. Without it, leaving during the cue started a scrum offscreen.
+   */
+  function dispose(): void {
+    window.clearTimeout(computerTimer);
+    cancelAnimationFrame(raf);
+    cancelAnimationFrame(miseRaf);
+    listening.abort();
+    resizing.disconnect();
+  }
+
+  return { element: root, hide: pause, dispose };
 }

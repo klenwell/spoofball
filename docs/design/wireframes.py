@@ -216,7 +216,7 @@ def match():
     b.tabs('Match')
 
     c = Frame('3 · Result')
-    c.header('Won 47 – 38', 'Comets vs Rival · 3 scrums')
+    c.header('Won 47 – 38', 'Spoofs vs Rival · 3 scrums')
     c.box(16, 76, W - 32, 90, fill='#ffffff')
     for i, row in enumerate(['Scrum', '1', '2', '3']):
         y = 96 + i * 20
@@ -249,7 +249,7 @@ def pick_dots(f, y):
 def pharm():
     a = Frame('1 · Roster')
     a.circle(36, 40, 20, fill=FILL, stroke=INK, width=2)
-    a.text(64, 36, 'Comets', size=18, weight=700)
+    a.text(64, 36, 'Spoofs', size=18, weight=700)
     a.text(64, 54, '3–2–1 · 6 matches', size=11, color=MID)
     for i in range(5):
         y = 84 + i * 56
@@ -307,7 +307,7 @@ def pharm():
 def stats():
     a = Frame('1 · Team')
     a.circle(36, 40, 20, fill=FILL, stroke=INK, width=2)
-    a.text(64, 36, 'Comets', size=18, weight=700)
+    a.text(64, 36, 'Spoofs', size=18, weight=700)
     a.text(64, 54, 'joined the league · Nov 2026', size=11, color=MID)
     for i, (k, v) in enumerate([('Record', '3–2–1'), ('Matches', '6'), ('Pts / match', '46'), ('Best', '71')]):
         x = 16 + (i % 2) * 138
