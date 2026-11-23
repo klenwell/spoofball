@@ -619,6 +619,20 @@ a.button {
   display: none;
 }
 
+/* A warning to read before going on, such as replacing your saved team. */
+.notice-warning {
+  margin-top: var(--space-4);
+  border-left-color: var(--team-orange-deep);
+  background: var(--color-white);
+  box-shadow: 0 0 0 1px var(--team-orange-deep);
+}
+
+.field-hint.field-warning {
+  color: var(--team-orange-deep);
+  font-weight: 600;
+  text-align: right;
+}
+
 .new-team-form {
   display: flex;
   flex-direction: column;

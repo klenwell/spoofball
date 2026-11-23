@@ -139,10 +139,20 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
   // --- Notices and buttons -------------------------------------------------
   const storageNotice = el('p', 'notice');
   storageNotice.setAttribute('role', 'status');
-  const replaces = el('p', 'field-hint');
+  // Shown first, where it can't be missed (the owner, #71 QA), and again by
+  // the buttons. Screen readers hear it with the form, since the form points to it.
+  const replaces = el('p', 'notice notice-warning');
+  replaces.id = id('replaces');
+  const replacesAgain = el('p', 'field-hint field-warning');
   if (savedTeam) {
-    replaces.textContent = `This replaces your saved team, ${savedTeam.logo} ${savedTeam.name}.`;
-  } else replaces.hidden = true;
+    const saved = el('strong', undefined, `${savedTeam.logo} ${savedTeam.name}`);
+    replaces.append('Creating a team replaces your saved team, ', saved, '.');
+    replacesAgain.textContent = `This replaces ${savedTeam.name}.`;
+    form.setAttribute('aria-describedby', replaces.id);
+  } else {
+    replaces.hidden = true;
+    replacesAgain.hidden = true;
+  }
   const actions = el('div', 'form-actions');
   const back = el('a', 'button', 'Back');
   back.href = START_HASH;
@@ -150,8 +160,8 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
   submit.type = 'submit';
   actions.append(back, submit);
 
-  form.append(nameField, colorSet, logoSet, preview, replaces, storageNotice, actions);
-  element.append(heading, form);
+  form.append(nameField, colorSet, logoSet, preview, storageNotice, replacesAgain, actions);
+  element.append(heading, replaces, form);
 
   /** A team that couldn't be saved, waiting for "Play anyway". */
   let unsaved: Team | null = null;
