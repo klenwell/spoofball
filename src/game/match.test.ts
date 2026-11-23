@@ -27,7 +27,8 @@ import {
 import { computerMove, placeSpoof, whoseTurn, type MiseState } from './mise';
 import { PRESET_HOME, PRESET_VISITOR } from './preset-teams';
 import type { Random } from './random';
-import type { Skills } from './skills';
+import { MAX_SKEW, SKEWED_SKILLS } from './skew';
+import { skillNames, type Skills } from './skills';
 
 const HOME = PRESET_HOME.team;
 const VISITOR = PRESET_VISITOR.team;
@@ -96,6 +97,7 @@ const tired = (core: Skills) => ({
 /** The share of a skill's loss regained, from core, tired and recovered values. */
 const regained = (core: number, before: number, after: number) =>
   (after - before) / (core - before);
+const mean = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
 
 describe('matchRandom', () => {
   // Seeds across the whole 32-bit range, as the screen draws them.
@@ -103,7 +105,7 @@ describe('matchRandom', () => {
 
   it('gives each purpose its own numbers, even for a large seed (#57 review)', () => {
     const match = { seed: 3_000_000_000 };
-    const purposes = ['host', 'order', 'moves', 'scrum', 'recovery'] as const;
+    const purposes = ['host', 'order', 'moves', 'scrum', 'recovery', 'form', 'nudge'] as const;
 
     const firsts = purposes.map((purpose) => matchRandom(match, purpose).next());
 
@@ -128,15 +130,37 @@ describe('matchRandom', () => {
 });
 
 describe('startMatch', () => {
-  it('starts every spoof fresh: no fatigue, its own skills', () => {
+  it('starts every spoof fresh: no fatigue, playing in its form', () => {
     const match = startMatch(HOME, VISITOR, TEST_SEED);
     for (const side of ['home', 'visitor'] as const) {
       for (const m of match.spoofs[side]) {
         expect(m.fatigue).toBe(0);
-        expect(m.skills).toEqual(m.spoof.skills);
+        expect(m.skills).toEqual(m.form);
         expect(m.points).toEqual([]);
       }
     }
+  });
+
+  it(`skews every spoof of both teams into a form, within ${String(MAX_SKEW)} of its own skills (#62)`, () => {
+    const match = startMatch(HOME, VISITOR, TEST_SEED);
+    for (const side of ['home', 'visitor'] as const) {
+      for (const m of match.spoofs[side]) {
+        expect(m.form, `${side} ${m.spoof.id}`).not.toEqual(m.spoof.skills);
+        for (const name of skillNames) {
+          const shift = Math.abs(m.form[name] - m.spoof.skills[name]);
+          if ((SKEWED_SKILLS as readonly string[]).includes(name))
+            expect(shift).toBeLessThanOrEqual(MAX_SKEW);
+          else expect(shift, name).toBe(0);
+        }
+      }
+    }
+  });
+
+  it('draws the form from the seed: the same for a replay, new for the next match', () => {
+    const forms = (seed: number) => startMatch(HOME, VISITOR, seed).spoofs.home.map((m) => m.form);
+
+    expect(forms(TEST_SEED)).toEqual(forms(TEST_SEED));
+    expect(forms(TEST_SEED + 1)).not.toEqual(forms(TEST_SEED));
   });
 
   it('picks the host from the seed: the same seed, the same host, and either team over many seeds', () => {
@@ -220,21 +244,147 @@ describe('a match', () => {
   });
 
   it('plays the next scrum with the skills each spoof has left, not fresh ones', () => {
-    let match = startMatch(HOME, VISITOR, TEST_SEED);
-    match = playScrum(match, computerMise(match));
+    const match = startMatch(HOME, VISITOR, TEST_SEED);
     const mise = computerMise(match);
+    const worn = (m: MatchSpoof): MatchSpoof => ({
+      ...m,
+      skills: { ...m.skills, burst: m.skills.burst - 20 },
+    });
+    const tiredMatch = {
+      ...match,
+      spoofs: { home: match.spoofs.home.map(worn), visitor: match.spoofs.visitor.map(worn) },
+    };
 
+    const fresh = scrumEntries(match, mise);
+    const tired = scrumEntries(tiredMatch, mise);
+
+    // Down 20 for every spoof whose burst doesn't bottom out at 1.
+    const unclamped = tired.filter((_, i) => (fresh[i]?.spoof.skills.burst ?? 0) > 21);
+    expect(unclamped.length).toBeGreaterThan(3);
+    tired.forEach((entry, i) => {
+      const was = fresh[i]?.spoof.skills.burst ?? 0;
+      if (was > 21) expect(entry.spoof.skills.burst).toBeCloseTo(was - 20, 9);
+    });
+  });
+
+  it("nudges each spoof by its court-mates' impact, up for high impact and down for low (#62)", () => {
+    // Every spoof the same but its impact: the home team all 95, the visitors all 5.
+    const flat = (team: typeof HOME, impact: number) => ({
+      ...team,
+      spoofs: team.spoofs.map((s) => ({ ...s, skills: { ...s.skills, impact, constancy: 20 } })),
+    });
+    const lift = { home: [] as number[], visitor: [] as number[] };
+    for (let seed = 0; seed < 40; seed += 1) {
+      const match = startMatch(flat(HOME, 95), flat(VISITOR, 5), seed);
+      for (const entry of scrumEntries(match, computerMise(match))) {
+        const me = match.spoofs[entry.team as BenchSide].find((m) => m.spoof.id === entry.spoof.id);
+        for (const name of SKEWED_SKILLS)
+          lift[entry.team as BenchSide].push(entry.spoof.skills[name] - (me?.skills[name] ?? 0));
+      }
+    }
+
+    expect(mean(lift.home)).toBeGreaterThan(2);
+    expect(mean(lift.visitor)).toBeLessThan(-2);
+  });
+
+  it("doesn't nudge from the bench: a benched spoof's impact changes no one", () => {
+    const match = startMatch(HOME, VISITOR, TEST_SEED);
+    const mise = computerMise(match);
+    const benched = match.spoofs.home.find(
+      (m) => !mise.placements.some((p) => p.team === 'home' && p.spoofId === m.spoof.id),
+    );
+    if (!benched) throw new Error('no benched spoof');
+    const withImpact = (impact: number) => ({
+      ...match,
+      teams: {
+        ...match.teams,
+        home: {
+          ...HOME,
+          spoofs: HOME.spoofs.map((s) =>
+            s.id === benched.spoof.id ? { ...s, skills: { ...s.skills, impact } } : s,
+          ),
+        },
+      },
+    });
+
+    expect(scrumEntries(withImpact(1), mise)).toEqual(scrumEntries(withImpact(99), mise));
+    expect(
+      scrumEntries(match, mise).some((e) => e.team === 'home' && e.spoof.id === benched.spoof.id),
+    ).toBe(false);
+  });
+
+  it("isn't nudged by its own impact, only its court-mates'", () => {
+    const match = startMatch(HOME, VISITOR, TEST_SEED);
+    const mise = computerMise(match);
+    const home = scrumEntries(match, mise).filter((e) => e.team === 'home');
+    const [me, mate] = home;
+    if (!me || !mate) throw new Error('need two home spoofs');
+    const withImpact = (impact: number): Match => ({
+      ...match,
+      teams: {
+        ...match.teams,
+        home: {
+          ...HOME,
+          spoofs: HOME.spoofs.map((s) =>
+            s.id === me.spoof.id ? { ...s, skills: { ...s.skills, impact } } : s,
+          ),
+        },
+      },
+    });
+    const find = (m: Match, id: string) =>
+      scrumEntries(m, mise).find((e) => e.team === 'home' && e.spoof.id === id)?.spoof.skills;
+
+    expect(find(withImpact(1), me.spoof.id)).toEqual(find(withImpact(99), me.spoof.id));
+    expect(find(withImpact(1), mate.spoof.id)).not.toEqual(find(withImpact(99), mate.spoof.id));
+  });
+
+  it('draws the nudge anew each scrum', () => {
+    const match = startMatch(HOME, VISITOR, TEST_SEED);
+    const mise = computerMise(match);
+    // The same spoofs, as fresh, in the same spots, but a scrum later.
+    const later = { ...playScrum(match, mise), spoofs: match.spoofs };
+
+    expect(scrumEntries(later, mise)).not.toEqual(scrumEntries(match, mise));
+  });
+
+  it(`keeps every spoof's scrum skills within ${String(MAX_SKEW)} of its own, form and nudge together`, () => {
+    for (let seed = 0; seed < 20; seed += 1) {
+      const match = startMatch(HOME, VISITOR, seed);
+      for (const entry of scrumEntries(match, computerMise(match))) {
+        const me = match.spoofs[entry.team as BenchSide].find((m) => m.spoof.id === entry.spoof.id);
+        for (const name of SKEWED_SKILLS) {
+          expect(
+            Math.abs(entry.spoof.skills[name] - (me?.spoof.skills[name] ?? 0)),
+          ).toBeLessThanOrEqual(MAX_SKEW + 1e-9);
+        }
+      }
+    }
+  });
+
+  it("drops the court-mates' nudge after the scrum: it lasts only that scrum", () => {
+    let match = startMatch(HOME, VISITOR, TEST_SEED);
+    const mise = computerMise(match);
     const entries = scrumEntries(match, mise);
 
+    match = playScrum(match, mise);
+
     for (const entry of entries) {
-      const now = match.spoofs[entry.team as BenchSide].find((m) => m.spoof.id === entry.spoof.id);
-      expect(entry.spoof.skills).toEqual(now?.skills);
+      const me = match.spoofs[entry.team as BenchSide].find((m) => m.spoof.id === entry.spoof.id);
+      if (!me) throw new Error('missing');
+      // Skills tiring doesn't touch are back to the form exactly; the tiring ones, no higher than it.
+      for (const name of ['stamina', 'vision', 'charisma', 'cooperation'] as const) {
+        expect(me.skills[name], name).toBeCloseTo(me.form[name], 9);
+      }
+      for (const name of ['growth', 'burst', 'iq'] as const) {
+        expect(me.skills[name], name).toBeLessThanOrEqual(me.form[name] + 1e-9);
+      }
     }
     expect(
       entries.some(
         (e) =>
-          e.spoof.skills.burst <
-          (HOME.spoofs.concat(VISITOR.spoofs).find((s) => s.id === e.spoof.id)?.skills.burst ?? 0),
+          e.spoof.skills.vision !==
+          match.spoofs.home.concat(match.spoofs.visitor).find((m) => m.spoof.id === e.spoof.id)
+            ?.form.vision,
       ),
     ).toBe(true);
   });
@@ -357,6 +507,7 @@ describe('restBetweenScrums', () => {
   if (!base) throw new Error('no spoof');
   const spoof = (id: string): MatchSpoof => ({
     spoof: { ...base, id, skills: core },
+    form: core,
     skills: tired(core),
     fatigue: 10,
     points: [],
@@ -383,6 +534,20 @@ describe('restBetweenScrums', () => {
     expect(regained(core.burst, core.burst - 40, played.skills.burst)).toBeCloseTo(0.66);
     // 99% back resting, then 66% of what's left at the break.
     expect(regained(core.burst, core.burst - 40, rested.skills.burst)).toBeCloseTo(1 - 0.01 * 0.34);
+  });
+
+  it("restores toward the spoof's form, not its own skills (#62)", () => {
+    // Its form 8 above its own: tired 40 below the form, it regains 99% of those 40.
+    const own = { ...core, burst: core.burst - 8 };
+    const [after] = restBetweenScrums(
+      [{ ...spoof('formed'), spoof: { ...base, id: 'formed', skills: own } }],
+      new Set(),
+      always('top'),
+    );
+
+    expect(regained(core.burst, core.burst - 40, after?.skills.burst ?? 0)).toBeCloseTo(
+      1 - 0.01 * 0.34,
+    );
   });
 });
 
@@ -549,7 +714,9 @@ describe('matchRecord', () => {
   });
 
   it('records outcomes only, never skills', () => {
-    expect(JSON.stringify(record)).not.toMatch(/"(skills|stamina|burst|iq|growth|temperament)"/);
+    expect(JSON.stringify(record)).not.toMatch(
+      /"(skills|form|stamina|burst|iq|growth|temperament)"/,
+    );
   });
 
   it("refuses a match that isn't over", () => {

@@ -9,7 +9,8 @@ import {
   type ScrumEntry,
   type ScrumResult,
 } from './scrum';
-import { clampSkill, type Skills } from './skills';
+import { courtMateNudge, matchForm, nudged } from './skew';
+import { clampSkill, skillNames, type Skills } from './skills';
 import type { ScrumSkills } from './spoof-motion';
 import type { Spoof, Team } from './teams';
 
@@ -18,6 +19,9 @@ import type { Spoof, Team } from './teams';
  * carrying their fatigue from one scrum to the next, then a result. Rules
  * from docs/design.md (Decisions for later epics, Match), after the
  * prototype's `models/match.py` and `recuperate` in `lib/minrook/rooks.py`.
+ *
+ * Each spoof plays the match in its own form, and each scrum it's nudged by
+ * its court-mates (#62, skew.ts). Both are hidden.
  *
  * A pure state machine: the screen runs each mise (mise.ts, with your moves)
  * and hands it to `playScrum`, which simulates the scrum and records it.
@@ -38,7 +42,9 @@ const TIRING_SKILLS = ['growth', 'burst', 'iq'] as const;
 /** A spoof's state through a match. */
 export interface MatchSpoof {
   readonly spoof: Spoof;
-  /** Its skills now: its own, worn down by tiring and partly restored by recovery. */
+  /** Its form this match (#62): its own skills, skewed once at the start. Recovery restores toward it. Hidden. */
+  readonly form: Skills;
+  /** Its skills now: its form, worn down by tiring and partly restored by recovery. */
   readonly skills: ScrumSkills;
   readonly fatigue: number;
   /** Its points in each scrum played so far, or null for a scrum it sat out. */
@@ -71,10 +77,18 @@ export interface Match {
  */
 export function matchRandom(
   match: Pick<Match, 'seed'>,
-  purpose: 'host' | 'order' | 'moves' | 'scrum' | 'recovery',
+  purpose: 'host' | 'order' | 'moves' | 'scrum' | 'recovery' | 'form' | 'nudge',
   scrum = 0,
 ): Random {
-  const purposes = { host: 1, order: 2, moves: 3, scrum: 4, recovery: 5 } as const;
+  const purposes = {
+    host: 1,
+    order: 2,
+    moves: 3,
+    scrum: 4,
+    recovery: 5,
+    form: 6,
+    nudge: 7,
+  } as const;
   // A large odd multiplier spreads nearby seeds apart. Math.imul keeps the
   // product in 32-bit integers: a plain multiply passes 2^53 for most seeds
   // and rounds away the purpose and scrum, so every purpose drew the same
@@ -84,24 +98,33 @@ export function matchRandom(
   );
 }
 
-function freshSpoof(spoof: Spoof): MatchSpoof {
+function freshSpoof(spoof: Spoof, random: Random): MatchSpoof {
+  const form = matchForm(spoof.skills, random);
   return {
     spoof,
-    skills: { ...spoof.skills },
+    form,
+    skills: { ...form },
     fatigue: 0,
     points: [],
     stats: emptyStats(),
   };
 }
 
-/** A new match between two teams. Fatigue starts at 0: it resets every match. */
+/**
+ * A new match between two teams. Fatigue starts at 0: it resets every match.
+ * Every spoof's form is drawn anew from the seed.
+ */
 export function startMatch(home: Team, visitor: Team, seed: number): Match {
   const host = matchRandom({ seed }, 'host').pick<BenchSide>(['home', 'visitor']);
+  const forms = matchRandom({ seed }, 'form');
   return {
     seed,
     host,
     teams: { home, visitor },
-    spoofs: { home: home.spoofs.map(freshSpoof), visitor: visitor.spoofs.map(freshSpoof) },
+    spoofs: {
+      home: home.spoofs.map((s) => freshSpoof(s, forms)),
+      visitor: visitor.spoofs.map((s) => freshSpoof(s, forms)),
+    },
     scrums: [],
   };
 }
@@ -126,19 +149,48 @@ export function miseRandom(match: Match): Random {
   return matchRandom(match, 'moves', scrumNumber(match));
 }
 
-/** The spoofs as they'll play the next scrum: their own, with their current skills and fatigue. */
-function playing(match: Match): Readonly<Record<BenchSide, readonly Spoof[]>> {
-  const now = (side: BenchSide) =>
-    match.spoofs[side].map((m) => ({ ...m.spoof, skills: { ...m.skills } }));
-  return { home: now('home'), visitor: now('visitor') };
+function matchSpoof(match: Match, side: BenchSide, id: string): MatchSpoof {
+  const found = match.spoofs[side].find((m) => m.spoof.id === id);
+  if (!found) throw new Error(`No spoof ${id} on ${side}`);
+  return found;
 }
 
-/** The next scrum's starting lineup from its finished mise: placed spoofs, as tired as they are. */
+/**
+ * The next scrum's starting lineup from its finished mise: placed spoofs, as
+ * tired as they are, each nudged by its court-mates in this scrum (#62).
+ */
 export function scrumEntries(match: Match, mise: MiseState): ScrumEntry[] {
-  return miseEntries(mise, playing(match)).map((entry) => {
-    const me = match.spoofs[entry.team as BenchSide].find((m) => m.spoof.id === entry.spoof.id);
-    return { ...entry, fatigue: me?.fatigue ?? 0 };
+  const random = matchRandom(match, 'nudge', scrumNumber(match));
+  const placed = miseEntries(mise, {
+    home: match.teams.home.spoofs,
+    visitor: match.teams.visitor.spoofs,
   });
+  return placed.map((entry) => {
+    const side = entry.team as BenchSide;
+    const me = matchSpoof(match, side, entry.spoof.id);
+    const courtMates = placed
+      .filter((e) => e.team === side && e.spoof.id !== entry.spoof.id)
+      .map((e) => e.spoof.skills);
+    const nudge = courtMateNudge(me.form, courtMates, random);
+    const skills = nudged(me.spoof.skills, me.form, me.skills, nudge);
+    return { ...entry, spoof: { ...entry.spoof, skills }, fatigue: me.fatigue };
+  });
+}
+
+/**
+ * A spoof's skills after a scrum: what it had going in, less what it lost to
+ * tiring in the scrum. The court-mates' nudge drops off: it lasts only that
+ * scrum (#62).
+ */
+function afterScrum(
+  before: Readonly<ScrumSkills>,
+  start: Readonly<ScrumSkills>,
+  finish: Readonly<ScrumSkills>,
+): ScrumSkills {
+  const skills = { ...before };
+  for (const name of skillNames)
+    skills[name] = clampSkill(before[name] - (start[name] - finish[name]));
+  return skills;
 }
 
 /**
@@ -204,10 +256,11 @@ export function playScrum(match: Match, mise: MiseState): Match {
       const finish = result.finish.find(
         (f) => f.id === m.spoof.id && entries.some((e) => e.team === side && e.spoof.id === f.id),
       );
-      if (!finish) return { ...m, points: [...m.points, null] };
+      const entry = entries.find((e) => e.team === side && e.spoof.id === m.spoof.id);
+      if (!finish || !entry) return { ...m, points: [...m.points, null] };
       return {
         ...m,
-        skills: { ...finish.skills },
+        skills: afterScrum(m.skills, entry.spoof.skills, finish.skills),
         fatigue: finish.fatigue,
         points: [...m.points, scores.spoofs[m.spoof.id] ?? 0],
         stats: addStats(m.stats, finish.stats),
@@ -229,6 +282,8 @@ export function playScrum(match: Match, mise: MiseState): Match {
 /**
  * The break between scrums: a spoof that sat the scrum out rests first, and
  * can recover fully; then every spoof recovers up to `BREAK_RECOVERY_CAP`.
+ * Both restore toward the spoof's form, not its own skills (#62): the
+ * prototype's fade of the form is left out.
  */
 export function restBetweenScrums(
   spoofs: readonly MatchSpoof[],
@@ -238,9 +293,9 @@ export function restBetweenScrums(
   return spoofs.map((m) => {
     let now = { skills: m.skills, fatigue: m.fatigue };
     if (!played.has(m.spoof.id)) {
-      now = recover(m.spoof.skills, now.skills, now.fatigue, REST_RECOVERY_CAP, random);
+      now = recover(m.form, now.skills, now.fatigue, REST_RECOVERY_CAP, random);
     }
-    now = recover(m.spoof.skills, now.skills, now.fatigue, BREAK_RECOVERY_CAP, random);
+    now = recover(m.form, now.skills, now.fatigue, BREAK_RECOVERY_CAP, random);
     return { ...m, ...now };
   });
 }
