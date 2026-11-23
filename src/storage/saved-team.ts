@@ -50,7 +50,9 @@ export const STORAGE_PROBLEM_TEXT: Readonly<Record<LoadProblem | SaveProblem, st
   none: 'No team saved yet.',
   unavailable:
     "This browser isn't saving data for the game, so your team won't be kept after you leave.",
-  unreadable: "Your saved team couldn't be read. It's kept as it is until you save a new team.",
+  // The data stays in place (see above), but the player can't use it, so the
+  // message says what to do: the owner's wording on #77.
+  unreadable: "Your saved team couldn't be read, so you'll need to create a new one.",
   newer: 'Your team was saved by a newer version of the game. Reload to get the latest version.',
   full: "The browser's storage is full, so your team couldn't be saved.",
   invalid: "That team isn't complete yet, so it wasn't saved.",

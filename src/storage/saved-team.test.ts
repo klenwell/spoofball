@@ -191,6 +191,12 @@ describe('STORAGE_PROBLEM_TEXT', () => {
       expect(STORAGE_PROBLEM_TEXT[problem].length).toBeGreaterThan(10);
     }
   });
+
+  it('tells a player with an unreadable save what to do', () => {
+    expect(STORAGE_PROBLEM_TEXT.unreadable).toBe(
+      "Your saved team couldn't be read, so you'll need to create a new one.",
+    );
+  });
 });
 
 describe('browserStorage', () => {
