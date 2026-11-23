@@ -120,7 +120,7 @@ export function teamProblems(team: Team): string[] {
  * Characters as a person counts them: an emoji, even one built from several
  * code points such as a flag, counts as one.
  */
-function characterCount(text: string): number {
+export function characterCount(text: string): number {
   return Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text))
     .length;
 }

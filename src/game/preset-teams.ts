@@ -4,8 +4,8 @@ import type { SpoofType } from './spoof-types';
 import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Lineup, type Spoof, type Team } from './teams';
 
 /**
- * Two preset teams for the Match screen, until the Draft (New Team) epic lets you
- * build your own. Since #39 the Match screen places them with the mise; the
+ * Two preset teams: the Spoofs, for a quick start (#71), and the Embers, the
+ * opponent until the league (#75). Since #39 the Match screen places them with the mise; the
  * fixed lineups here are a ready-made scrum for tests (presetScrumEntries):
  * each team has 3 spoofs on the court, following the mise rule (at least 2 on
  * the apron, at most 1 anywhere), and 2 on its bench.
@@ -32,10 +32,11 @@ function presetSpoof(id: string, type: SpoofType, seed: number): Spoof {
   return generateSpoof(id, type, total, random);
 }
 
-export const COMETS: Team = {
-  name: 'Comets',
+/** The Spoofs: the team you play as without creating your own (#71), the Comets until v0.2.0. */
+export const SPOOFS: Team = {
+  name: 'Spoofs',
   color: 'blue',
-  logo: '☄️',
+  logo: '👻',
   spoofs: [
     presetSpoof('c1', 'queen', 101),
     presetSpoof('c2', 'rook', 102),
@@ -61,7 +62,7 @@ export const EMBERS: Team = {
 /** Your team: home kit, bench below the court. */
 export const PRESET_HOME: Lineup = {
   side: 'home',
-  team: COMETS,
+  team: SPOOFS,
   spots: {
     c1: { x: -27, y: 23 }, // the queen: the one spoof placed anywhere, here in the mosh
     c2: { x: -80, y: 72 }, // apron

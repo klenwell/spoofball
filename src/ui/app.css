@@ -142,9 +142,10 @@ body {
 /* The scoreboard: your team on the left, the visitor on the right. */
 .scoreboard {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* minmax(0, …), so a long team name wraps instead of widening the page (#71). */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
   background: var(--color-surface);
   border: 1px solid var(--color-line);
@@ -155,7 +156,7 @@ body {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto auto;
-  column-gap: var(--space-2);
+  column-gap: var(--space-1);
   align-items: center;
 }
 
@@ -170,6 +171,9 @@ body {
 }
 
 .scoreboard-name {
+  min-width: 0;
+  /* Breaks only a word too long for its column, such as a 16-letter name. */
+  overflow-wrap: break-word;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
@@ -189,6 +193,7 @@ body {
 }
 
 .scoreboard-middle {
+  max-width: 6rem;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -500,6 +505,304 @@ body {
   font-family: var(--font-numeric);
 }
 
+/* --- Your team (#71): the header badge, the splash and create screens ---- */
+
+/* The splash and create screens have no tab bar, so no room is kept for it. */
+.app:is([data-screen='start'], [data-screen='new-team']) {
+  padding-bottom: 0;
+}
+
+.app:is([data-screen='start'], [data-screen='new-team']) .tab-bar {
+  display: none;
+}
+
+/* The team in play, in the header: a link back to the splash screen to switch. */
+.team-badge {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  margin-left: auto;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.team-badge:hover {
+  border-color: var(--color-accent-text);
+}
+
+.team-badge:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.team-badge-name {
+  min-width: 0;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-badge-logo {
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.splash {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-6);
+  text-align: center;
+}
+
+.splash-logo {
+  width: 9rem;
+  height: 9rem;
+}
+
+.splash-title {
+  margin: 0;
+  font-size: var(--text-xxl);
+  letter-spacing: 0.01em;
+}
+
+.splash-title:focus,
+.new-team .screen-title:focus {
+  outline: none;
+}
+
+.splash-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 18rem;
+}
+
+/* A link styled as a button, such as Create your team. */
+a.button {
+  display: inline-flex;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.splash-actions .button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.button-logo {
+  line-height: 1;
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 4px solid var(--color-accent-text);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  text-align: left;
+}
+
+.notice:empty {
+  display: none;
+}
+
+.new-team-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-top: var(--space-4);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field-label {
+  margin: 0;
+  padding: 0;
+  font-weight: 600;
+}
+
+.field-input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-text-muted);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.field-input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.field-input[aria-invalid='true'] {
+  border-color: var(--team-red-deep);
+}
+
+.field-hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.field-count {
+  font-family: var(--font-numeric);
+}
+
+.field-count.is-over,
+.field-error {
+  color: var(--team-red-deep);
+}
+
+.field-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* The color and logo grids: radio buttons drawn as discs. */
+/*
+ * Even rows: on a phone, 2 rows of 4 colors and 4 rows of 6 logos (6 discs
+ * fit across 320 px); on a wider screen, 1 row of colors and 3 rows of 8 logos.
+ */
+.choice-grid {
+  display: grid;
+  gap: var(--space-2) var(--space-4);
+  justify-content: start;
+}
+
+.color-grid {
+  grid-template-columns: repeat(4, 2.75rem);
+}
+
+.logo-grid {
+  grid-template-columns: repeat(6, 2.75rem);
+  column-gap: var(--space-1);
+}
+
+.choice-grid > legend {
+  margin-bottom: var(--space-2);
+}
+
+.choice {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-circle);
+  cursor: pointer;
+}
+
+/* The real radio button covers its disc, invisible, so it keeps its keyboard and screen-reader behavior. */
+.choice-input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.choice:has(.choice-input:checked) {
+  box-shadow: 0 0 0 3px var(--color-text);
+}
+
+.choice:has(.choice-input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+.color-dot {
+  width: 2rem;
+  height: 2rem;
+  border: 4px solid var(--dot-deep);
+  border-radius: var(--radius-circle);
+  background: var(--dot);
+}
+
+.choice-logo {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+}
+
+.logo-face {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.team-preview-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.team-preview-disc {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 5px solid var(--dot-deep);
+  border-radius: var(--radius-circle);
+  background: var(--dot);
+}
+
+.team-preview-logo {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.team-preview-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.team-preview-name.is-placeholder {
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.form-actions .button {
+  flex: 1;
+  min-width: 0;
+  max-width: 12rem;
+  padding-inline: var(--space-4);
+}
+
 /* Wider screens: the tabs move into the header, as a top bar. */
 @media (min-width: 48rem) {
   .app {
@@ -540,5 +843,31 @@ body {
 
   .tab[aria-current='page'] .tab-icon::after {
     inset: 2px;
+  }
+
+  .app-bar {
+    gap: var(--space-4);
+  }
+
+  .tab-bar {
+    margin-left: auto;
+  }
+
+  .team-badge {
+    margin-left: 0;
+  }
+
+  .color-grid,
+  .logo-grid {
+    grid-template-columns: repeat(8, 2.75rem);
+    column-gap: var(--space-4);
+  }
+
+  .scoreboard {
+    gap: var(--space-3);
+  }
+
+  .scoreboard-team {
+    column-gap: var(--space-2);
   }
 }

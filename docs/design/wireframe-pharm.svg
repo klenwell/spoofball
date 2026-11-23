@@ -5,7 +5,7 @@
   <rect x="0" y="0" width="300" height="620" rx="22" fill="#ffffff" stroke="#3b4048" stroke-width="2"/>
   <g>
     <circle cx="36" cy="40" r="20" fill="#eef0f3" stroke="#3b4048" stroke-width="2"/>
-    <text x="64" y="36" font-size="18" fill="#3b4048" text-anchor="start" font-weight="700">Comets</text>
+    <text x="64" y="36" font-size="18" fill="#3b4048" text-anchor="start" font-weight="700">Spoofs</text>
     <text x="64" y="54" font-size="11" fill="#8a919c" text-anchor="start" font-weight="400">3–2–1 · 6 matches</text>
     <rect x="12" y="84" width="276" height="48" rx="6" fill="#ffffff" stroke="#d5d9e0"/>
     <circle cx="42" cy="108" r="16" fill="#ffffff" stroke="#d5d9e0" stroke-width="1"/>

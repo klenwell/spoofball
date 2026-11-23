@@ -3,7 +3,7 @@ import { TEST_SEED } from '../test-support/random';
 import { createRandom } from './random';
 import { generateSkills, sizeToRadius, skillTotal } from './skills';
 import { TEAM_LOGOS } from './logos';
-import { COMETS, EMBERS } from './preset-teams';
+import { SPOOFS, EMBERS } from './preset-teams';
 import {
   MAX_TEAM_NAME_LENGTH,
   NEW_SPOOF_SKILL_TOTAL,
@@ -64,8 +64,8 @@ describe('temperament on a spoof', () => {
 });
 
 describe('teamProblems', () => {
-  const valid = COMETS;
-  const first = COMETS.spoofs[0];
+  const valid = SPOOFS;
+  const first = SPOOFS.spoofs[0];
   if (!first) throw new Error('no spoof');
   const withSpoof = (spoof: Spoof): Team => ({
     ...valid,
