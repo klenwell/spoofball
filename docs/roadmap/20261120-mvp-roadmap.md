@@ -23,7 +23,7 @@ We use the prototype as **a spec, not code to port**. We carry over the behavior
 ## Goals
 
 1. **Playable from the first epic on.** The game deployed at `klenwell.github.io/spoofball` is playable after every merged step, even if it's thin.
-2. **The four MVP parts:** Expansion (create and draft your team), Match, Pharm (manage your team), Stats. See the [glossary](../design.md#glossary).
+2. **The four MVP parts:** Draft (New Team) (create and draft your team), Match, Pharm (manage your team), Stats. See the [glossary](../design.md#glossary).
 3. **Works on phones** as well as desktop.
 4. **Transparent process.** Epics, tickets, PRs and short epic READMEs tell the story of how it was built.
 5. **Quality bar:** lint and tests run in CI on every PR, and the code is readable over clever.
@@ -99,7 +99,7 @@ What a player gets: **a full, styled match between two preset teams.**
 
 What a player gets: **create and draft your own team, play matches, and see stats that last.**
 
-- **Epic 3, `expansion`:**
+- **Epic 3, `draft`, Draft (New Team)** (named `expansion` until #69, 2026-11-23):
   - create a team (name, color, emoji logo);
   - draft 5 spoofs from a generated pool of 15 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Match epic's simulation;
   - save locally;
@@ -118,7 +118,7 @@ What a player gets: **the finished MVP, polished and tested on phones.**
 
 - **Epic 6, `mvp-release`:** a phone QA pass, accessibility basics, the README, the `v1.0.0` tag, and a retrospective.
 
-Match comes before Expansion because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
+Match comes before the Draft (New Team) epic because it's the core of the game and its biggest risk, and two preset teams are enough to make it playable.
 
 ## Decisions (2026-11-20)
 
@@ -146,6 +146,7 @@ Match comes before Expansion because it's the core of the game and its biggest r
 
 6. **Screen names** (2026-11-20).
    - **Expansion** replaces "New Team". In sports, a league adds new teams through expansion.
+     - **Renamed Draft (New Team)** on #69 (2026-11-23), which says more plainly what it is.
    - **Pharm** replaces "GM screen". It comes from "farm system", as in the prototype.
    - The pitch keeps its original wording.
 

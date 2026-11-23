@@ -4,7 +4,7 @@ import type { SpoofType } from './spoof-types';
 import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Lineup, type Spoof, type Team } from './teams';
 
 /**
- * Two preset teams for the Match screen, until the Expansion epic lets you
+ * Two preset teams for the Match screen, until the Draft (New Team) epic lets you
  * build your own. Since #39 the Match screen places them with the mise; the
  * fixed lineups here are a ready-made scrum for tests (presetScrumEntries):
  * each team has 3 spoofs on the court, following the mise rule (at least 2 on
@@ -35,6 +35,7 @@ function presetSpoof(id: string, type: SpoofType, seed: number): Spoof {
 export const COMETS: Team = {
   name: 'Comets',
   color: 'blue',
+  logo: '☄️',
   spoofs: [
     presetSpoof('c1', 'queen', 101),
     presetSpoof('c2', 'rook', 102),
@@ -47,6 +48,7 @@ export const COMETS: Team = {
 export const EMBERS: Team = {
   name: 'Embers',
   color: 'orange',
+  logo: '🔥',
   spoofs: [
     presetSpoof('e1', 'king', 201),
     presetSpoof('e2', 'knight', 202),

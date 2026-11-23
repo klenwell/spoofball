@@ -2,7 +2,7 @@
  * Spoof types and disc sizes, following the prototype (backgammon-chrome:
  * `AVATAR_DIST` in models/rook.py, `MIN_ROOK_RADIUS`/`MAX_ROOK_RADIUS`).
  * A spoof's type is fixed when it's created; it sets the avatar mark and
- * (in the Expansion epic) shapes its skill rolls.
+ * shapes its skill rolls (#35).
  */
 
 export const spoofTypes = [
