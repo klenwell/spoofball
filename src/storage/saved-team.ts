@@ -1,3 +1,5 @@
+import { createRandom } from '../game/random';
+import { drawSpoofName } from '../game/spoof-names';
 import { createSpoof, teamProblems, type Spoof, type Team } from '../game/teams';
 import { skillNames, type Skills } from '../game/skills';
 import type { SpoofType } from '../game/spoof-types';
@@ -18,6 +20,13 @@ import type { TeamColorName } from '../design/tokens';
  * - A team is checked (`teamProblems`) before it's saved and after it's
  *   loaded, so a team in play is always valid.
  *
+ * Versions:
+ * - 1 (#70): the team, and its spoofs' types and hidden traits.
+ * - 2 (#28): each spoof's name too. A version 1 team is upgraded on load:
+ *   its spoofs get names drawn from a seed made from the saved text, so they
+ *   come out the same on every load, even where storage won't let the
+ *   upgraded team be written back.
+ *
  * The skills are saved with the team. They stay hidden on screen, but anyone
  * reading the browser's storage could see them: fine for a single-player game
  * (#69 Notes).
@@ -27,7 +36,7 @@ import type { TeamColorName } from '../design/tokens';
 export const STORAGE_KEY = 'spoofball';
 
 /** The version of the saved record this code writes. */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 /** The part of the browser's `Storage` this module uses, so tests can pass a fake. */
 export type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -38,7 +47,8 @@ export type LoadProblem = 'none' | 'unavailable' | 'unreadable' | 'newer';
 export type SaveProblem = 'unavailable' | 'full' | 'invalid';
 
 export type LoadResult =
-  | { readonly ok: true; readonly team: Team }
+  /** `upgraded` is there, true, when the team came from an older version and is worth saving again. */
+  | { readonly ok: true; readonly team: Team; readonly upgraded?: true }
   | { readonly ok: false; readonly problem: LoadProblem };
 
 export type SaveResult =
@@ -71,6 +81,7 @@ export function browserStorage(): KeyValueStore | null {
 /** How a spoof is saved: its radius is worked out again from its size on load. */
 interface SavedSpoof {
   id: string;
+  name: string;
   type: SpoofType;
   skills: Skills;
   temperament: number;
@@ -100,6 +111,7 @@ export function saveTeam(store: KeyValueStore | null, team: Team): SaveResult {
       logo: team.logo,
       spoofs: team.spoofs.map((s) => ({
         id: s.id,
+        name: s.name,
         type: s.type,
         skills: { ...s.skills },
         temperament: s.temperament,
@@ -134,33 +146,64 @@ export function loadTeam(store: KeyValueStore | null): LoadResult {
     return { ok: false, problem: 'unreadable' };
   }
   if (data.version > SAVE_VERSION) return { ok: false, problem: 'newer' };
-  // Version 1 is the first; a later version upgrades older records here.
-  if (data.version !== SAVE_VERSION) return { ok: false, problem: 'unreadable' };
+  if (data.version < 1) return { ok: false, problem: 'unreadable' };
 
-  const team = teamFrom(data.team);
+  // Version 1 had no spoof names: they're drawn here, from the saved text.
+  const upgrading = data.version === 1;
+  const team = teamFrom(data.team, upgrading ? nameDrawer(text) : null);
   if (!team || teamProblems(team).length > 0) return { ok: false, problem: 'unreadable' };
-  return { ok: true, team };
+  return upgrading ? { ok: true, team, upgraded: true } : { ok: true, team };
 }
 
-/** A team from saved data of the right shape, or null. `teamProblems` checks its values. */
-function teamFrom(data: unknown): Team | null {
+/** Names a version 1 team's spoofs, in order, from a seed made from the saved text. */
+type NameDrawer = (taken: readonly string[]) => string;
+
+function nameDrawer(text: string): NameDrawer {
+  const random = createRandom(textSeed(text));
+  return (taken) => drawSpoofName(random, taken);
+}
+
+/** A whole-number seed from a text: its 32-bit FNV-1a hash. */
+function textSeed(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash;
+}
+
+/**
+ * A team from saved data of the right shape, or null. `teamProblems` checks
+ * its values. With `drawName`, the spoofs have no saved names (version 1),
+ * so each is given one.
+ */
+function teamFrom(data: unknown, drawName: NameDrawer | null): Team | null {
   if (!isObject(data) || !Array.isArray(data.spoofs)) return null;
   const { name, color, logo } = data;
   if (typeof name !== 'string' || typeof color !== 'string' || typeof logo !== 'string')
     return null;
   const spoofs: Spoof[] = [];
   for (const item of data.spoofs) {
-    const spoof = spoofFrom(item);
+    const name = drawName ? drawName(spoofs.map((s) => s.name)) : undefined;
+    const spoof = spoofFrom(item, name);
     if (!spoof) return null;
     spoofs.push(spoof);
   }
   return { name, color: color as TeamColorName, logo, spoofs };
 }
 
-function spoofFrom(data: unknown): Spoof | null {
+/** A spoof from saved data of the right shape, or null. `drawnName` stands in for a version 1 spoof's missing name. */
+function spoofFrom(data: unknown, drawnName: string | undefined): Spoof | null {
   if (!isObject(data) || !isObject(data.skills)) return null;
   const { id, type, temperament, skills } = data;
-  if (typeof id !== 'string' || typeof type !== 'string' || typeof temperament !== 'number') {
+  const name = drawnName ?? data.name;
+  if (
+    typeof id !== 'string' ||
+    typeof name !== 'string' ||
+    typeof type !== 'string' ||
+    typeof temperament !== 'number'
+  ) {
     return null;
   }
   const values: Partial<Record<(typeof skillNames)[number], number>> = {};
@@ -169,7 +212,7 @@ function spoofFrom(data: unknown): Spoof | null {
     if (typeof value !== 'number') return null;
     values[name] = value;
   }
-  return createSpoof(id, type as SpoofType, values as Skills, temperament);
+  return createSpoof(id, name, type as SpoofType, values as Skills, temperament);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

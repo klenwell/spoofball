@@ -1,6 +1,6 @@
 import { appInfo } from '../app-info';
 import type { Team } from '../game/teams';
-import { STORAGE_PROBLEM_TEXT, browserStorage, loadTeam } from '../storage/saved-team';
+import { STORAGE_PROBLEM_TEXT, browserStorage, loadTeam, saveTeam } from '../storage/saved-team';
 import { el } from './dom';
 import { createMatchScreen } from './match-screen';
 import { createNewTeamScreen } from './new-team-screen';
@@ -62,6 +62,10 @@ function footer(): HTMLElement {
 export function mountAppShell(root: HTMLElement): void {
   const store = browserStorage();
   const loaded = loadTeam(store);
+  // A team saved by an older version is written back in the current format,
+  // so it no longer depends on the upgrade. If that fails, the upgrade runs
+  // again next time, with the same result.
+  if (loaded.ok && loaded.upgraded) saveTeam(store, loaded.team);
   /** The team saved in this browser. */
   let savedTeam: Team | null = loaded.ok ? loaded.team : null;
   /** The team being played: none until one is loaded, picked or created. */
