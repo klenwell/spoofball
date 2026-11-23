@@ -11,7 +11,7 @@ import {
   skillNames,
   type Skills,
 } from './skills';
-import { drawTemperament } from './temperament';
+import { MAX_TEMPERAMENT, MIN_TEMPERAMENT, drawTemperament } from './temperament';
 import { spoofTypes, type SpoofType } from './spoof-types';
 
 /**
@@ -139,8 +139,12 @@ function spoofProblems(spoof: Spoof): string[] {
   }
   if (spoof.radius !== sizeToRadius(spoof.skills.size))
     problems.push(`${label}: radius doesn't match size`);
-  if (!Number.isFinite(spoof.temperament) || spoof.temperament <= 0) {
-    problems.push(`${label}: temperament must be above 0`);
+  if (
+    !Number.isFinite(spoof.temperament) ||
+    spoof.temperament < MIN_TEMPERAMENT ||
+    spoof.temperament > MAX_TEMPERAMENT
+  ) {
+    problems.push(`${label}: temperament is out of range`);
   }
   return problems;
 }

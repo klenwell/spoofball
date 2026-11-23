@@ -27,7 +27,7 @@ interface LooseRecord {
     name: string;
     color: string;
     logo: string;
-    spoofs: { type: string; skills: Partial<Record<string, number>> }[];
+    spoofs: { type: string; skills: Partial<Record<string, number>>; temperament?: unknown }[];
   };
 }
 
@@ -107,6 +107,22 @@ describe('loadTeam', () => {
       ['an unknown logo', () => storeWith((r) => (r.team.logo = 'X'))],
       ['4 spoofs', () => storeWith((r) => r.team.spoofs.pop())],
       ['an unknown type', () => storeWith((r) => (firstSpoof(r).type = 'jester'))],
+      ['a name that is not text', () => storeWith((r) => ((r.team as { name: unknown }).name = 5))],
+      ['a logo that is not text', () => storeWith((r) => ((r.team as { logo: unknown }).logo = 1))],
+      [
+        'spoofs that are not a list',
+        () => storeWith((r) => ((r.team as { spoofs: unknown }).spoofs = {})),
+      ],
+      ['a spoof that is null', () => storeWith((r) => ((r.team.spoofs as unknown[])[0] = null))],
+      [
+        'skills that are null',
+        () => storeWith((r) => ((firstSpoof(r) as { skills: unknown }).skills = null)),
+      ],
+      [
+        'a temperament that is not a number',
+        () => storeWith((r) => (firstSpoof(r).temperament = 'hot')),
+      ],
+      ['a temperament out of range', () => storeWith((r) => (firstSpoof(r).temperament = 50))],
     ];
 
     it.each(cases)('reports it as unreadable: %s', (_what, makeStore) => {

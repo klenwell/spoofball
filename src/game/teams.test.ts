@@ -118,6 +118,10 @@ describe('teamProblems', () => {
     ).not.toEqual([]);
     expect(teamProblems(withSpoof({ ...first, radius: first.radius + 1 }))).not.toEqual([]);
     expect(teamProblems(withSpoof({ ...first, temperament: 0 }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, temperament: 0.09 }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, temperament: 2.01 }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, temperament: 0.1 }))).toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, temperament: 2 }))).toEqual([]);
     expect(teamProblems(withSpoof({ ...first, skills: { ...first.skills, iq: 1 } }))).toEqual([]);
     expect(teamProblems(withSpoof({ ...first, skills: { ...first.skills, iq: 99 } }))).toEqual([]);
   });
