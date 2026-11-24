@@ -12,6 +12,7 @@ import {
   POOL_VALUE,
   createPool,
   scalePrices,
+  type Candidate,
 } from './combine';
 import { minimumTotal, skillTotal, typeProfiles } from './skills';
 import { spoofTypes } from './spoof-types';
@@ -23,6 +24,15 @@ function manyPools(count = 300, tuning = DEFAULT_POOL_TUNING) {
 }
 
 const sum = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0);
+
+/**
+ * 1,000 pools, made once and shared by the two tests that count types. Making
+ * 4,000 for one test ran past the 5-second test timeout on CI, which runs
+ * about 1.5 times slower than a laptop. 1,000 is plenty: the counts come out
+ * within 0.002 of what 2,000 pools give.
+ */
+let typeCountPools: Candidate[][] | undefined;
+const poolsForTypeCounts = () => (typeCountPools ??= manyPools(1000));
 
 describe('createPool', () => {
   it(`draws ${String(POOL_SIZE)} named candidates with ids p1 to p${String(POOL_SIZE)}, no two named alike`, () => {
@@ -77,7 +87,7 @@ describe('createPool', () => {
   });
 
   it("draws types with the combine's odds: about 4 or 5 pawns a pool, and often a second royal", () => {
-    const pools = manyPools(2000);
+    const pools = poolsForTypeCounts();
     const count = (pred: (t: string) => boolean) =>
       pools.map((pool) => pool.filter((c) => pred(c.spoof.type)).length);
     const pawns = count((t) => t.startsWith('pawn'));
@@ -92,7 +102,7 @@ describe('createPool', () => {
 
   it("draws the first candidate, before any limit applies, with the combine's odds", () => {
     const counts = Object.fromEntries(spoofTypes.map((t) => [t, 0])) as Record<string, number>;
-    const pools = manyPools(4000);
+    const pools = poolsForTypeCounts();
     for (const pool of pools) {
       const first = pool[0]?.spoof.type ?? 'king';
       counts[first] = (counts[first] ?? 0) + 1;
