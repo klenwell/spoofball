@@ -10,12 +10,16 @@ import {
   drillFrames,
   drillNames,
   edgeFor,
+  holdBrain,
+  PLAYER_BURST,
   playbackSpeed,
   runDrill,
   type Direction,
   type DrillName,
 } from './drills';
-import { heedProbability } from './spoof-ai';
+import { createRandom } from './random';
+import type { ScrumView, SpoofView } from './scrum';
+import { heedProbability, messageDelayFrames } from './spoof-ai';
 import { FRAMES_PER_SCRUM, SCRUM_SECONDS, SECONDS_PER_FRAME } from './spoof-motion';
 import { skillNames, type Skills } from './skills';
 import { createSpoof, type Spoof } from './teams';
@@ -59,7 +63,7 @@ function arrival(spoof: Spoof, seed: number): number {
   return path(spoof, 'teamwork', seed, 'left').findIndex((p) => distance(p, target) <= p.radius);
 }
 
-describe('drill lengths', () => {
+describe('drillFrames and playbackSpeed', () => {
   it('plays every drill in about 3 seconds', () => {
     for (const drill of drillNames) {
       const seconds = (drillFrames(drill) * SECONDS_PER_FRAME) / playbackSpeed(drill);
@@ -105,12 +109,15 @@ describe('runDrill', () => {
     }
   });
 
-  it('puts a dummy only in hold, pushing the candidate', () => {
+  it('puts a dummy only in hold', () => {
     for (const drill of drillNames) {
       const run = runDrill(spoofWith(), drill, { seed: TEST_SEED });
       const ids = run.entries.map((e) => e.spoof.id);
       expect(ids, drill).toEqual(drill === 'hold' ? [DRILLER_ID, DUMMY_ID] : [DRILLER_ID]);
     }
+  });
+
+  it("hold's dummy hits the candidate", () => {
     const hits = average(10, (seed) => {
       const run = runDrill(spoofWith(), 'hold', { seed });
       return run.result.finish.find((f) => f.id === DRILLER_ID)?.stats.dongs ?? 0;
@@ -127,7 +134,7 @@ describe('runDrill', () => {
 
 // Each drill's outcome follows its traits (#73's criteria), over seeded runs.
 // The PR has the full measurement: every skill, 200 runs each.
-describe('the drills tell spoofs apart', () => {
+describe('runDrill: telling spoofs apart', () => {
   it('sprint shows burst: a quick spoof covers far more ground', () => {
     const ground = (burst: number) =>
       average(10, (seed) => travelled(path(spoofWith({ burst }), 'sprint', seed)));
@@ -188,6 +195,24 @@ describe('the drills tell spoofs apart', () => {
     expect(soonest(85)).toBeLessThan(soonest(15) * 0.7);
   });
 
+  it('blow keeps the spoof where it started', () => {
+    for (const p of path(spoofWith(), 'blow', TEST_SEED)) {
+      expect(Math.hypot(p.x, p.y)).toBe(0);
+    }
+  });
+
+  it("teamwork's message arrives a quarter of a second after the tap, as a teammate's would", () => {
+    const delay = messageDelayFrames(PLAYER_BURST);
+    expect(delay * SECONDS_PER_FRAME).toBeCloseTo(0.25, 1);
+    // Even a bright, cooperative spoof can't move before the message arrives.
+    const spoof = spoofWith({ cooperation: 99, iq: 99 });
+    for (let i = 0; i < 10; i += 1) {
+      const p = path(spoof, 'teamwork', TEST_SEED + i, 'left');
+      for (const q of p.slice(0, delay)) expect(Math.hypot(q.x, q.y)).toBe(0);
+      expect(p.some((q) => q.x !== 0)).toBe(true);
+    }
+  });
+
   it('teamwork without a message: the spoof waits in the middle', () => {
     for (const p of path(spoofWith(), 'teamwork', TEST_SEED)) {
       expect(Math.hypot(p.x, p.y)).toBe(0);
@@ -203,5 +228,45 @@ describe('the drills tell spoofs apart', () => {
       const end = path(spoof, 'teamwork', TEST_SEED, direction).at(-1);
       expect(Math.sign(end?.x ?? 0), direction).toBe(side);
     }
+  });
+});
+
+describe('holdBrain', () => {
+  const view = (id: string, position: { x: number; y: number }): SpoofView => {
+    const spoof = id === DUMMY_ID ? spoofWith() : spoofWith({ mass: 70 });
+    return {
+      id,
+      team: id === DUMMY_ID ? 'dummy' : 'you',
+      position,
+      velocity: { x: 0, y: 0 },
+      radius: spoof.radius,
+      skills: spoof.skills,
+      temperament: 1,
+    };
+  };
+  const scrum = (candidateAt: { x: number; y: number }, secondsGone: number): ScrumView => ({
+    spoofs: [view(DRILLER_ID, candidateAt), view(DUMMY_ID, { x: 60, y: 0 })],
+    secondsGone,
+    court: DRILL_COURT,
+    aggression: 0,
+  });
+
+  it('the dummy charges the candidate where it is, following it off the middle', () => {
+    const at = { x: -30, y: 20 };
+    const goal = holdBrain(view(DUMMY_ID, { x: 60, y: 0 }), scrum(at, 1), createRandom(1), null);
+    expect(goal?.kind).toBe('crash');
+    expect(goal?.point).toEqual(at);
+  });
+
+  it("renews the dummy's charge at every thought", () => {
+    const old = { kind: 'crash', point: { x: 0, y: 0 }, weight: 1, expires: 1 } as const;
+    const goal = holdBrain(
+      view(DUMMY_ID, { x: 60, y: 0 }),
+      scrum({ x: 5, y: 5 }, 2),
+      createRandom(1),
+      old,
+    );
+    expect(goal?.point).toEqual({ x: 5, y: 5 });
+    expect(goal?.expires).toBeCloseTo(3.5);
   });
 });

@@ -125,12 +125,15 @@ const blowBrain: Brain = (self, _scrum, _random, current) => current ?? holdAt(s
 
 /**
  * Hold's brain: the candidate heads back to the middle whenever it's pushed
- * off it, and the dummy charges the candidate wherever it is.
+ * off it, and the dummy charges the candidate wherever it is. Exported for
+ * its tests.
  */
-const holdBrain: Brain = (self, scrum, _random, current) => {
+export const holdBrain: Brain = (self, scrum, _random, current) => {
   if (self.id === DUMMY_ID) {
     const target = scrum.spoofs.find((s) => s.id === DRILLER_ID);
-    // A charge lasts until it hits, or a second and a half.
+    // At every thought the dummy aims a fresh charge at where the candidate is
+    // now, so it keeps charging, following it when it's pushed off. The
+    // 1.5-second expiry only ends a charge the dummy hasn't renewed.
     return target
       ? { kind: 'crash', point: target.position, weight: 1, expires: scrum.secondsGone + 1.5 }
       : current;
