@@ -68,6 +68,9 @@ function lemniscate(width: number, height: number, steps = 32): Point[] {
   });
 }
 
+/** How far the fist leans clockwise, in degrees. */
+const FIST_TILT = 12;
+
 /**
  * Every mark (#74). The first six are the shown types' defaults (crown for a
  * king, gem for a queen, mallet for a rook, starburst for a bishop, shield
@@ -197,32 +200,41 @@ export const marks: Record<MarkName, readonly MarkShape[]> = {
   // A five-point star.
   star: [{ kind: 'polygon', points: star(5, 0.47, 0.2) }],
   // A raised fist (✊): four stepped, rounded finger tops, the thumb on the
-  // left and a wrist below. Its outline is what reads when it's small.
+  // left and a wrist below, tilted a little clockwise (the owner, on #74).
+  // Its outline is what reads when it's small.
   fist: [
-    { kind: 'circle', cx: -0.088, cy: -0.44, r: 0.06 },
-    { kind: 'circle', cx: 0.036, cy: -0.408, r: 0.06 },
-    { kind: 'circle', cx: 0.16, cy: -0.352, r: 0.06 },
-    { kind: 'circle', cx: 0.276, cy: -0.27, r: 0.06 },
-    {
-      kind: 'polygon',
-      points: [
-        [-0.148, -0.44],
+    ...turned(
+      [
         [-0.088, -0.44],
         [0.036, -0.408],
         [0.16, -0.352],
         [0.276, -0.27],
-        [0.336, -0.27],
-        [0.336, -0.14],
-        [0.252, 0.08],
-        [0.232, 0.18],
-        [0.232, 0.5],
-        [-0.188, 0.5],
-        [-0.188, 0.2],
-        [-0.308, 0.02],
-        [-0.34, -0.14],
-        [-0.29, -0.24],
-        [-0.148, -0.26],
       ],
+      FIST_TILT,
+    ).map(([cx, cy]) => ({ kind: 'circle' as const, cx, cy, r: 0.06 })),
+    {
+      kind: 'polygon',
+      points: turned(
+        [
+          [-0.148, -0.44],
+          [-0.088, -0.44],
+          [0.036, -0.408],
+          [0.16, -0.352],
+          [0.276, -0.27],
+          [0.336, -0.27],
+          [0.336, -0.14],
+          [0.252, 0.08],
+          [0.232, 0.18],
+          [0.232, 0.5],
+          [-0.188, 0.5],
+          [-0.188, 0.2],
+          [-0.308, 0.02],
+          [-0.34, -0.14],
+          [-0.29, -0.24],
+          [-0.148, -0.26],
+        ],
+        FIST_TILT,
+      ),
     },
   ],
   // A diamond (♦), taller than wide. The bishop's mark before #74.
