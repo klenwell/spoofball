@@ -15,6 +15,9 @@ function courtCanvas(
 } {
   const { canvas, ctx } = createCanvas(width, height);
   canvas.className = 'sg-court-canvas';
+  // Where a canvas must shrink to fit (max-width: 100%), its height follows,
+  // so the discs stay round.
+  canvas.style.height = 'auto';
   return { canvas, ctx };
 }
 
