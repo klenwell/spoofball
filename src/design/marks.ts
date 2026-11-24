@@ -196,21 +196,32 @@ export const marks: Record<MarkName, readonly MarkShape[]> = {
   ],
   // A five-point star.
   star: [{ kind: 'polygon', points: star(5, 0.47, 0.2) }],
-  // A fist, from the front: four knuckles over a closed hand, the thumb across.
+  // A raised fist (✊): four stepped, rounded finger tops, the thumb on the
+  // left and a wrist below. Its outline is what reads when it's small.
   fist: [
-    { kind: 'circle', cx: -0.27, cy: -0.2, r: 0.11 },
-    { kind: 'circle', cx: -0.09, cy: -0.22, r: 0.11 },
-    { kind: 'circle', cx: 0.09, cy: -0.22, r: 0.11 },
-    { kind: 'circle', cx: 0.27, cy: -0.2, r: 0.11 },
+    { kind: 'circle', cx: -0.088, cy: -0.44, r: 0.06 },
+    { kind: 'circle', cx: 0.036, cy: -0.408, r: 0.06 },
+    { kind: 'circle', cx: 0.16, cy: -0.352, r: 0.06 },
+    { kind: 'circle', cx: 0.276, cy: -0.27, r: 0.06 },
     {
       kind: 'polygon',
       points: [
-        [-0.38, -0.2],
-        [0.38, -0.2],
-        [0.36, 0.18],
-        [0.2, 0.36],
-        [-0.24, 0.36],
-        [-0.38, 0.2],
+        [-0.148, -0.44],
+        [-0.088, -0.44],
+        [0.036, -0.408],
+        [0.16, -0.352],
+        [0.276, -0.27],
+        [0.336, -0.27],
+        [0.336, -0.14],
+        [0.252, 0.08],
+        [0.232, 0.18],
+        [0.232, 0.5],
+        [-0.188, 0.5],
+        [-0.188, 0.2],
+        [-0.308, 0.02],
+        [-0.34, -0.14],
+        [-0.29, -0.24],
+        [-0.148, -0.26],
       ],
     },
   ],
