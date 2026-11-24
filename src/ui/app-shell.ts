@@ -1,10 +1,19 @@
 import { appInfo } from '../app-info';
+import { startDraft, type Draft } from '../game/draft';
 import type { Team } from '../game/teams';
-import { STORAGE_PROBLEM_TEXT, browserStorage, loadTeam, saveTeam } from '../storage/saved-team';
-import { el } from './dom';
+import {
+  STORAGE_PROBLEM_TEXT,
+  browserStorage,
+  loadDraft,
+  loadTeam,
+  saveDraft,
+  saveTeam,
+} from '../storage/saved-team';
+import { createCombineScreen } from './combine-screen';
+import { el, newSeed } from './dom';
 import { createMatchScreen } from './match-screen';
 import { createNewTeamScreen } from './new-team-screen';
-import { START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
+import { COMBINE_HASH, START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
 import { createSplashScreen } from './splash-screen';
 import { hashFor, tabById, tabs, type TabId } from './tabs';
 
@@ -19,6 +28,9 @@ import { hashFor, tabById, tabs, type TabId } from './tabs';
  * the Spoofs, or a new one. With no team, it opens on the splash screen,
  * which has no tab bar, and so does the create screen. The header shows the
  * team in play, and links back to the splash screen to switch.
+ *
+ * Since #72 it also holds the draft in progress: the create screen starts or
+ * updates it, the combine changes it, and finishing it saves the new team.
  */
 
 const SOURCE_URL = 'https://github.com/klenwell/spoofball';
@@ -70,6 +82,8 @@ export function mountAppShell(root: HTMLElement): void {
   let savedTeam: Team | null = loaded.ok ? loaded.team : null;
   /** The team being played: none until one is loaded, picked or created. */
   let team: Team | null = savedTeam;
+  /** The draft in progress (#72), kept across reloads, or null. */
+  let draft: Draft | null = loadDraft(store);
   /** Said on the splash screen, when there's no saved team for a reason worth knowing. */
   const loadNotice =
     loaded.ok || loaded.problem === 'none' ? null : STORAGE_PROBLEM_TEXT[loaded.problem];
@@ -138,14 +152,34 @@ export function mountAppShell(root: HTMLElement): void {
     }
     if (route.screen === 'new-team') {
       return createNewTeamScreen({
-        store,
+        canSave: store !== null,
         savedTeam,
-        onCreated: (created, saved) => {
-          if (saved) savedTeam = created;
-          play(created);
+        draft,
+        onNext: (choices) => {
+          // Changing your choices keeps the draft's pool and picks; otherwise a new pool.
+          draft = draft ? { ...draft, ...choices } : startDraft(choices, newSeed());
+          saveDraft(store, draft);
+          window.location.hash = COMBINE_HASH;
         },
       });
     }
+    if (route.screen === 'combine' && draft) {
+      return createCombineScreen({
+        draft,
+        savedTeam,
+        onChange: (next) => {
+          draft = next;
+          return saveDraft(store, next);
+        },
+        onFinish: (team) => saveTeam(store, team, { endDraft: true }),
+        onPlay: (team, saved) => {
+          draft = null;
+          if (saved) savedTeam = team;
+          play(team);
+        },
+      });
+    }
+    if (route.screen !== 'tab') return undefined;
     return team ? tabPanel(route.tab, team) : undefined;
   }
 
@@ -166,7 +200,11 @@ export function mountAppShell(root: HTMLElement): void {
       delete root.dataset.tab;
       heading.hidden = true;
       body.textContent = '';
-      document.title = route.screen === 'start' ? 'Spoofball' : 'Create your team · Spoofball';
+      document.title = {
+        start: 'Spoofball',
+        'new-team': 'Create your team · Spoofball',
+        combine: 'Combine · Spoofball',
+      }[route.screen];
     }
     if (content) panel.replaceChildren(content.element);
     else panel.replaceChildren();
@@ -181,7 +219,7 @@ export function mountAppShell(root: HTMLElement): void {
 
   function route({ opening }: { opening: boolean }): void {
     const { hash } = window.location;
-    const next = routeFromHash(hash, { hasTeam: team !== null, opening });
+    const next = routeFromHash(hash, { hasTeam: team !== null, hasDraft: draft !== null, opening });
     // Rewrite a hash that doesn't name the screen shown, without adding a
     // history entry, so Back never lands on a URL that names no screen.
     const canonical = hashForRoute(next);

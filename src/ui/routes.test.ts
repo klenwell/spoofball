@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { NEW_TEAM_HASH, START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
+import {
+  COMBINE_HASH,
+  NEW_TEAM_HASH,
+  START_HASH,
+  hashForRoute,
+  routeFromHash,
+  type Route,
+} from './routes';
 
-const later = { hasTeam: true, opening: false };
-const opening = { hasTeam: true, opening: true };
-const noTeam = { hasTeam: false, opening: false };
+const later = { hasTeam: true, hasDraft: false, opening: false };
+const opening = { hasTeam: true, hasDraft: false, opening: true };
+const noTeam = { hasTeam: false, hasDraft: false, opening: false };
 
 describe('routeFromHash', () => {
   describe('when no team is in play', () => {
@@ -11,7 +18,7 @@ describe('routeFromHash', () => {
       'opens the splash screen for %j',
       (hash) => {
         expect(routeFromHash(hash, noTeam)).toEqual({ screen: 'start' });
-        expect(routeFromHash(hash, { hasTeam: false, opening: true })).toEqual({ screen: 'start' });
+        expect(routeFromHash(hash, { ...noTeam, opening: true })).toEqual({ screen: 'start' });
       },
     );
 
@@ -37,13 +44,51 @@ describe('routeFromHash', () => {
   });
 });
 
+describe('routeFromHash, for the combine (#72)', () => {
+  describe('when a draft is in progress', () => {
+    it('opens the combine for its own hash, with or without a team', () => {
+      expect(routeFromHash(COMBINE_HASH, { ...noTeam, hasDraft: true })).toEqual({
+        screen: 'combine',
+      });
+      expect(routeFromHash(COMBINE_HASH, { ...later, hasDraft: true })).toEqual({
+        screen: 'combine',
+      });
+    });
+
+    it('takes a first-time player back to the combine when the game opens, wherever the hash points', () => {
+      for (const hash of ['', START_HASH, '#/match']) {
+        expect(routeFromHash(hash, { ...noTeam, hasDraft: true, opening: true })).toEqual({
+          screen: 'combine',
+        });
+      }
+    });
+
+    it('lets a first-time player leave for the splash screen once the game is open', () => {
+      expect(routeFromHash(START_HASH, { ...noTeam, hasDraft: true })).toEqual({ screen: 'start' });
+    });
+
+    it('still opens on Match for a player with a team', () => {
+      expect(routeFromHash('', { ...opening, hasDraft: true })).toEqual({
+        screen: 'tab',
+        tab: 'match',
+      });
+    });
+  });
+
+  it('opens the create screen for the combine hash when no draft is in progress', () => {
+    expect(routeFromHash(COMBINE_HASH, noTeam)).toEqual({ screen: 'new-team' });
+    expect(routeFromHash(COMBINE_HASH, later)).toEqual({ screen: 'new-team' });
+  });
+});
+
 describe('hashForRoute', () => {
   it.each<[Route, string]>([
     [{ screen: 'start' }, '#/start'],
     [{ screen: 'new-team' }, '#/new-team'],
+    [{ screen: 'combine' }, '#/combine'],
     [{ screen: 'tab', tab: 'pharm' }, '#/pharm'],
   ])('names %j as %s', (route, hash) => {
     expect(hashForRoute(route)).toBe(hash);
-    expect(routeFromHash(hash, later)).toEqual(route);
+    expect(routeFromHash(hash, { ...later, hasDraft: true })).toEqual(route);
   });
 });

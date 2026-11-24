@@ -1,9 +1,10 @@
 import { teamColorNames, type TeamColorName } from '../design/tokens';
+import type { Draft } from '../game/draft';
 import { TEAM_LOGOS } from '../game/logos';
-import { createTeam, teamNameProblem, type NameProblem } from '../game/new-team';
+import { teamNameProblem, type NameProblem } from '../game/new-team';
 import { createRandom } from '../game/random';
 import { MAX_TEAM_NAME_LENGTH, characterCount, type Team } from '../game/teams';
-import { STORAGE_PROBLEM_TEXT, saveTeam, type KeyValueStore } from '../storage/saved-team';
+import { STORAGE_PROBLEM_TEXT } from '../storage/saved-team';
 import type { Panel } from './app-shell';
 import { el, newSeed } from './dom';
 import { START_HASH } from './routes';
@@ -11,30 +12,34 @@ import { START_HASH } from './routes';
 /**
  * The create screen (#71, wireframe 1 in docs/design.md): a team name, one of
  * the 8 colors and an emoji logo, with a preview that follows your choices.
- * Confirming saves the team with 5 generated spoofs (the combine replaces
- * them in #72) and plays it. Where the browser won't save, the screen says
+ * Since #72, **Next: the combine** takes them to the combine, where you draft
+ * your 5 spoofs; the team is saved when the draft is finished. With a draft
+ * in progress, the screen opens with its choices, so you can change them
+ * and go back to the same pool. Where the browser won't save, the screen says
  * so, and you can still play.
  *
  * The color and logo grids are radio groups, so a keyboard moves through them
  * with the arrow keys and a screen reader announces each choice.
  */
 
+/** What the create screen chooses: a draft's name, color and logo. */
+export type TeamChoices = Pick<Draft, 'name' | 'color' | 'logo'>;
+
 export interface NewTeamOptions {
-  /** The browser's storage, or null where it's missing or blocked. */
-  readonly store: KeyValueStore | null;
-  /** The team saved now, which a new team replaces. */
+  /** False where the browser's storage is missing or blocked. */
+  readonly canSave: boolean;
+  /** The team saved now, which a new team replaces when its draft is finished. */
   readonly savedTeam: Team | null;
-  /** Plays the new team; `saved` says whether it was kept. */
-  readonly onCreated: (team: Team, saved: boolean) => void;
+  /** The draft in progress, whose choices the screen starts with, or null. */
+  readonly draft: Draft | null;
+  /** Goes on to the combine with these choices (spaces trimmed from the name). */
+  readonly onNext: (choices: TeamChoices) => void;
 }
 
 const NAME_PROBLEM_TEXT: Readonly<Record<NameProblem, string>> = {
   empty: 'Your team needs a name.',
   long: `A name can be up to ${String(MAX_TEAM_NAME_LENGTH)} characters.`,
 };
-
-/** Shown under the form when the team can't be kept, after the storage problem's own text. */
-const PLAY_ANYWAY_TEXT = 'You can still play it now.';
 
 function colorLabel(name: TeamColorName): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
@@ -67,7 +72,7 @@ function pickAtRandom<T>(items: readonly T[]): T {
   return random.pick(items);
 }
 
-export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOptions): Panel {
+export function createNewTeamScreen({ canSave, savedTeam, draft, onNext }: NewTeamOptions): Panel {
   fieldIds += 1;
   const id = (name: string) => `new-team-${name}-${String(fieldIds)}`;
 
@@ -90,6 +95,7 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
   // A guard against pasting a page of text; the 16-character rule is checked
   // separately, since an emoji can take several of these.
   nameInput.maxLength = MAX_TEAM_NAME_LENGTH * 4;
+  if (draft) nameInput.value = draft.name;
   const nameHint = el('p', 'field-hint');
   nameHint.id = id('name-hint');
   const nameCount = el('span', 'field-count');
@@ -103,7 +109,7 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
   // --- Color --------------------------------------------------------------
   const colorSet = el('fieldset', 'field choice-grid color-grid');
   colorSet.append(el('legend', 'field-label', 'Color'));
-  const firstColor = pickAtRandom(teamColorNames);
+  const firstColor = draft?.color ?? pickAtRandom(teamColorNames);
   const colorInputs = teamColorNames.map((name) => {
     const dot = el('span', 'color-dot');
     dot.style.setProperty('--dot', `var(--team-${name})`);
@@ -116,7 +122,7 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
   // --- Logo ---------------------------------------------------------------
   const logoSet = el('fieldset', 'field choice-grid logo-grid');
   logoSet.append(el('legend', 'field-label', 'Logo'));
-  const firstLogo = pickAtRandom(TEAM_LOGOS);
+  const firstLogo = draft?.logo ?? pickAtRandom(TEAM_LOGOS);
   const logoInputs = TEAM_LOGOS.map((logo) => {
     const face = el('span', 'logo-face', logo);
     // The emoji's own name is what a screen reader says for it.
@@ -146,8 +152,12 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
   const replacesAgain = el('p', 'field-hint field-warning');
   if (savedTeam) {
     const saved = el('strong', undefined, `${savedTeam.logo} ${savedTeam.name}`);
-    replaces.append('Creating a team replaces your saved team, ', saved, '.');
-    replacesAgain.textContent = `This replaces ${savedTeam.name}.`;
+    replaces.append(
+      'When you finish the draft, your new team replaces your saved team, ',
+      saved,
+      '.',
+    );
+    replacesAgain.textContent = `Finishing the draft replaces ${savedTeam.name}.`;
     form.setAttribute('aria-describedby', replaces.id);
   } else {
     replaces.hidden = true;
@@ -156,21 +166,15 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
   const actions = el('div', 'form-actions');
   const back = el('a', 'button', 'Back');
   back.href = START_HASH;
-  const submit = el('button', 'button button-primary', 'Create team');
+  const submit = el('button', 'button button-primary', 'Next: the combine');
   submit.type = 'submit';
   actions.append(back, submit);
 
   form.append(nameField, colorSet, logoSet, preview, storageNotice, replacesAgain, actions);
   element.append(heading, replaces, form);
 
-  /** A team that couldn't be saved, waiting for "Play anyway". */
-  let unsaved: Team | null = null;
-
-  function setStorageNotice(text: string | null): void {
-    storageNotice.textContent = text ?? '';
-    storageNotice.hidden = text === null;
-  }
-  setStorageNotice(store ? null : STORAGE_PROBLEM_TEXT.unavailable);
+  storageNotice.textContent = canSave ? '' : STORAGE_PROBLEM_TEXT.unavailable;
+  storageNotice.hidden = canSave;
 
   const checked = (inputs: readonly HTMLInputElement[]) => inputs.find((i) => i.checked)?.value;
   const color = () => (checked(colorInputs) ?? firstColor) as TeamColorName;
@@ -193,12 +197,6 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
     previewLogo.textContent = logo();
     previewName.textContent = name || 'Your team';
     previewName.classList.toggle('is-placeholder', name === '');
-    // A change after a failed save makes a new team, so the offer to play the old one goes.
-    if (unsaved) {
-      unsaved = null;
-      submit.textContent = 'Create team';
-      setStorageNotice(store ? null : STORAGE_PROBLEM_TEXT.unavailable);
-    }
   }
 
   form.addEventListener('input', update);
@@ -210,87 +208,15 @@ export function createNewTeamScreen({ store, savedTeam, onCreated }: NewTeamOpti
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    if (unsaved) {
-      onCreated(unsaved, false);
-      return;
-    }
     const problem = teamNameProblem(nameInput.value);
     showNameProblem(problem);
     if (problem) {
       nameInput.focus();
       return;
     }
-    if (savedTeam) confirmReplace.open(nameInput.value.trim());
-    else createAndPlay();
+    onNext({ name: nameInput.value.trim(), color: color(), logo: logo() });
   });
-
-  /** Makes the team from the form, saves it, and plays it. */
-  function createAndPlay(): void {
-    const team = createTeam(
-      { name: nameInput.value, color: color(), logo: logo() },
-      createRandom(newSeed()),
-    );
-    const result = saveTeam(store, team);
-    if (result.ok) {
-      onCreated(team, true);
-      return;
-    }
-    // No storage at all: the notice has said so from the start, so just play.
-    if (!store) {
-      onCreated(team, false);
-      return;
-    }
-    unsaved = team;
-    setStorageNotice(`${STORAGE_PROBLEM_TEXT[result.problem]} ${PLAY_ANYWAY_TEXT}`);
-    submit.textContent = 'Play anyway';
-  }
-
-  const confirmReplace = replaceDialog(savedTeam, createAndPlay);
-  element.append(confirmReplace.element);
 
   update();
   return { element, heading };
-}
-
-/**
- * The last check before a new team replaces your saved one (the owner, #71
- * QA). A modal `<dialog>`: the browser keeps focus inside it, and Escape or
- * "Keep" closes it with nothing changed. "Keep" has focus first, so a stray
- * Enter doesn't replace anything.
- */
-function replaceDialog(savedTeam: Team | null, onReplace: () => void) {
-  const element = el('dialog', 'confirm-dialog');
-  const title = el('h2', 'confirm-title');
-  title.id = `${element.className}-title-${String(fieldIds)}`;
-  const body = el('p', 'confirm-body');
-  body.id = `${element.className}-body-${String(fieldIds)}`;
-  element.setAttribute('aria-labelledby', title.id);
-  element.setAttribute('aria-describedby', body.id);
-  const actions = el('div', 'confirm-actions');
-  const keep = el('button', 'button');
-  keep.type = 'button';
-  const replace = el('button', 'button button-primary', 'Replace team');
-  replace.type = 'button';
-  actions.append(keep, replace);
-  element.append(title, body, actions);
-
-  keep.addEventListener('click', () => {
-    element.close();
-  });
-  replace.addEventListener('click', () => {
-    element.close();
-    onReplace();
-  });
-
-  return {
-    element,
-    open(newName: string): void {
-      if (!savedTeam) return;
-      title.textContent = `Replace ${savedTeam.name}?`;
-      body.textContent = `${newName} will take the place of your saved team, ${savedTeam.logo} ${savedTeam.name}, and its spoofs. This can't be undone.`;
-      keep.textContent = `Keep ${savedTeam.name}`;
-      element.showModal();
-      keep.focus();
-    },
-  };
 }

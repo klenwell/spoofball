@@ -536,11 +536,11 @@ body {
 /* --- Your team (#71): the header badge, the splash and create screens ---- */
 
 /* The splash and create screens have no tab bar, so no room is kept for it. */
-.app:is([data-screen='start'], [data-screen='new-team']) {
+.app:is([data-screen='start'], [data-screen='new-team'], [data-screen='combine']) {
   padding-bottom: 0;
 }
 
-.app:is([data-screen='start'], [data-screen='new-team']) .tab-bar {
+.app:is([data-screen='start'], [data-screen='new-team'], [data-screen='combine']) .tab-bar {
   display: none;
 }
 
@@ -882,8 +882,190 @@ a.button {
   padding-inline: var(--space-4);
 }
 
+/* --- The combine (#72): candidates warming up, and your picks ------------ */
+
+.combine {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.combine-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.combine .screen-title:focus {
+  outline: none;
+}
+
+.combine-counter {
+  margin: 0;
+  font-family: var(--font-numeric);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.combine-intro {
+  margin: 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.combine-budget {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* 3 cells a row on a phone, 5 on wider screens (below). */
+.combine-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combine-item {
+  min-width: 0;
+}
+
+/* A candidate's cell: its warm-up, name and price. A button that picks or unpicks it. */
+.combine-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 6px 4px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.combine-cell:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Picked: outlined in the accent, as in wireframe 2, and a check by the price. */
+.combine-cell.is-picked {
+  border-color: var(--color-accent-text);
+  box-shadow: inset 0 0 0 2px var(--color-accent-text);
+}
+
+.combine-cell.is-picked .combine-price::after {
+  content: ' ✓';
+  color: var(--color-accent-text);
+}
+
+/* More than you have left, or the team is full: the price fades; the warm-up still shows. */
+.combine-cell.is-out-of-reach .combine-price {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.combine-canvas {
+  display: block;
+}
+
+.combine-name {
+  max-width: 100%;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.combine-price {
+  font-family: var(--font-numeric);
+  font-size: var(--text-sm);
+}
+
+.combine-message {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.combine-picks-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.combine-pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.combine-pick {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+}
+
+.combine-pick.is-empty {
+  padding: 0 var(--space-3);
+  border: 1px dashed var(--color-text-muted);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+
+.combine-pick-disc {
+  flex: none;
+}
+
+.combine-pick-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.combine-pick-price {
+  flex: none;
+  font-family: var(--font-numeric);
+}
+
+.combine-pick-remove {
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-lg);
+  cursor: pointer;
+}
+
+.combine-pick-remove:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.combine .button[aria-disabled='true'] {
+  opacity: 0.6;
+}
+
 /* Wider screens: the tabs move into the header, as a top bar. */
 @media (min-width: 48rem) {
+  .combine-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
   .app {
     padding-bottom: 0;
   }
