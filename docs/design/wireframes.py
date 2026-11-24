@@ -139,10 +139,10 @@ def draft():
     a.button(16, 540, W - 32, 'Next: the combine')
 
     b = Frame('2 · Combine: warm-ups')
-    b.header('Combine', 'Watch them move. Pick 5.')
+    b.header('Combine', 'Watch them move. Pick 5 within budget.')
     b.text(W - 16, 36, '2 / 5', size=16, anchor='end', weight=700)
-    cols, rows, r = 3, 5, 26
-    for i in range(cols * rows):
+    cols, rows, r = 3, 4, 26
+    for i in range(10):
         cx = 78 + (i % cols) * 72
         cy = 98 + (i // cols) * 66
         picked = i in (2, 9)
@@ -151,11 +151,11 @@ def draft():
         sx, sy = cx + 9 * math.cos(ang), cy + 9 * math.sin(ang)
         b.line(sx - 12 * math.cos(ang), sy - 12 * math.sin(ang), sx, sy, color=LIGHT, width=2, dash=True)
         b.spoof(sx, sy, 5 + (i % 4), solid=True)
-    b.note(446, 'each cell: one candidate moving on its own (no numbers)')
-    b.note(461, 'tap a cell for drills · 15 candidates')
+    b.note(446, 'each cell: one candidate moving on its own, its name and price')
+    b.note(461, 'tap a cell to pick · 10 candidates · budget 250')
     for i in range(5):
         b.circle(58 + i * 46, 498, 15, fill=FILL if i > 1 else INK, stroke=LIGHT if i > 1 else INK, dash=i > 1)
-    b.button(16, 534, W - 32, 'Done (needs 5)', primary=False)
+    b.button(16, 534, W - 32, 'Done', primary=False)
 
     c = Frame('3 · Combine: drills')
     c.header('Drills', '< Back to warm-ups')

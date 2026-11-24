@@ -77,6 +77,7 @@ These were chosen by the owner from a set of mockup comparisons.
    - **This is stricter than the prototype.** The prototype never showed skills, but its Pharm roster showed each spoof's 5 comps as "spangles": a circle per comp, sized and colored from red to green by its value, with an icon (`CompSpangle` in `public/js/app/models/rook.js`). There were no numbers, but you could read them at a glance.
    - Spoof cards and stats show only the avatar and **outcomes**: matches and scrums played, points, points per scrum, and +/− per scrum (team points minus opponent points while that spoof played, from the prototype's stats page).
    - **Why:** the game should reward intuition and watching, not number-crunching.
+   - **A price is the one number the combine shows** (#72, the owner, 2026-11-23). It's a rough, deliberately noisy hint of a candidate's raw skill total, never of a single skill, and it doesn't reflect which skills a spoof has.
 8. **The draft is a combine,** modeled on the NFL Scouting Combine (the owner's idea on #20).
    - **Warm-ups:** every candidate moves on its own in a small round cell, so you can scan the pool like a scout.
    - **Drills:** tap a spoof to open a small drill court with 2–3 short drills, such as _sprint_ (dash across and back), _blow_ (grow from its smallest size) and _hold_ (stay in the mosh while a dummy pushes). Each is a few seconds, with no numbers.
@@ -93,7 +94,7 @@ Low-fidelity phone sketches (#20), to guide the epics that build each screen. Th
 ![Draft (New Team) wireframes](design/wireframe-draft.svg)
 
 1. **Your team:** a name (up to 16 characters, as in the prototype), one of the 8 colors, and an emoji logo, with a preview.
-2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell. Picked cells are outlined, and a strip at the bottom fills to 5.
+2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell, with its name and price. Picked cells are outlined, and a strip at the bottom fills to 5, with the budget left (#72).
 3. **Drills:** sprint, blow and hold tabs on a small court. "Draft this spoof" or "Next candidate".
 
 There's no tab bar until the team exists. On desktop, the warm-up grid widens to more columns and the drill court opens beside it.
@@ -186,11 +187,19 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 
 ### Draft (New Team)
 
-- **Spoofs have names** (#28). A name is a playful word and a first name, such as "Dizzy Gus": up to 16 characters, different from every other on its team, ignoring case, and with no word used twice on a team. Every spoof gets one when it's made, computer teams' included, from the same seed as its skills. It shows on the scrum result and the match scorecard, and the combine shows it when it arrives. The word lists are in `src/game/spoof-names.ts`, for the owner's review. You can rename a spoof when you draft it (#72), and later in Pharm.
+- **Spoofs have names** (#28). A name is a playful word and a first name, such as "Dizzy Gus": up to 16 characters, different from every other on its team, ignoring case, and with no word used twice on a team. Every spoof gets one when it's made, computer teams' included, from the same seed as its skills. It shows on the scrum result, the match scorecard and the combine. The word lists are in `src/game/spoof-names.ts`, for the owner's review. You can rename a spoof when you draft it (#72), and later in Pharm.
 - **The team logo comes from a curated set of 24 emoji,** shown as a grid (the owner picked them on #77 and #71). Computer teams draw from the same set.
 - **The game opens on a splash screen** when there's no saved team (#71): **Create your team**, or a quick start, **Play as Spoofs**, which saves nothing. The **Spoofs** (👻, blue) are the default team, the Comets until v0.2.0. The header shows the team in play and links back to the splash screen to switch.
-- **Until the combine (#72), a new team gets 5 generated spoofs,** as the prototype's new teams did (`Team.new`): 2,640 skill points shared out, 2 pawns on the smallest shares, 1 other type on the largest, and 2 of any type. Unlike the prototype, they keep the roster rules (at most 1 royal, at most 2 of each face type).
-- **The combine has 15 candidates** (3 per pick), drawn with the prototype's type odds. It was 18 for a 6-spoof team; #44 made teams 5. (The prototype never used its type odds in play: it drew types evenly. See #43.)
+- **A new team is drafted in the combine** (#72). The create screen's **Next: the combine** opens it, and **Done** saves the team and plays it. If it replaces your saved team, the last check comes at Done. A draft in progress is saved as it changes, so a reload brings back the same pool and picks. Until #72, a new team got 5 generated spoofs, as the prototype's `Team.new` did.
+- **The combine has 10 candidates** for your 5 picks (the owner, 2026-11-23, on #69). It was 15 in the first plan, and 18 for a 6-spoof team before #44 made teams 5. Types are drawn with the prototype's type odds. (The prototype never used its type odds in play: it drew types evenly. See #43.)
+- **A price and a budget, instead of roster limits** (the owner, on #69 and #72). The prototype's limits (at most 1 royal, at most 2 of each face type) don't apply.
+  - **The budget is 250 coins** for all 5. Every pool's prices add up to twice that, 500, so a pool of average spoofs costs about the budget for 5, and the 5 cheapest always fit.
+  - **A price is 1 to 100 coins.** It follows the candidate's raw skill total, never which skills it has, plus a jitter. So two spoofs with the same total cost about the same even if one plays far better: spotting the bargains is your strategy and skill.
+  - **Strength is spread wider** than a new team's: each candidate's total is drawn evenly within ±75 of 528 a spoof, within its type's limits.
+  - **The jitter** is about 12 coins. Over 400 seeded pools, the cheaper of two candidates has more skill points 13% of the time.
+  - These are the starting values; the owner settles the budget, spread and jitter in #72's review round.
+- **You can rename a spoof as you draft it,** up to 16 characters, unlike any other name in the pool.
+- **Warm-ups:** each candidate wanders alone in a small round cell, by the match's own movement rules (thinking, dashing, skidding, bouncing). It doesn't tire or grow there.
 - **Three drills:** _sprint_ (hints at burst and stamina), _blow_ (growth and size) and _hold_ (mass and constancy). Each takes about 3 seconds, can be rerun, and varies a little each time. Iq, vision, charisma and cooperation show only in matches.
 
 ### Pharm
@@ -199,7 +208,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - A team starts with 3 picks and can hold at most 3. It gets one back after each loss.
   - Replacing happens between matches. You choose from **3 prospects**, scouted with the same warm-ups and drills, and prospects you pass on stay for next time.
   - Keep the prototype's balance rules: a prospect's skill total is based on your weakest spoof, and a team holds at most 1 royal (king or queen) and 2 of each face type (rook, bishop, knight).
-- **Re-drafting** runs a full 15-spoof combine. It keeps the team's name, color and logo, but **resets its record and stats, after a clear warning.**
+- **Re-drafting** runs a full combine (10 candidates since #72). It keeps the team's name, color and logo, but **resets its record and stats, after a clear warning.**
 
 ### Stats
 

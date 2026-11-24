@@ -101,7 +101,7 @@ What a player gets: **create and draft your own team, play matches, and see stat
 
 - **Epic 3, `draft`, Draft (New Team)** (named `expansion` until #69, 2026-11-23):
   - create a team (name, color, emoji logo);
-  - draft 5 spoofs from a generated pool of 15 through **the combine**: candidates show their hidden abilities by moving, in warm-ups and drills, with no numbers (see [design](../design.md)). The combine reuses the Match epic's simulation;
+  - draft 5 spoofs from a generated pool of 10 through **the combine**, within a budget: candidates show their hidden abilities by moving, in warm-ups and drills, and the only number is each one's price (#72; see [design](../design.md)). The combine reuses the Match epic's simulation;
   - save locally;
   - play your team against a generated opponent.
 - **Epic 4, `stats`:** record team and spoof stats for each match. A stats screen shows the team record and a line for each spoof. History survives a reload.
