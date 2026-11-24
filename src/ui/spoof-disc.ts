@@ -60,7 +60,8 @@ function traceShape(ctx: CanvasRenderingContext2D, shape: MarkShape, scale: numb
       ctx.stroke();
       return;
     case 'polygon':
-    case 'line': {
+    case 'line':
+    case 'cut': {
       shape.points.forEach(([px, py], i) => {
         if (i === 0) ctx.moveTo(px * scale, py * scale);
         else ctx.lineTo(px * scale, py * scale);
@@ -109,7 +110,11 @@ function drawBody(
   ctx.strokeStyle = kit.mark;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (const shape of marks[mark]) traceShape(ctx, shape, radius);
+  for (const shape of marks[mark]) {
+    // A cut is drawn in the disc's fill, as a gap through the mark.
+    ctx.strokeStyle = shape.kind === 'cut' ? kit.fill : kit.mark;
+    traceShape(ctx, shape, radius);
+  }
 }
 
 /**

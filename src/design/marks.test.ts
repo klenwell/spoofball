@@ -28,6 +28,14 @@ describe('shapeExtent', () => {
     expect(shapeExtent({ kind: 'ring', cx: 0, cy: 0, r: 0.3, width: 0.1 })).toBeCloseTo(0.35);
   });
 
+  it('includes half the width of a cut, like a line', () => {
+    const points = [
+      [0, 0],
+      [0, 0.4],
+    ] as const;
+    expect(shapeExtent({ kind: 'cut', points, width: 0.1 })).toBeCloseTo(0.45);
+  });
+
   it('uses the farthest vertex of a polygon', () => {
     const points = [
       [0, -0.5],

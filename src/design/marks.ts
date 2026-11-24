@@ -6,8 +6,10 @@ import type { MarkName } from '../game/spoof-types';
  * renderer scales them to any disc size, so a refined shape can replace a
  * definition here without touching the drawing code.
  *
- * Filled shapes use the kit's mark color. Stroked shapes (`ring`, `line`)
- * carry their own width, also in disc units.
+ * Filled shapes use the kit's mark color. Stroked shapes (`ring`, `line`,
+ * `cut`) carry their own width, also in disc units. A `cut` is stroked in
+ * the disc's fill color, so it shows as a gap through the shapes drawn
+ * before it, such as the line that sets off the glove's thumb.
  */
 
 export type Point = readonly [number, number];
@@ -16,7 +18,9 @@ export type MarkShape =
   | { kind: 'polygon'; points: readonly Point[] }
   | { kind: 'circle'; cx: number; cy: number; r: number }
   | { kind: 'ring'; cx: number; cy: number; r: number; width: number }
-  | { kind: 'line'; points: readonly Point[]; width: number };
+  | { kind: 'line'; points: readonly Point[]; width: number }
+  /** A line in the disc's own color, cutting a gap through the shapes before it. */
+  | { kind: 'cut'; points: readonly Point[]; width: number };
 
 /** Marks must stay inside this radius, clear of the disc's trim. */
 export const MARK_SAFE_RADIUS = 0.62;
@@ -66,15 +70,6 @@ function lemniscate(width: number, height: number, steps = 32): Point[] {
     const d = 1 + Math.sin(t) ** 2;
     return [(width * Math.cos(t)) / d, (height * 2 * Math.sin(t) * Math.cos(t)) / d];
   });
-}
-
-/** How far the glove leans clockwise, in degrees. */
-const GLOVE_TILT = 12;
-
-/** A circle's center, tilted with the glove. */
-function at(x: number, y: number): { cx: number; cy: number } {
-  const [[cx, cy]] = turned([[x, y]], GLOVE_TILT) as [Point];
-  return { cx, cy };
 }
 
 /**
@@ -205,15 +200,59 @@ export const marks: Record<MarkName, readonly MarkShape[]> = {
   ],
   // A five-point star.
   star: [{ kind: 'polygon', points: star(5, 0.47, 0.2) }],
-  // A boxing glove, tilted a little clockwise (the owner, on #74): a tall
-  // mitt, the thumb bulging on the left, and a wide cuff joined below. The
-  // cuff is nearly as wide as the mitt, so it doesn't read as the bulb's
-  // narrow base. It replaced a raised fist, which blurred when small.
+  // A boxing glove, traced from the owner's sample (#74): a big rounded
+  // mitt reaching up and to the left, the thumb on its right set off by a
+  // curved cut, and the cuff at the lower right, apart from the mitt.
   glove: [
-    { kind: 'circle', ...at(0.06, -0.2), r: 0.27 },
-    { kind: 'circle', ...at(0.06, -0.04), r: 0.27 },
-    { kind: 'circle', ...at(-0.22, 0.02), r: 0.15 },
-    { kind: 'polygon', points: turned(box(-0.2, 0.1, 0.3, 0.45), GLOVE_TILT) },
+    {
+      kind: 'polygon',
+      points: [
+        [0.079, -0.47],
+        [-0.005, -0.511],
+        [-0.125, -0.533],
+        [-0.245, -0.523],
+        [-0.353, -0.48],
+        [-0.437, -0.403],
+        [-0.49, -0.307],
+        [-0.518, -0.187],
+        [-0.514, -0.067],
+        [-0.473, 0.041],
+        [-0.389, 0.137],
+        [-0.269, 0.221],
+        [-0.125, 0.293],
+        [-0.005, 0.334],
+        [0.355, -0.019],
+        [0.36, -0.139],
+        [0.343, -0.259],
+        [0.302, -0.343],
+        [0.235, -0.403],
+        [0.163, -0.432],
+        [0.115, -0.439],
+      ],
+    },
+    {
+      kind: 'polygon',
+      points: [
+        [0.379, 0.01],
+        [0.475, 0.101],
+        [0.523, 0.173],
+        [0.511, 0.233],
+        [0.307, 0.497],
+        [0.235, 0.521],
+        [0.163, 0.497],
+        [0.024, 0.358],
+      ],
+    },
+    {
+      kind: 'cut',
+      width: 0.06,
+      points: [
+        [0.091, -0.48],
+        [0.11, -0.403],
+        [0.137, -0.331],
+        [0.163, -0.271],
+      ],
+    },
   ],
   // A diamond (♦), taller than wide. The bishop's mark before #74.
   diamond: [
@@ -275,6 +314,7 @@ export function shapeExtent(shape: MarkShape): number {
     case 'polygon':
       return Math.max(...shape.points.map(([x, y]) => Math.hypot(x, y)));
     case 'line':
+    case 'cut':
       return Math.max(...shape.points.map(([x, y]) => Math.hypot(x, y))) + shape.width / 2;
   }
 }
