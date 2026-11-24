@@ -50,6 +50,24 @@ describe('stepWarmUp', () => {
     expect(quick).toBeGreaterThan(slow * 2);
   });
 
+  it('shows iq: a bright spoof picks new spots far more often than a dim one', () => {
+    // Each thought picks a new spot to head for, so count the new goals.
+    const thoughts = (spoof: Spoof) => {
+      let warmUp: WarmUp = startWarmUp(spoof, TEST_SEED);
+      let count = 0;
+      for (let i = 0; i < FRAMES_PER_SCRUM * 4; i += 1) {
+        const next = stepWarmUp(warmUp);
+        if (next.goal !== null && next.goal !== warmUp.goal) count += 1;
+        warmUp = next;
+      }
+      return count;
+    };
+    const bright = thoughts(spoofWith({ iq: 90 }));
+    const dim = thoughts(spoofWith({ iq: 15 }));
+    expect(dim).toBeGreaterThan(0);
+    expect(bright).toBeGreaterThan(dim * 3);
+  });
+
   it('comes from its seed: the same seed, the same warm-up', () => {
     const spoof = spoofWith({});
     expect(run(spoof, 200, 7)).toEqual(run(spoof, 200, 7));

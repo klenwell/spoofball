@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TEST_SEED } from '../test-support/random';
+import { createRandom } from './random';
 import {
   COMBINE_TYPE_ODDS,
   DEFAULT_POOL_TUNING,
@@ -11,8 +12,8 @@ import {
   POOL_SIZE,
   POOL_VALUE,
   createPool,
+  drawPoolType,
   scalePrices,
-  type Candidate,
 } from './combine';
 import { minimumTotal, skillTotal, typeProfiles } from './skills';
 import { spoofTypes } from './spoof-types';
@@ -24,15 +25,6 @@ function manyPools(count = 300, tuning = DEFAULT_POOL_TUNING) {
 }
 
 const sum = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0);
-
-/**
- * 1,000 pools, made once and shared by the two tests that count types. Making
- * 4,000 for one test ran past the 5-second test timeout on CI, which runs
- * about 1.5 times slower than a laptop. 1,000 is plenty: the counts come out
- * within 0.002 of what 2,000 pools give.
- */
-let typeCountPools: Candidate[][] | undefined;
-const poolsForTypeCounts = () => (typeCountPools ??= manyPools(1000));
 
 describe('createPool', () => {
   it(`draws ${String(POOL_SIZE)} named candidates with ids p1 to p${String(POOL_SIZE)}, no two named alike`, () => {
@@ -87,7 +79,9 @@ describe('createPool', () => {
   });
 
   it("draws types with the combine's odds: about 4 or 5 pawns a pool, and often a second royal", () => {
-    const pools = poolsForTypeCounts();
+    // 1,000 pools: plenty, within 0.002 of 2,000. Making 4,000 ran past the
+    // 5-second test timeout on CI, which runs about 1.5 times slower than a laptop.
+    const pools = manyPools(1000);
     const count = (pred: (t: string) => boolean) =>
       pools.map((pool) => pool.filter((c) => pred(c.spoof.type)).length);
     const pawns = count((t) => t.startsWith('pawn'));
@@ -100,20 +94,33 @@ describe('createPool', () => {
     expect(royals.filter((r) => r >= 2).length / pools.length).toBeGreaterThan(0.2);
   });
 
-  it("draws the first candidate, before any limit applies, with the combine's odds", () => {
+  it("draws a type with the combine's odds, before any limit applies", () => {
+    // Sampled straight from the draw, so it's quick and tight: 20,000 draws
+    // put one standard error at about 0.003, so a share off by 0.01 fails,
+    // which tells even the pawn subtypes apart (the review on #80).
+    const draws = 20000;
     const counts = Object.fromEntries(spoofTypes.map((t) => [t, 0])) as Record<string, number>;
-    const pools = poolsForTypeCounts();
-    for (const pool of pools) {
-      const first = pool[0]?.spoof.type ?? 'king';
-      counts[first] = (counts[first] ?? 0) + 1;
+    const random = createRandom(TEST_SEED);
+    for (let n = 0; n < draws; n += 1) {
+      const type = drawPoolType(random, [], POOL_SIZE);
+      counts[type] = (counts[type] ?? 0) + 1;
     }
+    // The owner's odds on #72 (2026-11-23), written out so a change to them shows here.
+    expect(COMBINE_TYPE_ODDS).toEqual({
+      king: 5,
+      queen: 5,
+      rook: 13,
+      bishop: 13,
+      knight: 14,
+      'pawn-basic': 23,
+      'pawn-noble': 15,
+      'pawn-angry': 12,
+    });
     const odds = sum(spoofTypes.map((t) => COMBINE_TYPE_ODDS[t]));
     expect(odds).toBe(100);
     for (const type of spoofTypes) {
-      expect((counts[type] ?? 0) / pools.length, type).toBeCloseTo(
-        COMBINE_TYPE_ODDS[type] / odds,
-        1,
-      );
+      const share = (counts[type] ?? 0) / draws;
+      expect(Math.abs(share - COMBINE_TYPE_ODDS[type] / odds), type).toBeLessThan(0.01);
     }
   });
 

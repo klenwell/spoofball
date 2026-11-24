@@ -86,7 +86,7 @@ const isRoyal = (type: SpoofType) => type === 'king' || type === 'queen';
  * still to come. Once the pool has its most pawns, the rest are other types;
  * if the last places must hold the pool's royals, they're drawn from royals.
  */
-function drawPoolType(random: Random, drawn: readonly SpoofType[], left: number): SpoofType {
+export function drawPoolType(random: Random, drawn: readonly SpoofType[], left: number): SpoofType {
   const pawns = drawn.filter(isPawn).length;
   const royalsNeeded = MIN_POOL_ROYALS - drawn.filter(isRoyal).length;
   const options = spoofTypes.filter((type) => {
