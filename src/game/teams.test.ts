@@ -5,6 +5,7 @@ import { generateSkills, sizeToRadius, skillTotal } from './skills';
 import { TEAM_LOGOS } from './logos';
 import { drawSpoofName } from './spoof-names';
 import { drawTemperament } from './temperament';
+import { defaultMark } from './spoof-types';
 import { SPOOFS, EMBERS } from './preset-teams';
 import {
   MAX_SPOOF_NAME_LENGTH,
@@ -28,6 +29,18 @@ describe('createSpoof', () => {
     ).skills;
     const spoof = createSpoof('a', 'Dizzy Gus', 'king', skills);
     expect(spoof.radius).toBe(sizeToRadius(skills.size));
+  });
+});
+
+describe('a spoof mark (#74)', () => {
+  it("is its type's default unless it's given one", () => {
+    const skills = generateSkills('rook', NEW_SPOOF_SKILL_TOTAL, createRandom(TEST_SEED));
+    expect(createSpoof('a', 'Dizzy Gus', 'rook', skills).mark).toBe('mallet');
+    expect(createSpoof('a', 'Dizzy Gus', 'rook', skills, 1, 'heart').mark).toBe('heart');
+  });
+
+  it("is a computer team's spoofs' type marks", () => {
+    for (const spoof of EMBERS.spoofs) expect(spoof.mark).toBe(defaultMark(spoof.type));
   });
 });
 
@@ -166,6 +179,8 @@ describe('teamProblems', () => {
       teamProblems(withSpoof({ ...first, skills: { ...first.skills, iq: Number.NaN } })),
     ).not.toEqual([]);
     expect(teamProblems(withSpoof({ ...first, radius: first.radius + 1 }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, mark: 'skull' as Spoof['mark'] }))).not.toEqual([]);
+    expect(teamProblems(withSpoof({ ...first, mark: 'heart' }))).toEqual([]);
     expect(teamProblems(withSpoof({ ...first, temperament: 0 }))).not.toEqual([]);
     expect(teamProblems(withSpoof({ ...first, temperament: 0.09 }))).not.toEqual([]);
     expect(teamProblems(withSpoof({ ...first, temperament: 2.01 }))).not.toEqual([]);

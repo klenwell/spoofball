@@ -3,6 +3,7 @@ import { TEST_SEED } from '../test-support/random';
 import { DRAFT_BUDGET, createPool } from './combine';
 import {
   budgetLeft,
+  chooseMark,
   draftPool,
   draftProblem,
   draftedTeam,
@@ -14,6 +15,7 @@ import {
   togglePick,
   type Draft,
 } from './draft';
+import { defaultMark, type MarkName } from './spoof-types';
 import { teamProblems } from './teams';
 
 const choices = { name: ' Night Owls ', color: 'teal' as const, logo: '🦉' };
@@ -42,6 +44,7 @@ describe('startDraft', () => {
       seed: TEST_SEED,
       picks: [],
       renames: {},
+      marks: {},
     });
   });
 });
@@ -141,6 +144,43 @@ describe('renaming', () => {
   });
 });
 
+describe('chooseMark (#74)', () => {
+  it("gives a candidate any of the 16 marks, wherever it's drawn", () => {
+    const draft = newDraft();
+
+    const marked = chooseMark(draft, draftPool(draft), 'p1', 'heart');
+
+    expect(marked.marks).toEqual({ p1: 'heart' });
+    expect(draftPool(marked).find((c) => c.spoof.id === 'p1')?.spoof.mark).toBe('heart');
+  });
+
+  it("leaves the others wearing their types' marks", () => {
+    const draft = newDraft();
+    const marked = chooseMark(draft, draftPool(draft), 'p1', 'heart');
+
+    for (const c of draftPool(marked).filter((c) => c.spoof.id !== 'p1')) {
+      expect(c.spoof.mark).toBe(defaultMark(c.spoof.type));
+    }
+  });
+
+  it('lets two spoofs wear the same mark: no block (the owner, 2026-11-24)', () => {
+    let draft = newDraft();
+    draft = chooseMark(draft, draftPool(draft), 'p1', 'bolt');
+    draft = chooseMark(draft, draftPool(draft), 'p2', 'bolt');
+
+    expect(draft.marks).toEqual({ p1: 'bolt', p2: 'bolt' });
+    expect(draftProblem(draft)).toBeNull();
+  });
+
+  it('changes nothing for a candidate not in the pool, or an unknown mark', () => {
+    const draft = newDraft();
+    const pool = draftPool(draft);
+
+    expect(chooseMark(draft, pool, 'p99', 'heart')).toBe(draft);
+    expect(chooseMark(draft, pool, 'p1', 'skull' as MarkName)).toBe(draft);
+  });
+});
+
 describe('draftedTeam', () => {
   it('is null until 5 are picked', () => {
     const four = pickAll(newDraft(), byPrice(newDraft()).slice(0, 4));
@@ -151,6 +191,7 @@ describe('draftedTeam', () => {
   it('makes a valid team from your choices and your picks, in pick order, renames and all', () => {
     let draft = pickAll(newDraft(), byPrice(newDraft()).slice(0, 5).reverse());
     draft = renameCandidate(draft, draftPool(draft), draft.picks[0] ?? '', 'Hoot');
+    draft = chooseMark(draft, draftPool(draft), draft.picks[1] ?? '', 'anchor');
 
     const team = draftedTeam(draft);
 
@@ -158,6 +199,7 @@ describe('draftedTeam', () => {
     expect(team?.name).toBe('Night Owls');
     expect(team?.spoofs.map((s) => s.id)).toEqual(draft.picks);
     expect(team?.spoofs[0]?.name).toBe('Hoot');
+    expect(team?.spoofs[1]?.mark).toBe('anchor');
   });
 });
 
@@ -184,6 +226,8 @@ describe('draftProblem', () => {
     ['a rename not in the pool', { renames: { p99: 'Hoot' } }],
     ['a rename too long', { renames: { p1: 'A'.repeat(17) } }],
     ['a rename with spaces at the end', { renames: { p1: 'Hoot ' } }],
+    ['a mark not in the pool', { marks: { p99: 'heart' } }],
+    ['an unknown mark', { marks: { p1: 'skull' as MarkName } }],
   ])('finds %s', (_what, change) => {
     expect(draftProblem({ ...valid, ...change })).not.toBeNull();
   });

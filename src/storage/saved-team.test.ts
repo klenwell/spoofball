@@ -12,7 +12,15 @@ import {
   saveDraft,
   saveTeam,
 } from './saved-team';
-import { draftPool, renameCandidate, startDraft, togglePick, type Draft } from '../game/draft';
+import {
+  chooseMark,
+  draftPool,
+  renameCandidate,
+  startDraft,
+  togglePick,
+  type Draft,
+} from '../game/draft';
+import { defaultMark } from '../game/spoof-types';
 import { TEST_SEED } from '../test-support/random';
 
 /** A saved record's JSON, from a team as `saveTeam` would write it. */
@@ -36,6 +44,7 @@ interface LooseRecord {
       type: string;
       skills: Partial<Record<string, number>>;
       temperament?: unknown;
+      mark?: unknown;
     }[];
   };
 }
@@ -68,9 +77,9 @@ describe('saveTeam and loadTeam', () => {
     saveTeam(store, SPOOFS);
 
     expect([...store.items.keys()]).toEqual([STORAGE_KEY]);
-    expect(SAVE_VERSION).toBe(3);
+    expect(SAVE_VERSION).toBe(4);
     expect(JSON.parse(store.items.get(STORAGE_KEY) ?? '')).toMatchObject({
-      version: 3,
+      version: 4,
       team: { name: 'Spoofs', color: 'blue', logo: '👻' },
     });
   });
@@ -79,6 +88,32 @@ describe('saveTeam and loadTeam', () => {
     const record = JSON.parse(savedJson()) as LooseRecord;
 
     expect(record.team.spoofs.map((s) => s.name)).toEqual(SPOOFS.spoofs.map((s) => s.name));
+  });
+
+  it("save each spoof's mark, and load a chosen one back (#74)", () => {
+    const team: Team = {
+      ...SPOOFS,
+      spoofs: SPOOFS.spoofs.map((s, i) => (i === 0 ? { ...s, mark: 'glove' } : s)),
+    };
+    const store = memoryStorage();
+    saveTeam(store, team);
+    const record = JSON.parse(store.items.get(STORAGE_KEY) ?? '') as LooseRecord;
+
+    expect(record.team.spoofs.map((s) => s.mark)).toEqual(team.spoofs.map((s) => s.mark));
+    expect(loadTeam(store)).toEqual({ ok: true, team });
+  });
+
+  it("load a team saved before marks (version 3) with its types' marks, now the new defaults", () => {
+    const store = storeWith((record) => {
+      record.version = 3;
+      for (const spoof of record.team.spoofs) delete spoof.mark;
+    });
+
+    const result = loadTeam(store);
+
+    expect(result.ok && result.team.spoofs.map((s) => s.mark)).toEqual(
+      SPOOFS.spoofs.map((s) => defaultMark(s.type)),
+    );
   });
 
   it("save a spoof's radius as its size: the radius is worked out again on load", () => {
@@ -129,6 +164,7 @@ describe('loadTeam', () => {
       ['an unknown logo', () => storeWith((r) => (r.team.logo = 'X'))],
       ['4 spoofs', () => storeWith((r) => r.team.spoofs.pop())],
       ['an unknown type', () => storeWith((r) => (firstSpoof(r).type = 'jester'))],
+      ['an unknown mark', () => storeWith((r) => (firstSpoof(r).mark = 'skull'))],
       ['a name that is not text', () => storeWith((r) => ((r.team as { name: unknown }).name = 5))],
       ['a logo that is not text', () => storeWith((r) => ((r.team as { logo: unknown }).logo = 1))],
       [
@@ -285,7 +321,8 @@ describe('a draft in progress (#72)', () => {
     let draft = startDraft({ name: 'Night Owls', color: 'teal', logo: '🦉' }, TEST_SEED);
     const cheapest = [...draftPool(draft)].sort((a, b) => a.price - b.price);
     for (const c of cheapest.slice(0, 2)) draft = togglePick(draft, draftPool(draft), c.spoof.id);
-    return renameCandidate(draft, draftPool(draft), draft.picks[0] ?? '', 'Hoot');
+    draft = renameCandidate(draft, draftPool(draft), draft.picks[0] ?? '', 'Hoot');
+    return chooseMark(draft, draftPool(draft), draft.picks[1] ?? '', 'star');
   }
 
   it('saves and loads back unchanged', () => {
@@ -365,6 +402,8 @@ describe('a draft in progress (#72)', () => {
     ['an unknown color', (d) => (d.color = 'beige')],
     ['an unknown logo', (d) => (d.logo = 'X')],
     ['a pick not in the pool', (d) => (d.picks = ['p99'])],
+    ['marks that are not an object', (d) => (d.marks = ['star'])],
+    ['an unknown mark', (d) => (d.marks = { p1: 'skull' })],
   ])('ignores a saved draft with %s, and leaves it in place', (_what, edit) => {
     const store = memoryStorage();
     saveDraft(store, someDraft());

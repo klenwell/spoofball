@@ -30,7 +30,7 @@ import { EMBERS } from '../game/preset-teams';
 import type { Random } from '../game/random';
 import { liveScores, type Scores } from '../game/scoring';
 import type { ScrumEntry, ScrumFrame } from '../game/scrum';
-import { defaultMark, shownType, type SpoofType } from '../game/spoof-types';
+import { shownType, type SpoofType } from '../game/spoof-types';
 import { SCRUM_SECONDS } from '../game/spoof-motion';
 import type { Spoof, Team } from '../game/teams';
 import type { Panel } from './app-shell';
@@ -107,7 +107,7 @@ const YOU: BenchSide = 'home';
 const COMPUTER: BenchSide = 'visitor';
 const SIDES: readonly BenchSide[] = ['home', 'visitor'];
 
-function avatarName(type: SpoofType): string {
+function shownTypeName(type: SpoofType): string {
   const name = shownType(type);
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
@@ -119,7 +119,7 @@ function avatarName(type: SpoofType): string {
  */
 function spoofLabel(spoof: { readonly name: string; readonly type: SpoofType }): HTMLElement {
   const label = el('span', 'spoof-name', spoof.name);
-  label.append(el('span', 'visually-hidden', `, ${avatarName(spoof.type).toLowerCase()}`));
+  label.append(el('span', 'visually-hidden', `, ${shownTypeName(spoof.type).toLowerCase()}`));
   return label;
 }
 
@@ -140,7 +140,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
   };
   const kits = matchKits(yourTeam.color, EMBERS.color);
   const kitFor = (side: string): Kit => (side === 'home' ? kits.home : kits.visitor);
-  const typeOf = new Map(SIDES.flatMap((side) => TEAMS[side].map((s) => [s.id, s.type] as const)));
+  const markOf = new Map(SIDES.flatMap((side) => TEAMS[side].map((s) => [s.id, s.mark] as const)));
   const nameOf = (side: BenchSide) => teamOf[side].name;
 
   let status: Status = 'mise';
@@ -271,7 +271,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
           x: seat.x,
           y: seat.y,
           radius: spoof.radius,
-          mark: defaultMark(spoof.type),
+          mark: spoof.mark,
           kit: kitFor(team),
           // Tired spoofs on the bench show it, so you can choose who rests.
           fatigue: Math.min(100, fatigueOf(team, spoof.id)),
@@ -280,13 +280,13 @@ export function createMatchScreen(yourTeam: Team): Panel {
       });
     }
     for (const s of spoofs) {
-      const type = typeOf.get(s.id);
-      if (!type) continue;
+      const mark = markOf.get(s.id);
+      if (!mark) continue;
       drawSpoofInArena(c, v, {
         x: s.x,
         y: s.y,
         radius: s.radius,
-        mark: defaultMark(type),
+        mark,
         kit: kitFor(s.team),
         fatigue: Math.min(100, s.fatigue),
         highlighted: status === 'mise' && s.team === COMPUTER && s.id === justPlaced,
@@ -308,7 +308,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
       drawSpoofInArena(c, v, {
         ...pending.spot,
         radius: pending.spoof.radius,
-        mark: defaultMark(pending.spoof.type),
+        mark: pending.spoof.mark,
         kit: kitFor(YOU),
         fatigue: Math.min(100, fatigueOf(YOU, pending.spoof.id)),
       });
@@ -318,7 +318,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
     const landing = aim(hand, YOU);
     const disc = {
       radius: held.spoof.radius,
-      mark: defaultMark(held.spoof.type),
+      mark: held.spoof.mark,
       kit: kitFor(YOU),
       fatigue: Math.min(100, fatigueOf(YOU, held.spoof.id)),
     };
@@ -429,7 +429,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
       return 'Placed. Before the ring fills, you can drag it elsewhere or back to your bench.';
     }
     if (held.kind === 'picked') {
-      return `Tap the court to place ${held.spoof.name}, your ${avatarName(held.spoof.type).toLowerCase()}, or drag it there.`;
+      return `Tap the court to place ${held.spoof.name}, your ${shownTypeName(held.spoof.type).toLowerCase()}, or drag it there.`;
     }
     return 'Your turn: drag a spoof from your bench onto the court, or tap it and then a spot.';
   }
@@ -596,7 +596,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
           x: 8,
           y: 8,
           radius: 6.5,
-          mark: defaultMark(spoof.type),
+          mark: spoof.mark,
           kit: kitFor(side),
         });
         const who = el('span', 'scorecard-spoof');
@@ -678,7 +678,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
           x: 9,
           y: 9,
           radius: 7,
-          mark: defaultMark(line.type),
+          mark: line.mark,
           kit: kitFor(side),
         });
         const points =

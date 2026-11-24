@@ -320,6 +320,8 @@ export interface SpoofScrumLine {
   readonly id: string;
   readonly name: string;
   readonly type: Spoof['type'];
+  /** The mark on its disc (#74). */
+  readonly mark: Spoof['mark'];
   readonly points: number | null;
 }
 
@@ -345,6 +347,7 @@ export function scrumSummary(match: Match, n: number): ScrumSummary {
       id: m.spoof.id,
       name: m.spoof.name,
       type: m.spoof.type,
+      mark: m.spoof.mark,
       points: m.points[n] ?? null,
     }));
   return {
@@ -371,6 +374,8 @@ export interface ScorecardLine {
   readonly id: string;
   readonly name: string;
   readonly type: Spoof['type'];
+  /** The mark on its disc (#74). */
+  readonly mark: Spoof['mark'];
   readonly byScrum: readonly (number | null)[];
   readonly total: number;
 }
@@ -401,6 +406,7 @@ export function matchScorecard(match: Match): Scorecard {
       id: m.spoof.id,
       name: m.spoof.name,
       type: m.spoof.type,
+      mark: m.spoof.mark,
       byScrum: m.points,
       total: m.points.reduce<number>((a, p) => a + (p ?? 0), 0),
     })),

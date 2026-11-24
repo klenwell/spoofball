@@ -2,11 +2,13 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
 import { DRAFT_BUDGET, createPool, type Candidate } from './combine';
 import { isTeamLogo } from './logos';
 import { teamNameProblem, type NameProblem } from './new-team';
+import { markNames, type MarkName } from './spoof-types';
 import { SPOOFS_PER_TEAM, type Team } from './teams';
 
 /**
  * A draft in progress (#72): the team's name, color and logo from the create
- * screen, the pool's seed, the candidates picked so far, and any renames.
+ * screen, the pool's seed, the candidates picked so far, and any renames
+ * and marks you chose (#74).
  * It's plain data, so it's saved as it changes and a reload brings it back.
  * The rules: at most 5 picks, within the budget, and a spoof's name is 1–16
  * characters, unlike every other in the pool (so it's unique on your team).
@@ -21,18 +23,28 @@ export interface Draft {
   readonly picks: readonly string[];
   /** New names, by candidate id. */
   readonly renames: Readonly<Record<string, string>>;
+  /** Marks you chose (#74), by candidate id. The rest wear their type's. */
+  readonly marks: Readonly<Record<string, MarkName>>;
 }
 
 /** A new draft, with nothing picked. */
 export function startDraft(choices: Pick<Draft, 'name' | 'color' | 'logo'>, seed: number): Draft {
-  return { ...choices, name: choices.name.trim(), seed, picks: [], renames: {} };
+  return { ...choices, name: choices.name.trim(), seed, picks: [], renames: {}, marks: {} };
 }
 
-/** The draft's pool, with any renames applied. */
+/** The draft's pool, with any renames and chosen marks applied. */
 export function draftPool(draft: Draft): Candidate[] {
   return createPool(draft.seed).map((candidate) => {
-    const name = draft.renames[candidate.spoof.id];
-    return name === undefined ? candidate : { ...candidate, spoof: { ...candidate.spoof, name } };
+    const { id } = candidate.spoof;
+    const name = draft.renames[id];
+    const mark = draft.marks[id];
+    if (name === undefined && mark === undefined) return candidate;
+    const spoof = {
+      ...candidate.spoof,
+      ...(name === undefined ? {} : { name }),
+      ...(mark === undefined ? {} : { mark }),
+    };
+    return { ...candidate, spoof };
   });
 }
 
@@ -93,6 +105,24 @@ export function renameCandidate(
   return { ...draft, renames: { ...draft.renames, [id]: name.trim() } };
 }
 
+/**
+ * Gives a candidate a mark (#74): any of the 16, even one a teammate wears
+ * (the owner's choice: no block and no warning). An unknown mark changes nothing.
+ */
+export function chooseMark(
+  draft: Draft,
+  pool: readonly Candidate[],
+  id: string,
+  mark: MarkName,
+): Draft {
+  if (!pool.some((c) => c.spoof.id === id) || !isMarkName(mark)) return draft;
+  return { ...draft, marks: { ...draft.marks, [id]: mark } };
+}
+
+function isMarkName(value: string): value is MarkName {
+  return (markNames as readonly string[]).includes(value);
+}
+
 /** True once 5 are picked: the team can be finished. */
 export function isDraftComplete(draft: Draft): boolean {
   return draft.picks.length === SPOOFS_PER_TEAM;
@@ -130,6 +160,10 @@ export function draftProblem(draft: Draft): string | null {
   for (const [id, name] of Object.entries(draft.renames)) {
     if (!ids.has(id)) return 'A rename is not in the pool';
     if (renameProblem(pool, id, name) || name.trim() !== name) return 'Bad spoof name';
+  }
+  for (const [id, mark] of Object.entries(draft.marks)) {
+    if (!ids.has(id)) return 'A mark is not in the pool';
+    if (!isMarkName(mark)) return 'Unknown mark';
   }
   return null;
 }

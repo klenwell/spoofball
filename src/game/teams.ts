@@ -13,7 +13,7 @@ import {
 } from './skills';
 import { drawSpoofName } from './spoof-names';
 import { MAX_TEMPERAMENT, MIN_TEMPERAMENT, drawTemperament } from './temperament';
-import { spoofTypes, type SpoofType } from './spoof-types';
+import { defaultMark, markNames, spoofTypes, type MarkName, type SpoofType } from './spoof-types';
 
 /**
  * The spoof and team model: a spoof's type, hidden skills (#35) and size, and
@@ -36,17 +36,23 @@ export interface Spoof {
    * and not a skill itself: a style of play, neither better nor worse.
    */
   readonly temperament: number;
+  /**
+   * The mark on its disc (#74): its type's default (`defaultMark`) unless you
+   * chose another when you drafted it. It says nothing about its skills.
+   */
+  readonly mark: MarkName;
 }
 
-/** A spoof with its radius worked out from its size skill. */
+/** A spoof with its radius worked out from its size skill, wearing its type's mark unless given one. */
 export function createSpoof(
   id: string,
   name: string,
   type: SpoofType,
   skills: Skills,
   temperament = 1,
+  mark: MarkName = defaultMark(type),
 ): Spoof {
-  return { id, name, type, skills, radius: sizeToRadius(skills.size), temperament };
+  return { id, name, type, skills, radius: sizeToRadius(skills.size), temperament, mark };
 }
 
 /**
@@ -167,6 +173,8 @@ function spoofProblems(spoof: Spoof): string[] {
   }
   if (!(spoofTypes as readonly string[]).includes(spoof.type))
     problems.push(`${label}: unknown type`);
+  if (!(markNames as readonly string[]).includes(spoof.mark))
+    problems.push(`${label}: unknown mark`);
   for (const name of skillNames) {
     const value = spoof.skills[name];
     if (!Number.isFinite(value) || value < MIN_SKILL || value > MAX_SKILL) {
