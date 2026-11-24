@@ -411,6 +411,8 @@ export function createCombineScreen(options: CombineOptions): Panel {
   }
 
   function render(): void {
+    // A pick that leaves the team (× here, or Remove on the drill court) takes its open picker with it.
+    if (pickerOpen !== null && !draft.picks.includes(pickerOpen)) pickerOpen = null;
     const left = budgetLeft(draft, pool);
     const full = draft.picks.length >= SPOOFS_PER_TEAM;
     counter.textContent = `${String(draft.picks.length)} / ${String(SPOOFS_PER_TEAM)}`;

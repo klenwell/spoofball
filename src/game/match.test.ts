@@ -45,8 +45,8 @@ function computerMise(match: Match): MiseState {
 }
 
 /** A whole match, with the computer placing for both teams. */
-function computerMatch(seed: number): Match {
-  let match = startMatch(HOME, VISITOR, seed);
+function computerMatch(seed: number, home = HOME): Match {
+  let match = startMatch(home, VISITOR, seed);
   while (!isMatchOver(match)) match = playScrum(match, computerMise(match));
   return match;
 }
@@ -629,6 +629,33 @@ describe('outcomeFor', () => {
 
   it("refuses a match that isn't over", () => {
     expect(() => outcomeFor(finished([10], [5]), 'home')).toThrow(/not over/);
+  });
+});
+
+describe('a chosen mark (#74)', () => {
+  // Your first spoof wears a mark you chose; the visitor wears its types'.
+  const marked = {
+    ...HOME,
+    spoofs: HOME.spoofs.map((s, i) => (i === 0 ? { ...s, mark: 'glove' as const } : s)),
+  };
+  const match = computerMatch(TEST_SEED, marked);
+  const marksOf = (lines: readonly { readonly mark: string }[]) => lines.map((l) => l.mark);
+
+  it("is on each spoof's line in a scrum's result", () => {
+    for (const side of ['home', 'visitor'] as const) {
+      expect(marksOf(scrumSummary(match, 0).spoofs[side])).toEqual(
+        match.teams[side].spoofs.map((s) => s.mark),
+      );
+    }
+    expect(scrumSummary(match, 0).spoofs.home[0]?.mark).toBe('glove');
+  });
+
+  it("is on each spoof's line on the scorecard", () => {
+    const card = matchScorecard(match);
+    for (const side of ['home', 'visitor'] as const) {
+      expect(marksOf(card.teams[side].lines)).toEqual(match.teams[side].spoofs.map((s) => s.mark));
+    }
+    expect(card.teams.home.lines[0]?.mark).toBe('glove');
   });
 });
 
