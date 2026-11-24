@@ -206,8 +206,8 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **Sprint and blow play sped up** (the owner, 2026-11-24, on #73). Stamina and growth only show over time: at match speed, a 3-second sprint ends before tiring adds up, and a spoof grows only 4% to 21%. So each simulates a whole scrum (8 seconds) and plays it back in 3, about 2.7× speed. Hold and teamwork play at match speed.
   - **Hold hints at mass only** (the owner, 2026-11-24). In a match, constancy only makes a spoof stop more cleanly at its goal and think more often late in a scrum, and neither shows in a short drill: measured over 150 runs, it moved hold's result by less than 2 units.
   - **Iq shows in every drill,** in how quickly a spoof reacts, as it does in a match.
-  - **Tap a candidate to open its drills,** and draft it from the drill court (#73). On a phone the drill court takes the screen; on a wide screen it opens beside the warm-ups, and the candidate's cell is highlighted in light yellow.
-  - **The drill court** (the owner's review, 2026-11-24, on #73): each drill's caption sits above the court, saying what to watch for and why it matters in a match. A timer in the court's corner counts down the drill's seconds and then says it's done, so a run where little changes still reads as having run. Hold's dummy is dark gray, in neither team's colors. A more compact layout is #84.
+  - **Tap a candidate to open its drills,** and draft it from the drill court (#73). On a phone the drill court takes the screen; on a wide screen it opens beside the warm-ups, and the candidate's cell is highlighted in light yellow, around its white court.
+  - **The drill court** (the owner's review, 2026-11-24, on #73): each drill's caption sits above the court, saying what to watch for and why it matters in a match. A timer in the court's corner counts down the drill's seconds in tenths (3.0, 2.9, …) and then says it's done, so a run where little changes still reads as having run. Hold's dummy is dark gray, in neither team's colors. A more compact layout is #84.
 
 ### Pharm
 

@@ -24,7 +24,7 @@ import { frameAt, startFrame } from './playback';
  * The drill court (#73, wireframe 3 in docs/design.md): one candidate at a
  * time, with a tab for each drill. A caption above the court says what to
  * watch for and why it matters. A drill plays as soon as its tab opens, for
- * about 3 seconds, with a timer counting down in the court's corner, and
+ * about 3 seconds, with a timer counting down in tenths in the court's corner, and
  * plays again on a tap of the court or **Run again**. In teamwork, you tap
  * one of two spots to send the spoof your message, and the 3 seconds start
  * then; each tap is a new run.
@@ -281,12 +281,15 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     }
   }
 
-  /** Counts down the drill's seconds, then says it's done. Teamwork first waits for a tap. */
+  /**
+   * Counts down the drill's seconds, in tenths (3.0, 2.9, …), then says it's
+   * done. Teamwork first waits for a tap.
+   */
   function showTimer(): void {
     let text = TIMER_WAITING;
     if (run && playing) {
       const left = (simulatedSeconds() - clock) / run.speed;
-      text = left > 0 ? `${String(Math.ceil(left))} s` : TIMER_DONE;
+      text = left > 0 ? `${(Math.ceil(left * 10) / 10).toFixed(1)} s` : TIMER_DONE;
     }
     if (timer.textContent !== text) timer.textContent = text;
     timer.classList.toggle('is-done', text === TIMER_DONE);

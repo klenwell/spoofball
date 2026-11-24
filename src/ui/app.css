@@ -966,14 +966,9 @@ a.button {
   color: var(--color-accent-text);
 }
 
-/* Its drills are open (#73): a highlighter yellow behind it, its court on white. */
+/* Its drills are open (#73): a highlighter yellow behind it. Its court stays white. */
 .combine-cell.is-drilling {
   background: var(--color-selected);
-}
-
-.combine-cell.is-drilling .combine-canvas {
-  border-radius: var(--radius-md);
-  background: var(--color-white);
 }
 
 /* More than you have left, or the team is full: the price fades; the warm-up still shows. */
