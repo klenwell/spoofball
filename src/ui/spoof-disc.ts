@@ -1,4 +1,4 @@
-import type { Kit } from '../design/kits';
+import type { DiscColors } from '../design/kits';
 import { marks, type MarkShape } from '../design/marks';
 import { palette } from '../design/tokens';
 import { avatarOf, type SpoofType } from '../game/spoof-types';
@@ -15,7 +15,7 @@ export interface SpoofDisc {
   /** Disc radius in CSS pixels. Grows and shrinks during a scrum. */
   radius: number;
   type: SpoofType;
-  kit: Kit;
+  kit: DiscColors;
   /** 0 (fresh) to 100 (spent). The disc fades as it tires. */
   fatigue?: number;
   highlighted?: boolean;
@@ -82,7 +82,12 @@ const LAYER_PADDING = 0.45;
 let scratch: HTMLCanvasElement | null = null;
 
 /** Draws the disc body (fill, trim, mark) centered on (0, 0), at full opacity. */
-function drawBody(ctx: CanvasRenderingContext2D, radius: number, type: SpoofType, kit: Kit): void {
+function drawBody(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  type: SpoofType,
+  kit: DiscColors,
+): void {
   const trim = trimWidth(radius);
   const inner = radius - trim;
 
@@ -116,7 +121,7 @@ function drawFadedBody(
   ctx: CanvasRenderingContext2D,
   radius: number,
   type: SpoofType,
-  kit: Kit,
+  kit: DiscColors,
   opacity: number,
 ): void {
   const transform = ctx.getTransform();

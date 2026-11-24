@@ -64,6 +64,20 @@ describe('page colors', () => {
     expect(contrastRatio(palette.placeOk, palette.apron)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each([
+    ['text', palette.text],
+    ['muted text', palette.textMuted],
+    ['accent text', palette.accentText],
+  ])('%s has at least 4.5:1 contrast on a selected cell (#73)', (_label, color) => {
+    expect(contrastRatio(color, palette.selected)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("the hold drill's dummy has a ring with at least 3:1 contrast on the mosh, the apron and the crush", () => {
+    for (const behind of [palette.mosh, palette.apron, palette.crush]) {
+      expect(contrastRatio(palette.dummyTrim, behind)).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it("the court's edge has at least 3:1 contrast on the page, so you can see where the court ends", () => {
     expect(contrastRatio(palette.courtEdge, palette.background)).toBeGreaterThanOrEqual(3);
   });

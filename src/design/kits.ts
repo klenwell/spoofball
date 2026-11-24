@@ -30,6 +30,19 @@ export function kit(color: TeamColorName, style: KitStyle): Kit {
   return { style, color, fill: palette.white, trim: deep, mark: deep };
 }
 
+/** The colors a disc is drawn in: a kit's, or the hold drill's dummy's. */
+export type DiscColors = Pick<Kit, 'fill' | 'trim' | 'mark'>;
+
+/**
+ * The hold drill's dummy (#73): dark gray with a near-black ring, in neither
+ * team's colors, so it reads as a practice body, not an opponent or a teammate.
+ */
+export const DUMMY_COLORS: DiscColors = {
+  fill: palette.dummy,
+  trim: palette.dummyTrim,
+  mark: palette.white,
+};
+
 export interface MatchKits {
   home: Kit;
   visitor: Kit;
