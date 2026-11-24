@@ -41,7 +41,7 @@
   <rect x="0" y="0" width="300" height="620" rx="22" fill="#ffffff" stroke="#3b4048" stroke-width="2"/>
   <g>
     <text x="16" y="36" font-size="18" fill="#3b4048" text-anchor="start" font-weight="700">Combine</text>
-    <text x="16" y="54" font-size="11" fill="#8a919c" text-anchor="start" font-weight="400">Watch them move. Pick 5.</text>
+    <text x="16" y="54" font-size="11" fill="#8a919c" text-anchor="start" font-weight="400">Watch them move. Pick 5 within budget.</text>
     <text x="284" y="36" font-size="16" fill="#3b4048" text-anchor="end" font-weight="700">2 / 5</text>
     <circle cx="78" cy="98" r="26" fill="#ffffff" stroke="#d5d9e0" stroke-width="1"/>
     <line x1="75.0" y1="98.0" x2="87.0" y2="98.0" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
@@ -73,30 +73,15 @@
     <circle cx="78" cy="296" r="26" fill="#ffffff" stroke="#2f6fd6" stroke-width="3"/>
     <line x1="80.75379234124289" y1="294.80977828060816" x2="69.73862297627137" y2="299.57066515817553" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
     <circle cx="69.73862297627137" cy="299.57066515817553" r="6" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
-    <circle cx="150" cy="296" r="26" fill="#ffffff" stroke="#d5d9e0" stroke-width="1"/>
-    <line x1="150.82549001415478" y1="298.88419247563866" x2="147.52352995753563" y2="287.347422573084" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
-    <circle cx="147.52352995753563" cy="287.347422573084" r="7" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
-    <circle cx="222" cy="296" r="26" fill="#ffffff" stroke="#d5d9e0" stroke-width="1"/>
-    <line x1="219.03348797191757" y1="296.44699707744263" x2="230.8995360842473" y2="294.6590087676722" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
-    <circle cx="230.8995360842473" cy="294.6590087676722" r="8" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
-    <circle cx="78" cy="362" r="26" fill="#ffffff" stroke="#d5d9e0" stroke-width="1"/>
-    <line x1="77.93894747000495" y1="359.000621299572" x2="78.18315758998514" y2="370.99813610128405" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
-    <circle cx="78.18315758998514" cy="370.99813610128405" r="5" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
-    <circle cx="150" cy="362" r="26" fill="#ffffff" stroke="#d5d9e0" stroke-width="1"/>
-    <line x1="152.9822445927878" y1="362.32590978627223" x2="141.05326622163665" y2="361.0222706411833" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
-    <circle cx="141.05326622163665" cy="361.0222706411833" r="6" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
-    <circle cx="222" cy="362" r="26" fill="#ffffff" stroke="#d5d9e0" stroke-width="1"/>
-    <line x1="221.2925609371484" y1="364.9153953372316" x2="224.1223171885547" y2="353.25381398830524" stroke="#d5d9e0" stroke-width="2" stroke-dasharray="3 3"/>
-    <circle cx="224.1223171885547" cy="353.25381398830524" r="7" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
-    <text x="150.0" y="446" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">each cell: one candidate moving on its own (no numbers)</text>
-    <text x="150.0" y="461" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">tap a cell for drills · 15 candidates</text>
+    <text x="150.0" y="446" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">each cell: one candidate moving on its own, its name and price</text>
+    <text x="150.0" y="461" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">tap a cell to pick · 10 candidates · budget 250</text>
     <circle cx="58" cy="498" r="15" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
     <circle cx="104" cy="498" r="15" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
     <circle cx="150" cy="498" r="15" fill="#eef0f3" stroke="#d5d9e0" stroke-width="1" stroke-dasharray="3 3"/>
     <circle cx="196" cy="498" r="15" fill="#eef0f3" stroke="#d5d9e0" stroke-width="1" stroke-dasharray="3 3"/>
     <circle cx="242" cy="498" r="15" fill="#eef0f3" stroke="#d5d9e0" stroke-width="1" stroke-dasharray="3 3"/>
     <rect x="16" y="534" width="268" height="36" rx="18" fill="#ffffff" stroke="#2f6fd6"/>
-    <text x="150.0" y="557" font-size="12" fill="#2f6fd6" text-anchor="middle" font-weight="600">Done (needs 5)</text>
+    <text x="150.0" y="557" font-size="12" fill="#2f6fd6" text-anchor="middle" font-weight="600">Done</text>
   </g>
 </g>
 <g transform="translate(681,34)">
