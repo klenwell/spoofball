@@ -95,7 +95,7 @@ Low-fidelity phone sketches (#20), to guide the epics that build each screen. Th
 
 1. **Your team:** a name (up to 16 characters, as in the prototype), one of the 8 colors, and an emoji logo, with a preview.
 2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell, with its name and price. Tap a cell for its drills (#73). Picked cells are outlined, and a strip at the bottom fills to 5, with the budget left (#72).
-3. **Drills:** sprint, blow, hold and teamwork tabs on a small court, with the candidate's name and price (#73). "Draft this spoof" or "Next candidate".
+3. **Drills:** sprint, blow, hold and teamwork tabs on a small court, with the candidate's name and price (#73). A caption above the court says what to watch for and why it matters, and a timer in its corner counts down the drill. "Draft this spoof" or "Next candidate".
 
 There's no tab bar until the team exists. On desktop, the warm-up grid widens to more columns and the drill court opens beside it.
 
@@ -202,11 +202,12 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 - **You can rename a spoof as you draft it,** up to 16 characters, unlike any other name in the pool.
 - **Warm-ups:** each candidate wanders alone in a small round cell, by the match's own movement rules (thinking, dashing, skidding, bouncing). It doesn't tire or grow there.
 - **Four drills** (#73): _sprint_ (hints at burst and stamina), _blow_ (growth and size), _hold_ (mass) and _teamwork_ (cooperation and iq). Each plays for about 3 seconds, can be rerun, and varies a little each time. Vision, charisma and constancy show only in matches.
-  - **Teamwork** was the owner's addition (2026-11-23, on #69): you tap **Go left** or **Go right**, and the spoof heeds your message, or not, by a match's rules. Your message comes from an average sender (charisma 50, burst 50), so it's heeded as often as the spoof's cooperation, as a share, and arrives a quarter of a second after the tap. The spoof acts on it at its next thought, which iq speeds up.
+  - **Teamwork** was the owner's addition (2026-11-23, on #69): you tap one of two spots on the drill court, left or right, and the spoof heeds your message, or not, by a match's rules. Its 3 seconds start at the tap, and nothing says when it ignored you: the timer runs out with the spoof still in the middle (the owner, 2026-11-24, on #73). Two fixed spots, not anywhere you tap, so every run covers the same distance and candidates compare fairly. Your message comes from an average sender (charisma 50, burst 50), so it's heeded as often as the spoof's cooperation, as a share, and arrives a quarter of a second after the tap. The spoof acts on it at its next thought, which iq speeds up.
   - **Sprint and blow play sped up** (the owner, 2026-11-24, on #73). Stamina and growth only show over time: at match speed, a 3-second sprint ends before tiring adds up, and a spoof grows only 4% to 21%. So each simulates a whole scrum (8 seconds) and plays it back in 3, about 2.7× speed. Hold and teamwork play at match speed.
   - **Hold hints at mass only** (the owner, 2026-11-24). In a match, constancy only makes a spoof stop more cleanly at its goal and think more often late in a scrum, and neither shows in a short drill: measured over 150 runs, it moved hold's result by less than 2 units.
   - **Iq shows in every drill,** in how quickly a spoof reacts, as it does in a match.
-  - **Tap a candidate to open its drills,** and draft it from the drill court (#73). On a phone the drill court takes the screen; on a wide screen it opens beside the warm-ups.
+  - **Tap a candidate to open its drills,** and draft it from the drill court (#73). On a phone the drill court takes the screen; on a wide screen it opens beside the warm-ups, and the candidate's cell is highlighted in light yellow.
+  - **The drill court** (the owner's review, 2026-11-24, on #73): each drill's caption sits above the court, saying what to watch for and why it matters in a match. A timer in the court's corner counts down the drill's seconds and then says it's done, so a run where little changes still reads as having run. Hold's dummy is dark gray, in neither team's colors. A more compact layout is #84.
 
 ### Pharm
 

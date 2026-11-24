@@ -58,6 +58,17 @@ export const palette = {
    * the red crush too, where green and red are about as bright.
    */
   placeOk: '#13803F',
+  /**
+   * Behind the warm-up cell of the candidate whose drills are open (#73): a
+   * light yellow, like a highlighter. Text keeps at least 4.5:1 on it.
+   */
+  selected: '#FFF3BF',
+  /**
+   * The dummy in the hold drill (#73): dark gray, in neither team's colors.
+   * Its ring is near-black, at least 3:1 on the mosh, the apron and the crush.
+   */
+  dummy: '#4A505A',
+  dummyTrim: '#1B1F24',
 } as const;
 
 export const teamColorNames = [

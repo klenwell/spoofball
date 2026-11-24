@@ -1,5 +1,5 @@
-import { kit, type Kit } from '../design/kits';
-import type { TeamColorName } from '../design/tokens';
+import { DUMMY_COLORS, kit } from '../design/kits';
+import { palette, type TeamColorName } from '../design/tokens';
 import type { Candidate } from '../game/combine';
 import { courtRadius } from '../game/court';
 import {
@@ -22,14 +22,16 @@ import { frameAt, startFrame } from './playback';
 
 /**
  * The drill court (#73, wireframe 3 in docs/design.md): one candidate at a
- * time, with a tab for each drill. A drill plays as soon as its tab opens,
- * for about 3 seconds, and plays again on a tap of the court or **Run
- * again**. In teamwork, **Go left** and **Go right** send the spoof your
- * message, and each tap is a new run.
+ * time, with a tab for each drill. A caption above the court says what to
+ * watch for and why it matters. A drill plays as soon as its tab opens, for
+ * about 3 seconds, with a timer counting down in the court's corner, and
+ * plays again on a tap of the court or **Run again**. In teamwork, you tap
+ * one of two spots to send the spoof your message, and the 3 seconds start
+ * then; each tap is a new run.
  *
- * Only the candidate's name and price show: no numbers about its skills or
- * how it did. Every run is a match simulation (`runDrill`), played back by
- * the combine's animation loop through `tick`.
+ * Only the candidate's name, its price and the timer show: no numbers about
+ * its skills or how it did. Every run is a match simulation (`runDrill`),
+ * played back by the combine's animation loop through `tick`.
  */
 
 export interface DrillCourtOptions {
@@ -73,21 +75,30 @@ const DRILL_LABELS: Readonly<Record<DrillName, string>> = {
   teamwork: 'Teamwork',
 };
 
-/** What each drill shows, in words: no numbers. Sped-up drills say so. */
+/**
+ * What to watch for in each drill, and why it matters in a match, in words:
+ * no numbers. Wording proposed on #73 for the owner's edit.
+ */
 const DRILL_CAPTIONS: Readonly<Record<DrillName, string>> = {
-  sprint: 'Dashes across the court and back, again and again: a whole scrum, sped up.',
-  blow: 'Stands still and grows, through a whole scrum, sped up.',
-  hold: 'Tries to stay in the middle while a dummy pushes it.',
-  teamwork: 'Send it a message. Does it listen, and how soon does it get there?',
+  sprint:
+    'How far does it get, and does it slow down? A quick spoof reaches open spots first, and one that tires less keeps its pace to the end of a scrum.',
+  blow: 'How big does it get? A scrum scores the court each spoof covers, so a bigger spoof scores more.',
+  hold: "Can it hold its ground? A spoof that's hard to push keeps its spot, even in the crush, where points count triple.",
+  teamwork:
+    'If a teammate sends it a message, does it respond? How fast? Teammates who gather on the same spot score more there.',
 };
 
-/**
- * The dummy in hold wears away, so it reads as an opponent, in purple (or
- * blue, if you're purple): colors that stand out on the red crush, unlike red.
- */
-function dummyKit(teamColor: TeamColorName): Kit {
-  return kit(teamColor === 'purple' ? 'blue' : 'purple', 'away');
-}
+/** The timer's words when a drill isn't counting down. */
+const TIMER_DONE = 'Done';
+const TIMER_WAITING = 'Tap a spot';
+
+/** A teamwork spot's button is at least this wide, in CSS pixels, so it's easy to tap. */
+const MIN_SPOT_TARGET = 44;
+
+const SIDES = [
+  { direction: 'left', side: -1, label: 'Send it to the left spot' },
+  { direction: 'right', side: 1, label: 'Send it to the right spot' },
+] as const;
 
 function coins(price: number): string {
   return `${String(price)} ${price === 1 ? 'coin' : 'coins'}`;
@@ -96,7 +107,6 @@ function coins(price: number): string {
 export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
   const { onDraft, onNext, onBack } = options;
   const teamKit = kit(options.teamColor, 'home');
-  const otherKit = dummyKit(options.teamColor);
 
   const element = el('section', 'drill-court');
   element.hidden = true;
@@ -149,18 +159,28 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     tabs.find((t) => t.drill === next)?.tab.focus();
   });
 
+  const caption = el('p', 'drill-caption');
+  // The court, with the timer in its corner and teamwork's two spots over it.
+  const stage = el('div', 'drill-stage');
   const canvas = el('canvas', 'drill-canvas');
   canvas.setAttribute('aria-hidden', 'true');
-  const caption = el('p', 'drill-caption');
+  const timer = el('span', 'drill-timer');
+  const spots = SIDES.map(({ direction, side, label }) => {
+    const button = el('button', 'drill-spot');
+    button.type = 'button';
+    button.setAttribute('aria-label', label);
+    button.addEventListener('click', () => {
+      chosen = direction;
+      start(direction);
+    });
+    return { side, button };
+  });
+  stage.append(canvas, timer, ...spots.map((s) => s.button));
   const controls = el('div', 'drill-controls');
   const again = el('button', 'button', 'Run again');
   again.type = 'button';
-  const goLeft = el('button', 'button', 'Go left');
-  goLeft.type = 'button';
-  const goRight = el('button', 'button', 'Go right');
-  goRight.type = 'button';
-  controls.append(again, goLeft, goRight);
-  panel.append(canvas, caption, controls);
+  controls.append(again);
+  panel.append(caption, stage, controls);
 
   const status = el('p', 'drill-status');
   status.setAttribute('role', 'status');
@@ -177,6 +197,10 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
   let drill: DrillName = 'sprint';
   let runs = 0;
   let run: DrillRun | null = null;
+  /** Whether the run is playing. Teamwork waits for a tap on a spot. */
+  let playing = false;
+  /** Teamwork: the spot you sent it to, or null before a tap. */
+  let chosen: Direction | null = null;
   let frames: ScrumFrame[] = [];
   /** Simulated seconds played so far. */
   let clock = 0;
@@ -189,11 +213,13 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     return (Math.imul(index + 1, 0x9e3779b1) ^ Math.imul(runs, 0x85ebca6b) ^ Date.now()) >>> 0;
   }
 
+  /** A new run. Teamwork's first, before you tap a spot, only shows the spoof waiting. */
   function start(direction?: Direction): void {
     if (!candidate) return;
     run = runDrill(candidate.spoof, drill, { seed: seed(), direction });
     frames = [startFrame(run.entries), ...run.result.frames];
     clock = 0;
+    playing = drill !== 'teamwork' || direction !== undefined;
     draw();
   }
 
@@ -207,21 +233,16 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     panel.setAttribute('aria-labelledby', `drill-tab-${drill}`);
     caption.textContent = DRILL_CAPTIONS[drill];
     const teamwork = drill === 'teamwork';
-    again.hidden = teamwork;
-    goLeft.hidden = !teamwork;
-    goRight.hidden = !teamwork;
+    controls.hidden = teamwork;
+    for (const { button } of spots) button.hidden = !teamwork;
+    chosen = null;
+    placeSpots();
     // Teamwork waits for your message; the others start at once.
     start();
   }
 
   again.addEventListener('click', () => {
     start();
-  });
-  goLeft.addEventListener('click', () => {
-    start('left');
-  });
-  goRight.addEventListener('click', () => {
-    start('right');
   });
   canvas.addEventListener('click', () => {
     if (drill !== 'teamwork') start();
@@ -240,26 +261,62 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     return Math.max(0, frames.length - 1) * SECONDS_PER_FRAME;
   }
 
-  function draw(): void {
-    if (!ctx || size === 0 || !candidate) return;
+  function view(): ArenaView {
     const radius = courtRadius(DRILL_COURT);
-    const view: ArenaView = { scale: size / (2 * radius + 8), cx: size / 2, cy: size / 2 };
+    return { scale: size / (2 * radius + 8), cx: size / 2, cy: size / 2 };
+  }
+
+  /** Lays teamwork's spot buttons over the spots drawn on the court. */
+  function placeSpots(): void {
+    if (!candidate || size === 0) return;
+    const { scale, cx, cy } = view();
+    const radius = candidate.spoof.radius;
+    const target = Math.max(2 * radius * scale, MIN_SPOT_TARGET);
+    for (const { side, button } of spots) {
+      const spot = edgeFor(side, radius);
+      button.style.width = `${String(target)}px`;
+      button.style.height = `${String(target)}px`;
+      button.style.left = `${String(cx + spot.x * scale - target / 2)}px`;
+      button.style.top = `${String(cy + spot.y * scale - target / 2)}px`;
+    }
+  }
+
+  /** Counts down the drill's seconds, then says it's done. Teamwork first waits for a tap. */
+  function showTimer(): void {
+    let text = TIMER_WAITING;
+    if (run && playing) {
+      const left = (simulatedSeconds() - clock) / run.speed;
+      text = left > 0 ? `${String(Math.ceil(left))} s` : TIMER_DONE;
+    }
+    if (timer.textContent !== text) timer.textContent = text;
+    timer.classList.toggle('is-done', text === TIMER_DONE);
+  }
+
+  function draw(): void {
+    showTimer();
+    if (!ctx || size === 0 || !candidate) return;
+    const v = view();
     ctx.clearRect(0, 0, size, size);
-    drawCourtOnly(ctx, view, DRILL_COURT);
+    drawCourtOnly(ctx, v, DRILL_COURT);
     if (drill === 'teamwork') {
-      // The two spots you can send it to.
-      for (const side of [-1, 1] as const) {
+      // The two spots you can send it to: dashed, and the one you chose solid and shaded.
+      for (const { direction, side } of SIDES) {
         const spot = edgeFor(side, candidate.spoof.radius);
         ctx.beginPath();
         ctx.arc(
-          view.cx + spot.x * view.scale,
-          view.cy + spot.y * view.scale,
-          candidate.spoof.radius * view.scale,
+          v.cx + spot.x * v.scale,
+          v.cy + spot.y * v.scale,
+          candidate.spoof.radius * v.scale,
           0,
           Math.PI * 2,
         );
-        ctx.setLineDash([4, 4]);
-        ctx.lineWidth = 1.5;
+        const picked = direction === chosen;
+        if (picked) {
+          ctx.fillStyle = palette.selected;
+          ctx.fill();
+        }
+        ctx.setLineDash(picked ? [] : [4, 4]);
+        ctx.lineWidth = picked ? 2.5 : 1.5;
         ctx.strokeStyle = teamKit.trim;
         ctx.stroke();
         ctx.setLineDash([]);
@@ -269,12 +326,12 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     const now = frameAt(frames, Math.min(clock, simulatedSeconds()));
     for (const spoof of now.spoofs) {
       const mine = spoof.id === DRILLER_ID;
-      drawSpoofInArena(ctx, view, {
+      drawSpoofInArena(ctx, v, {
         x: spoof.x,
         y: spoof.y,
         radius: spoof.radius,
         type: mine ? candidate.spoof.type : 'pawn-basic',
-        kit: mine ? teamKit : otherKit,
+        kit: mine ? teamKit : DUMMY_COLORS,
         fatigue: spoof.fatigue,
       });
     }
@@ -291,6 +348,7 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     canvas.style.height = `${String(css)}px`;
     ctx = canvas.getContext('2d');
     ctx?.setTransform(backing.scale, 0, 0, backing.scale, 0, 0);
+    placeSpots();
     draw();
   }
 
@@ -318,10 +376,11 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     close() {
       element.hidden = true;
       run = null;
+      playing = false;
     },
     current: () => (element.hidden ? null : (candidate?.spoof.id ?? null)),
     tick(seconds) {
-      if (element.hidden || !run) return;
+      if (element.hidden || !run || !playing) return;
       const end = simulatedSeconds();
       if (clock >= end) return;
       clock = Math.min(end, clock + seconds * run.speed);

@@ -23,7 +23,7 @@ import { distance, ZERO, type Vec } from './vec';
  *   stamina).
  * - **Blow:** stand still and grow (size, growth).
  * - **Hold:** stay in the middle while a dummy pushes (mass).
- * - **Teamwork:** you send a message, Go left or Go right, and the spoof
+ * - **Teamwork:** you tap a spot, left or right, to send a message, and the spoof
  *   heeds it or not, then heads there (cooperation, iq).
  *
  * Every drill plays for about 3 seconds (the owner, 2026-11-24, on #73).
@@ -66,7 +66,7 @@ export const DRILL_COURT: Court = courtWithMosh(60);
 
 /** The candidate's id in a drill. */
 export const DRILLER_ID = 'driller';
-/** Hold's dummy: an opponent that keeps charging the candidate. */
+/** Hold's dummy: a practice body that keeps charging the candidate. */
 export const DUMMY_ID = 'dummy';
 
 /**

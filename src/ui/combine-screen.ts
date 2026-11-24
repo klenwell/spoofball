@@ -254,6 +254,7 @@ export function createCombineScreen(options: CombineOptions): Panel {
     const c = pool[at];
     if (!c) return;
     element.classList.add('is-drilling');
+    markOpen(id);
     drills.open(c, at, draftState(id));
     drills.heading.focus();
   }
@@ -261,7 +262,18 @@ export function createCombineScreen(options: CombineOptions): Panel {
   function closeDrills(id: string): void {
     drills.close();
     element.classList.remove('is-drilling');
+    markOpen(null);
     cells.find((cell) => cell.id === id)?.button.focus();
+  }
+
+  /** Highlights the cell of the candidate whose drills are open, beside the drill court. */
+  function markOpen(id: string | null): void {
+    for (const cell of cells) {
+      const open = cell.id === id;
+      cell.button.classList.toggle('is-drilling', open);
+      if (open) cell.button.setAttribute('aria-current', 'true');
+      else cell.button.removeAttribute('aria-current');
+    }
   }
 
   function rename(id: string, input: HTMLInputElement): void {

@@ -99,12 +99,16 @@
     <text x="188.0" y="90.85" font-size="11" fill="#2f6fd6" text-anchor="middle" font-weight="400">Hold</text>
     <rect x="226" y="72" width="64" height="30" rx="15" fill="#ffffff" stroke="#2f6fd6"/>
     <text x="258.0" y="90.85" font-size="11" fill="#2f6fd6" text-anchor="middle" font-weight="400">Teamwork</text>
-    <circle cx="150.0" cy="250" r="120" fill="#eef0f3" stroke="#d5d9e0" stroke-width="1"/>
-    <circle cx="150.0" cy="250" r="80" fill="#ffffff" stroke="#8a919c" stroke-width="1"/>
-    <line x1="50.0" y1="250" x2="250.0" y2="250" stroke="#2f6fd6" stroke-width="1" stroke-dasharray="3 3"/>
-    <circle cx="220.0" cy="250" r="12" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
-    <text x="220.0" y="230" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">dash across and back</text>
-    <text x="150.0" y="395" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">a few seconds per drill · plays again on tap</text>
+    <rect x="16" y="112" width="268" height="34" rx="6" fill="#ffffff" stroke="#2f6fd6"/>
+    <text x="150.0" y="132.5" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">What to watch for, and why it matters</text>
+    <circle cx="150.0" cy="265" r="108" fill="#eef0f3" stroke="#d5d9e0" stroke-width="1"/>
+    <circle cx="150.0" cy="265" r="72" fill="#ffffff" stroke="#8a919c" stroke-width="1"/>
+    <line x1="60.0" y1="265" x2="240.0" y2="265" stroke="#2f6fd6" stroke-width="1" stroke-dasharray="3 3"/>
+    <circle cx="212.0" cy="265" r="12" fill="#3b4048" stroke="#3b4048" stroke-width="1"/>
+    <text x="212.0" y="245" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">dash across and back</text>
+    <rect x="30" y="160" width="40" height="20" rx="10" fill="#ffffff" stroke="#d5d9e0"/>
+    <text x="50.0" y="173.5" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">3 s</text>
+    <text x="150.0" y="395" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">about 3 s per drill, with a timer · plays again on tap</text>
     <text x="150.0" y="410" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">some randomness, like a real combine</text>
     <rect x="16" y="432" width="268" height="46" rx="6" fill="#eef0f3" stroke="#d5d9e0" stroke-dasharray="4 3"/>
     <text x="150.0" y="458.5" font-size="10" fill="#8a919c" text-anchor="middle" font-weight="400">Drill court reuses the match simulation</text>

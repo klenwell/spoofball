@@ -966,6 +966,16 @@ a.button {
   color: var(--color-accent-text);
 }
 
+/* Its drills are open (#73): a highlighter yellow behind it, its court on white. */
+.combine-cell.is-drilling {
+  background: var(--color-selected);
+}
+
+.combine-cell.is-drilling .combine-canvas {
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+}
+
 /* More than you have left, or the team is full: the price fades; the warm-up still shows. */
 .combine-cell.is-out-of-reach .combine-price {
   color: var(--color-text-muted);
@@ -1169,15 +1179,62 @@ a.button {
   gap: var(--space-2);
 }
 
+/* The court, with the timer in its corner and teamwork's spots laid over it. */
+.drill-stage {
+  position: relative;
+}
+
 .drill-canvas {
   display: block;
   cursor: pointer;
 }
 
-.drill-caption {
-  margin: 0;
+.drill-timer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-line);
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-size: var(--text-sm);
+  pointer-events: none;
+}
+
+.drill-timer.is-done {
   color: var(--color-text-muted);
-  text-align: center;
+}
+
+.drill-spot {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.drill-spot[hidden] {
+  display: none;
+}
+
+.drill-spot:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* What to watch for, and why it matters: above the court, where it's seen first. */
+.drill-caption {
+  width: 100%;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 500;
 }
 
 .drill-controls {
@@ -1191,7 +1248,7 @@ a.button {
   min-width: 0;
 }
 
-.drill-controls .button[hidden] {
+.drill-controls[hidden] {
   display: none;
 }
 
