@@ -50,7 +50,7 @@ export const markNames = [
   'anchor',
   'bulb',
   'star',
-  'fist',
+  'glove',
   'diamond',
   'club',
   'spade',
