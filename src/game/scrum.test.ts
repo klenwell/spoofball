@@ -435,6 +435,61 @@ describe('simulateScrum', () => {
         expect(followRate(1)).toBeLessThan(0.1);
       });
     });
+
+    describe('for drills (#73)', () => {
+      it('runs only as many frames as it is given', () => {
+        const r = simulateScrum([entry('a', 'home', { x: 0, y: 0 })], {
+          random: createRandom(TEST_SEED),
+          brain: hold,
+          frames: 113,
+        });
+        expect(r.frames).toHaveLength(113);
+      });
+
+      it('refuses a length that is not 1 to a whole scrum of frames', () => {
+        for (const frames of [0, 1.5, FRAMES_PER_SCRUM + 1]) {
+          expect(() =>
+            simulateScrum([entry('a', 'home', { x: 0, y: 0 })], {
+              random: createRandom(TEST_SEED),
+              frames,
+            }),
+          ).toThrow(RangeError);
+        }
+      });
+
+      it("delivers a message from outside on its frame, heeded by the teammate's rule", () => {
+        const goal = { kind: 'goto' as const, point: { x: 0, y: 90 }, weight: 0.75, expires: null };
+        const heedRate = (cooperation: number) => {
+          let heeds = 0;
+          for (let seed = 0; seed < 40; seed += 1) {
+            const r = simulateScrum([entry('a', 'home', { x: 0, y: 0 }, { cooperation })], {
+              random: createRandom(seed),
+              brain: hold,
+              frames: 20,
+              messages: [{ to: 'a', senderCharisma: 50, goal, deliverOnFrame: 10 }],
+            });
+            const stats = r.finish[0]?.stats;
+            expect(stats?.pongs).toBe(1);
+            heeds += stats?.heeds ?? 0;
+          }
+          return heeds / 40;
+        };
+        // Twice 0.5 × cooperation: 0.99 and 0.05.
+        expect(heedRate(99)).toBeGreaterThan(0.9);
+        expect(heedRate(5)).toBeLessThan(0.2);
+      });
+
+      it('holds a message back until its frame', () => {
+        const goal = { kind: 'goto' as const, point: { x: 0, y: 90 }, weight: 1, expires: null };
+        const r = simulateScrum([entry('a', 'home', { x: 0, y: 0 })], {
+          random: createRandom(TEST_SEED),
+          brain: hold,
+          frames: 5,
+          messages: [{ to: 'a', senderCharisma: 50, goal, deliverOnFrame: 10 }],
+        });
+        expect(r.finish[0]?.stats.pongs).toBe(0);
+      });
+    });
   });
 
   describe("a teammate's message", () => {

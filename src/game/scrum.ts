@@ -132,6 +132,16 @@ export interface ScrumOptions {
   readonly tuning?: Partial<Tuning>;
   /** The court; today's (`DEFAULT_COURT`) unless given. */
   readonly court?: Court;
+  /**
+   * How many frames to simulate: a whole scrum (`FRAMES_PER_SCRUM`) unless
+   * given. A drill (#73) runs about 3 seconds.
+   */
+  readonly frames?: number;
+  /**
+   * Messages from outside the scrum, delivered and heeded (or ignored) by the
+   * same rules as a teammate's: the player's in the teamwork drill (#73).
+   */
+  readonly messages?: readonly Message[];
 }
 
 /**
@@ -218,7 +228,7 @@ export interface ScrumFinish {
 }
 
 export interface ScrumResult {
-  /** `FRAMES_PER_SCRUM` frames, one after each simulated step. */
+  /** One frame after each simulated step: `FRAMES_PER_SCRUM` unless the scrum was given fewer. */
   readonly frames: readonly ScrumFrame[];
   readonly finish: readonly ScrumFinish[];
 }
@@ -241,7 +251,8 @@ interface Runner {
   stats: BehaviorStats;
 }
 
-interface Message {
+/** A message on its way to a spoof: a goal suggested by a teammate, or by the player in a drill. */
+export interface Message {
   readonly to: string;
   readonly senderCharisma: number;
   readonly goal: Goal;
@@ -371,13 +382,19 @@ export function simulateScrum(entries: readonly ScrumEntry[], options: ScrumOpti
   const brain = options.brain ?? spoofBrain;
   const tuning: Tuning = { ...DEFAULT_TUNING, ...options.tuning };
   const court = options.court ?? DEFAULT_COURT;
+  const frameCount = options.frames ?? FRAMES_PER_SCRUM;
+  if (!Number.isInteger(frameCount) || frameCount < 1 || frameCount > FRAMES_PER_SCRUM) {
+    throw new RangeError(
+      `A scrum runs 1 to ${String(FRAMES_PER_SCRUM)} frames, got ${String(frameCount)}`,
+    );
+  }
   const runners = entries.map(startRunner);
   const byId = new Map(runners.map((r) => [r.id, r]));
   const frames: ScrumFrame[] = [];
-  let mail: Message[] = [];
+  let mail: Message[] = [...(options.messages ?? [])];
   let contacts = new Set<string>();
 
-  for (let frame = 0; frame < FRAMES_PER_SCRUM; frame += 1) {
+  for (let frame = 0; frame < frameCount; frame += 1) {
     const secondsGone = frame * SECONDS_PER_FRAME;
 
     // 1. Deliver messages due now.
