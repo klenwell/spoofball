@@ -7,9 +7,13 @@ import {
   STORAGE_KEY,
   STORAGE_PROBLEM_TEXT,
   browserStorage,
+  loadDraft,
   loadTeam,
+  saveDraft,
   saveTeam,
 } from './saved-team';
+import { draftPool, renameCandidate, startDraft, togglePick, type Draft } from '../game/draft';
+import { TEST_SEED } from '../test-support/random';
 
 /** A saved record's JSON, from a team as `saveTeam` would write it. */
 function savedJson(team: Team = SPOOFS): string {
@@ -64,9 +68,9 @@ describe('saveTeam and loadTeam', () => {
     saveTeam(store, SPOOFS);
 
     expect([...store.items.keys()]).toEqual([STORAGE_KEY]);
-    expect(SAVE_VERSION).toBe(2);
+    expect(SAVE_VERSION).toBe(3);
     expect(JSON.parse(store.items.get(STORAGE_KEY) ?? '')).toMatchObject({
-      version: 2,
+      version: 3,
       team: { name: 'Spoofs', color: 'blue', logo: '👻' },
     });
   });
@@ -110,7 +114,14 @@ describe('loadTeam', () => {
       ['not an object', () => memoryStorage({ [STORAGE_KEY]: '[1, 2]' })],
       ['no version', () => storeWith((r) => delete r.version)],
       ['an older version than any written', () => storeWith((r) => (r.version = 0))],
-      ['no team', () => storeWith((r) => delete (r as Partial<LooseRecord>).team)],
+      [
+        'no team, in a version 2 record',
+        () =>
+          storeWith((r) => {
+            r.version = 2;
+            delete (r as Partial<LooseRecord>).team;
+          }),
+      ],
       ['a spoof missing a skill', () => storeWith((r) => delete firstSpoof(r).skills.iq)],
       ['a skill out of range', () => storeWith((r) => (firstSpoof(r).skills.burst = 150))],
       ['a name too long', () => storeWith((r) => (r.team.name = 'A'.repeat(17)))],
@@ -265,6 +276,107 @@ describe('saveTeam', () => {
     saveTeam(store, SPOOFS);
 
     expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
+  });
+});
+
+describe('a draft in progress (#72)', () => {
+  /** A draft with 2 picks and a rename, on the test seed's pool. */
+  function someDraft(): Draft {
+    let draft = startDraft({ name: 'Night Owls', color: 'teal', logo: '🦉' }, TEST_SEED);
+    const cheapest = [...draftPool(draft)].sort((a, b) => a.price - b.price);
+    for (const c of cheapest.slice(0, 2)) draft = togglePick(draft, draftPool(draft), c.spoof.id);
+    return renameCandidate(draft, draftPool(draft), draft.picks[0] ?? '', 'Hoot');
+  }
+
+  it('saves and loads back unchanged', () => {
+    const store = memoryStorage();
+
+    expect(saveDraft(store, someDraft())).toEqual({ ok: true });
+    expect(loadDraft(store)).toEqual(someDraft());
+  });
+
+  it("has none to load when there's none saved, or storage is missing or blocked", () => {
+    expect(loadDraft(memoryStorage())).toBeNull();
+    expect(loadDraft(null)).toBeNull();
+    expect(loadDraft(blockedStorage())).toBeNull();
+    expect(loadDraft(memoryStorage({ [STORAGE_KEY]: savedJson() }))).toBeNull();
+  });
+
+  it('keeps the saved team beside it, so starting a draft replaces nothing yet', () => {
+    const store = memoryStorage({ [STORAGE_KEY]: savedJson() });
+
+    saveDraft(store, someDraft());
+
+    expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
+    expect(loadDraft(store)).toEqual(someDraft());
+  });
+
+  it('is kept when the team is saved again, and ended when the team is the draft’s result', () => {
+    const store = memoryStorage();
+    saveDraft(store, someDraft());
+
+    saveTeam(store, SPOOFS);
+    expect(loadDraft(store)).toEqual(someDraft());
+
+    saveTeam(store, SPOOFS, { endDraft: true });
+    expect(loadDraft(store)).toBeNull();
+    expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
+  });
+
+  it('leaves no team to load while a first-time player is mid-draft', () => {
+    const store = memoryStorage();
+    saveDraft(store, someDraft());
+
+    expect(loadTeam(store)).toEqual({ ok: false, problem: 'none' });
+  });
+
+  it('keeps a version 1 team, upgraded, when a draft is saved beside it', () => {
+    const store = storeWith((r) => {
+      r.version = 1;
+      for (const spoof of r.team.spoofs) delete spoof.name;
+    });
+    const upgraded = loadTeam(store);
+
+    saveDraft(store, someDraft());
+
+    expect(upgraded.ok && loadTeam(store)).toEqual({
+      ok: true,
+      team: upgraded.ok ? upgraded.team : null,
+    });
+  });
+
+  it("refuses a draft that breaks the rules, and reports storage that won't save", () => {
+    const store = memoryStorage();
+    expect(saveDraft(store, { ...someDraft(), picks: ['p99'] })).toMatchObject({
+      ok: false,
+      problem: 'invalid',
+    });
+    expect(store.items.size).toBe(0);
+    expect(saveDraft(null, someDraft())).toEqual({ ok: false, problem: 'unavailable' });
+    expect(saveDraft(fullStorage(), someDraft())).toEqual({ ok: false, problem: 'full' });
+  });
+
+  it.each<[string, (draft: Record<string, unknown>) => void]>([
+    ['picks that are not a list', (d) => (d.picks = 'p1')],
+    ['a pick that is not text', (d) => (d.picks = [1])],
+    ['renames that are not an object', (d) => (d.renames = [])],
+    ['a rename that is not text', (d) => (d.renames = { p1: 5 })],
+    ['a seed that is not a number', (d) => (d.seed = '7')],
+    ['an unknown color', (d) => (d.color = 'beige')],
+    ['an unknown logo', (d) => (d.logo = 'X')],
+    ['a pick not in the pool', (d) => (d.picks = ['p99'])],
+  ])('ignores a saved draft with %s, and leaves it in place', (_what, edit) => {
+    const store = memoryStorage();
+    saveDraft(store, someDraft());
+    const record = JSON.parse(store.items.get(STORAGE_KEY) ?? '') as {
+      draft: Record<string, unknown>;
+    };
+    edit(record.draft);
+    const text = JSON.stringify(record);
+    store.items.set(STORAGE_KEY, text);
+
+    expect(loadDraft(store)).toBeNull();
+    expect(store.items.get(STORAGE_KEY)).toBe(text);
   });
 });
 

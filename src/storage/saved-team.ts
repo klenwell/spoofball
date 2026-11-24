@@ -1,9 +1,11 @@
+import { draftProblem, type Draft } from '../game/draft';
+import { isTeamLogo } from '../game/logos';
 import { createRandom } from '../game/random';
 import { drawSpoofName } from '../game/spoof-names';
 import { createSpoof, teamProblems, type Spoof, type Team } from '../game/teams';
 import { skillNames, type Skills } from '../game/skills';
 import type { SpoofType } from '../game/spoof-types';
-import type { TeamColorName } from '../design/tokens';
+import { teamColorNames, type TeamColorName } from '../design/tokens';
 
 /**
  * Saving your team in the browser (#70). One key in `localStorage` holds a
@@ -26,6 +28,9 @@ import type { TeamColorName } from '../design/tokens';
  *   its spoofs get names drawn from a seed made from the saved text, so they
  *   come out the same on every load, even where storage won't let the
  *   upgraded team be written back.
+ * - 3 (#72): a draft in progress too, beside the saved team or without one.
+ *   The team is optional: a first-time player mid-draft has none yet. A
+ *   version 2 record reads as version 3 with no draft.
  *
  * The skills are saved with the team. They stay hidden on screen, but anyone
  * reading the browser's storage could see them: fine for a single-player game
@@ -36,7 +41,7 @@ import type { TeamColorName } from '../design/tokens';
 export const STORAGE_KEY = 'spoofball';
 
 /** The version of the saved record this code writes. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 
 /** The part of the browser's `Storage` this module uses, so tests can pass a fake. */
 export type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -94,30 +99,42 @@ interface SavedTeam {
   spoofs: SavedSpoof[];
 }
 
+/** A draft is saved as it is: plain data (`Draft` in draft.ts). */
+type SavedDraft = Draft;
+
 interface SavedRecord {
   version: number;
-  team: SavedTeam;
+  team?: SavedTeam;
+  draft?: SavedDraft;
 }
 
-export function saveTeam(store: KeyValueStore | null, team: Team): SaveResult {
-  const problems = teamProblems(team);
-  if (problems.length > 0) return { ok: false, problem: 'invalid', details: problems };
-  if (!store) return { ok: false, problem: 'unavailable' };
-  const record: SavedRecord = {
-    version: SAVE_VERSION,
-    team: {
-      name: team.name,
-      color: team.color,
-      logo: team.logo,
-      spoofs: team.spoofs.map((s) => ({
-        id: s.id,
-        name: s.name,
-        type: s.type,
-        skills: { ...s.skills },
-        temperament: s.temperament,
-      })),
-    },
+function savedTeam(team: Team): SavedTeam {
+  return {
+    name: team.name,
+    color: team.color,
+    logo: team.logo,
+    spoofs: team.spoofs.map((s) => ({
+      id: s.id,
+      name: s.name,
+      type: s.type,
+      skills: { ...s.skills },
+      temperament: s.temperament,
+    })),
   };
+}
+
+function savedDraft(draft: Draft): SavedDraft {
+  return {
+    name: draft.name,
+    color: draft.color,
+    logo: draft.logo,
+    seed: draft.seed,
+    picks: [...draft.picks],
+    renames: { ...draft.renames },
+  };
+}
+
+function write(store: KeyValueStore, record: SavedRecord): SaveResult {
   try {
     store.setItem(STORAGE_KEY, JSON.stringify(record));
     return { ok: true };
@@ -126,7 +143,45 @@ export function saveTeam(store: KeyValueStore | null, team: Team): SaveResult {
   }
 }
 
-export function loadTeam(store: KeyValueStore | null): LoadResult {
+/**
+ * Saves your team. A draft in progress is kept beside it, unless `endDraft`
+ * says the team is the draft's result (#72), which ends it.
+ */
+export function saveTeam(
+  store: KeyValueStore | null,
+  team: Team,
+  { endDraft = false }: { endDraft?: boolean } = {},
+): SaveResult {
+  const problems = teamProblems(team);
+  if (problems.length > 0) return { ok: false, problem: 'invalid', details: problems };
+  if (!store) return { ok: false, problem: 'unavailable' };
+  const draft = endDraft ? null : loadDraft(store);
+  const record: SavedRecord = { version: SAVE_VERSION, team: savedTeam(team) };
+  if (draft) record.draft = savedDraft(draft);
+  return write(store, record);
+}
+
+/**
+ * Saves a draft in progress (#72), keeping the saved team beside it. Data
+ * that can't be read is replaced, as when saving a team: the player is
+ * making a new one.
+ */
+export function saveDraft(store: KeyValueStore | null, draft: Draft): SaveResult {
+  const problem = draftProblem(draft);
+  if (problem) return { ok: false, problem: 'invalid', details: [problem] };
+  if (!store) return { ok: false, problem: 'unavailable' };
+  const loaded = loadTeam(store);
+  const record: SavedRecord = { version: SAVE_VERSION, draft: savedDraft(draft) };
+  if (loaded.ok) record.team = savedTeam(loaded.team);
+  return write(store, record);
+}
+
+/** The record's data and text, or why there's none to read. */
+type ReadResult =
+  | { readonly ok: true; readonly data: Record<string, unknown>; readonly text: string }
+  | { readonly ok: false; readonly problem: LoadProblem };
+
+function readRecord(store: KeyValueStore | null): ReadResult {
   if (!store) return { ok: false, problem: 'unavailable' };
   let text: string | null;
   try {
@@ -147,12 +202,59 @@ export function loadTeam(store: KeyValueStore | null): LoadResult {
   }
   if (data.version > SAVE_VERSION) return { ok: false, problem: 'newer' };
   if (data.version < 1) return { ok: false, problem: 'unreadable' };
+  return { ok: true, data, text };
+}
+
+export function loadTeam(store: KeyValueStore | null): LoadResult {
+  const read = readRecord(store);
+  if (!read.ok) return read;
+  const { data, text } = read;
+  // Since version 3, a record can hold just a draft, with no team yet.
+  if (data.version === 3 && data.team === undefined) return { ok: false, problem: 'none' };
 
   // Version 1 had no spoof names: they're drawn here, from the saved text.
   const upgrading = data.version === 1;
   const team = teamFrom(data.team, upgrading ? nameDrawer(text) : null);
   if (!team || teamProblems(team).length > 0) return { ok: false, problem: 'unreadable' };
   return upgrading ? { ok: true, team, upgraded: true } : { ok: true, team };
+}
+
+/**
+ * The draft in progress (#72), or null: when there's none, or it can't be
+ * read or doesn't follow the draft's rules. An unreadable draft is left in
+ * place until the next save replaces it.
+ */
+export function loadDraft(store: KeyValueStore | null): Draft | null {
+  const read = readRecord(store);
+  if (!read.ok) return null;
+  const draft = draftFrom(read.data.draft);
+  return draft && draftProblem(draft) === null ? draft : null;
+}
+
+/** A draft from saved data of the right shape, or null. `draftProblem` checks its values. */
+function draftFrom(data: unknown): Draft | null {
+  if (!isObject(data) || !Array.isArray(data.picks) || !isObject(data.renames)) return null;
+  const { name, color, logo, seed } = data;
+  if (
+    typeof name !== 'string' ||
+    typeof color !== 'string' ||
+    typeof logo !== 'string' ||
+    typeof seed !== 'number'
+  ) {
+    return null;
+  }
+  if (!(teamColorNames as readonly string[]).includes(color) || !isTeamLogo(logo)) return null;
+  const picks: string[] = [];
+  for (const pick of data.picks) {
+    if (typeof pick !== 'string') return null;
+    picks.push(pick);
+  }
+  const renames: Record<string, string> = {};
+  for (const [id, newName] of Object.entries(data.renames)) {
+    if (typeof newName !== 'string') return null;
+    renames[id] = newName;
+  }
+  return { name, color: color as TeamColorName, logo, seed, picks, renames };
 }
 
 /** Names a version 1 team's spoofs, in order, from a seed made from the saved text. */
