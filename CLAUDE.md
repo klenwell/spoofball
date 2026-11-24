@@ -97,6 +97,7 @@ src/
 | `npm run lint`         | ESLint (typescript-eslint strict and stylistic, type-checked)    |
 | `npm run format:check` | Check Prettier formatting (`npm run format` to fix)              |
 | `npm run perf:scrum`   | Time scrums in headless Chrome at 4× CPU slowdown (needs Chrome) |
+| `npm run perf:combine` | Time the combine's warm-ups at 4× CPU slowdown (needs Chrome)    |
 
 Before opening a PR, run `npm run lint && npm run typecheck && npm test && npm run format:check && npm run build`.
 

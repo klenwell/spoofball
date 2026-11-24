@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "perf:scrum": "node scripts/scrum-perf.js"
+    "perf:scrum": "node scripts/scrum-perf.js",
+    "perf:combine": "node scripts/combine-perf.js"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
