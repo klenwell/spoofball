@@ -4,6 +4,7 @@ import { DRAFT_BUDGET, type Candidate } from '../game/combine';
 import { courtRadius } from '../game/court';
 import {
   budgetLeft,
+  chooseMark,
   draftPool,
   draftedTeam,
   isDraftComplete,
@@ -14,7 +15,7 @@ import {
   type Draft,
   type RenameProblem,
 } from '../game/draft';
-import { avatarOf } from '../game/spoof-types';
+import { markNames, shownType, type MarkName } from '../game/spoof-types';
 import { FRAMES_PER_SCRUM, SCRUM_SECONDS } from '../game/spoof-motion';
 import { MAX_SPOOF_NAME_LENGTH, SPOOFS_PER_TEAM, type Team } from '../game/teams';
 import { WARM_UP_CELL, startWarmUp, stepWarmUp, warmUpSeed, type WarmUp } from '../game/warm-up';
@@ -34,7 +35,8 @@ import { drawSpoofDisc } from './spoof-disc';
  * drills (#73, wireframe 3), where you draft it or remove it; a pick over
  * budget, or a sixth, isn't made, and the screen says why. On a phone the
  * drill court takes the screen; on a wide one it opens beside the warm-ups.
- * You can rename a pick in the strip. **Done** saves your team and plays it,
+ * You can rename a pick in the strip, and tap its disc to give it any of
+ * the 16 marks (#74). **Done** saves your team and plays it,
  * after a last check if it replaces your saved team.
  *
  * Every change is saved as it happens (`onChange`), so a reload brings back
@@ -71,7 +73,7 @@ const DRAFT_NOT_SAVED_TEXT =
   "Your draft can't be saved in this browser, so it will be lost if you leave or reload.";
 
 function typeName(candidate: Candidate): string {
-  return avatarOf(candidate.spoof.type);
+  return shownType(candidate.spoof.type);
 }
 
 function coins(price: number): string {
@@ -90,13 +92,39 @@ function sizeCanvas(canvas: HTMLCanvasElement, css: number): CanvasRenderingCont
   return ctx;
 }
 
-/** A small disc for a pick in the strip. */
-function discCanvas(candidate: Candidate, teamKit: Kit): HTMLCanvasElement {
+/** What each mark is called, for screen readers and the picker (#74). */
+const MARK_LABELS: Readonly<Record<MarkName, string>> = {
+  crown: 'crown',
+  gem: 'gem',
+  mallet: 'mallet',
+  starburst: 'starburst',
+  shield: 'shield',
+  dot: 'dot',
+  heart: 'heart',
+  bolt: 'lightning bolt',
+  infinity: 'infinity sign',
+  anchor: 'anchor',
+  bulb: 'light bulb',
+  star: 'star',
+  glove: 'boxing glove',
+  diamond: 'diamond',
+  club: 'club',
+  spade: 'spade',
+};
+
+/** A small disc wearing a mark, in your kit: for a pick in the strip, and the mark picker. */
+function discCanvas(mark: MarkName, teamKit: Kit, css = 22): HTMLCanvasElement {
   const canvas = el('canvas', 'combine-pick-disc');
   canvas.setAttribute('aria-hidden', 'true');
-  const ctx = sizeCanvas(canvas, 22);
+  const ctx = sizeCanvas(canvas, css);
   if (ctx)
-    drawSpoofDisc(ctx, { x: 11, y: 11, radius: 9, type: candidate.spoof.type, kit: teamKit });
+    drawSpoofDisc(ctx, {
+      x: css / 2,
+      y: css / 2,
+      radius: css / 2 - 2,
+      mark,
+      kit: teamKit,
+    });
   return canvas;
 }
 
@@ -289,6 +317,70 @@ export function createCombineScreen(options: CombineOptions): Panel {
     change(renameCandidate(draft, pool, id, input.value));
   }
 
+  /** The pick whose mark picker is open, or null. */
+  let pickerOpen: string | null = null;
+  /** After a re-render, the pick whose mark button gets focus back. */
+  let pickerFocus: string | null = null;
+
+  /**
+   * A pick's mark button (#74): its disc, which opens the 16 marks below
+   * the row. Any mark, even one a teammate wears.
+   */
+  function markButton(c: Candidate): HTMLButtonElement {
+    const id = c.spoof.id;
+    const button = el('button', 'combine-pick-mark');
+    button.type = 'button';
+    button.dataset.id = id;
+    button.setAttribute('aria-expanded', String(pickerOpen === id));
+    button.setAttribute('aria-controls', `mark-picker-${id}`);
+    button.setAttribute(
+      'aria-label',
+      `Mark for ${c.spoof.name}: ${MARK_LABELS[c.spoof.mark]}. Change`,
+    );
+    button.append(discCanvas(c.spoof.mark, teamKit, 28));
+    button.addEventListener('click', () => {
+      pickerOpen = pickerOpen === id ? null : id;
+      pickerFocus = id;
+      render();
+    });
+    return button;
+  }
+
+  /** The 16 marks for a pick, as a group of buttons; the one it wears is pressed. */
+  function markPicker(c: Candidate): HTMLElement {
+    const id = c.spoof.id;
+    const picker = el('div', 'combine-mark-picker');
+    picker.id = `mark-picker-${id}`;
+    picker.setAttribute('role', 'group');
+    picker.setAttribute('aria-label', `Marks for ${c.spoof.name}`);
+    for (const mark of markNames) {
+      const option = el('button', 'combine-mark-option');
+      option.type = 'button';
+      option.setAttribute('aria-label', MARK_LABELS[mark]);
+      option.setAttribute('aria-pressed', String(c.spoof.mark === mark));
+      option.title = MARK_LABELS[mark];
+      option.append(discCanvas(mark, teamKit, 32));
+      option.addEventListener('click', () => {
+        pickerOpen = null;
+        pickerFocus = id;
+        // A new mark re-renders through `change`; the same mark still closes the picker.
+        const next = chooseMark(draft, pool, id, mark);
+        if (next === draft) render();
+        else change(next);
+      });
+      picker.append(option);
+    }
+    picker.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      // Close the picker, not the drill court.
+      event.stopPropagation();
+      pickerOpen = null;
+      pickerFocus = id;
+      render();
+    });
+    return picker;
+  }
+
   function pickRow(c: Candidate): HTMLLIElement {
     const row = el('li', 'combine-pick');
     const input = el('input', 'field-input combine-pick-name');
@@ -313,11 +405,14 @@ export function createCombineScreen(options: CombineOptions): Panel {
       // The row is gone: keep focus nearby.
       (picksList.querySelector<HTMLButtonElement>('.combine-pick-remove') ?? done).focus();
     });
-    row.append(discCanvas(c, teamKit), input, price, remove);
+    row.append(markButton(c), input, price, remove);
+    if (pickerOpen === c.spoof.id) row.append(markPicker(c));
     return row;
   }
 
   function render(): void {
+    // A pick that leaves the team (× here, or Remove on the drill court) takes its open picker with it.
+    if (pickerOpen !== null && !draft.picks.includes(pickerOpen)) pickerOpen = null;
     const left = budgetLeft(draft, pool);
     const full = draft.picks.length >= SPOOFS_PER_TEAM;
     counter.textContent = `${String(draft.picks.length)} / ${String(SPOOFS_PER_TEAM)}`;
@@ -363,6 +458,17 @@ export function createCombineScreen(options: CombineOptions): Panel {
       // A rename re-renders the strip: put focus back in the same row.
       const inputs = [...picksList.querySelectorAll('input')];
       inputs.find((i) => i.value === keepFocus.trim())?.focus();
+    }
+    if (pickerFocus !== null) {
+      // Opening or closing a mark picker re-renders the strip: focus its first
+      // mark when it opens, and the mark button again when it closes.
+      const id = pickerFocus;
+      pickerFocus = null;
+      const target =
+        pickerOpen === id
+          ? picksList.querySelector<HTMLButtonElement>(`#mark-picker-${id} [aria-pressed='true']`)
+          : picksList.querySelector<HTMLButtonElement>(`.combine-pick-mark[data-id='${id}']`);
+      target?.focus();
     }
     const complete = isDraftComplete(draft);
     // Short, so it fits beside Back on a phone: the counter says how many are picked,
@@ -436,7 +542,8 @@ export function createCombineScreen(options: CombineOptions): Panel {
       x: size / 2 + warmUp.position.x * scale,
       y: size / 2 + warmUp.position.y * scale,
       radius: warmUp.spoof.radius * scale,
-      type: warmUp.spoof.type,
+      // A mark you chose shows at once: the pool has it, the warm-up doesn't.
+      mark: candidate(cell.id)?.spoof.mark ?? warmUp.spoof.mark,
       kit: teamKit,
     });
   }

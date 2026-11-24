@@ -333,7 +333,7 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
         x: spoof.x,
         y: spoof.y,
         radius: spoof.radius,
-        type: mine ? candidate.spoof.type : 'pawn-basic',
+        mark: mine ? candidate.spoof.mark : 'dot',
         kit: mine ? teamKit : DUMMY_COLORS,
         fatigue: spoof.fatigue,
       });

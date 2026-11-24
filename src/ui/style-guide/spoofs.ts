@@ -1,10 +1,9 @@
 import { kit, matchKits } from '../../design/kits';
-import { teamColorNames, type TeamColorName } from '../../design/tokens';
-import { avatars, type Avatar, type SpoofType } from '../../game/spoof-types';
+import { palette, teamColorNames, type TeamColorName } from '../../design/tokens';
+import { DEFAULT_MARKS, markNames, type MarkName } from '../../game/spoof-types';
 import { createCanvas } from '../canvas';
 import { drawSpoofDisc, type SpoofDisc } from '../spoof-disc';
 
-const SIZES = [10, 16, 24] as const;
 const CELL = 56;
 
 function courtCanvas(
@@ -16,6 +15,9 @@ function courtCanvas(
 } {
   const { canvas, ctx } = createCanvas(width, height);
   canvas.className = 'sg-court-canvas';
+  // Where a canvas must shrink to fit (max-width: 100%), its height follows,
+  // so the discs stay round.
+  canvas.style.height = 'auto';
   return { canvas, ctx };
 }
 
@@ -26,33 +28,53 @@ function label(text: string): HTMLElement {
   return span;
 }
 
-/** A spoof type that shows this avatar. Every pawn subtype shows the same one. */
-function typeFor(avatar: Avatar): SpoofType {
-  return avatar === 'pawn' ? 'pawn-basic' : avatar;
+/** The shown type whose default this mark is, if any. */
+function defaultFor(mark: MarkName): string | null {
+  const entry = Object.entries(DEFAULT_MARKS).find(([, m]) => m === mark);
+  return entry ? entry[0] : null;
 }
 
-/** One card per avatar: home kit on the top row, away kit below, at each size. */
-function typeCards(color: TeamColorName): HTMLElement[] {
-  return avatars.map((avatar) => {
-    const type = typeFor(avatar);
+/**
+ * Where each mark is checked (#74): radius 10, 16 and 24 on the white mosh,
+ * then radius 10, the smallest, on the gray apron and the red crush.
+ */
+const MARK_CELLS = [
+  { radius: 10, ground: palette.mosh },
+  { radius: 16, ground: palette.mosh },
+  { radius: 24, ground: palette.mosh },
+  { radius: 10, ground: palette.apron },
+  { radius: 10, ground: palette.crush },
+] as const;
+
+/** One card per mark: home kit on the top row, away kit below, on each ground. */
+function markCards(color: TeamColorName): HTMLElement[] {
+  return markNames.map((mark) => {
     const card = document.createElement('figure');
     card.className = 'sg-spoof-card';
-    const { canvas, ctx } = courtCanvas(CELL * SIZES.length, CELL * 2);
+    const { canvas, ctx } = courtCanvas(CELL * MARK_CELLS.length, CELL * 2);
+    MARK_CELLS.forEach(({ ground }, col) => {
+      ctx.fillStyle = ground;
+      ctx.fillRect(CELL * col, 0, CELL, CELL * 2);
+    });
     (['home', 'away'] as const).forEach((style, row) => {
-      SIZES.forEach((radius, col) => {
+      MARK_CELLS.forEach(({ radius }, col) => {
         drawSpoofDisc(ctx, {
           x: CELL * col + CELL / 2,
           y: CELL * row + CELL / 2,
           radius,
-          type,
+          mark,
           kit: kit(color, style),
         });
       });
     });
     canvas.setAttribute('role', 'img');
-    canvas.setAttribute('aria-label', `${avatar}: home and away kits at radius 10, 16 and 24`);
+    canvas.setAttribute(
+      'aria-label',
+      `${mark}: home and away kits at radius 10, 16 and 24 on the mosh, and 10 on the apron and the crush`,
+    );
     const caption = document.createElement('figcaption');
-    caption.textContent = avatar === 'pawn' ? 'pawn (all subtypes)' : avatar;
+    const type = defaultFor(mark);
+    caption.textContent = type ? `${mark} (${type === 'pawn' ? 'every pawn' : type})` : mark;
     card.append(canvas, caption);
     return card;
   });
@@ -86,7 +108,7 @@ function states(color: TeamColorName): HTMLElement[] {
         x: 0,
         y: 0,
         radius: 16,
-        type: 'rook',
+        mark: 'mallet',
         kit: home,
         fatigue,
         caption: String(fatigue),
@@ -98,29 +120,29 @@ function states(color: TeamColorName): HTMLElement[] {
         x: 0,
         y: 0,
         radius,
-        type: 'king',
+        mark: 'crown',
         kit: home,
         caption: String(radius),
       })),
     ),
     stateStrip('Highlight: selected', [
-      { x: 0, y: 0, radius: 16, type: 'queen', kit: home, caption: 'off' },
-      { x: 0, y: 0, radius: 16, type: 'queen', kit: home, highlighted: true, caption: 'on' },
+      { x: 0, y: 0, radius: 16, mark: 'gem', kit: home, caption: 'off' },
+      { x: 0, y: 0, radius: 16, mark: 'gem', kit: home, highlighted: true, caption: 'on' },
       {
         x: 0,
         y: 0,
         radius: 16,
-        type: 'queen',
+        mark: 'gem',
         kit: kit(color, 'away'),
         highlighted: true,
         caption: 'away',
       },
     ]),
     stateStrip('In a match, the visitor always wears away (even in the same color)', [
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: match.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: match.home, caption: 'home' },
-      { x: 0, y: 0, radius: 16, type: 'knight', kit: match.visitor, caption: 'visitor' },
-      { x: 0, y: 0, radius: 16, type: 'bishop', kit: match.visitor, caption: 'visitor' },
+      { x: 0, y: 0, radius: 16, mark: 'shield', kit: match.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, mark: 'starburst', kit: match.home, caption: 'home' },
+      { x: 0, y: 0, radius: 16, mark: 'shield', kit: match.visitor, caption: 'visitor' },
+      { x: 0, y: 0, radius: 16, mark: 'starburst', kit: match.visitor, caption: 'visitor' },
     ]),
   ];
 }
@@ -149,7 +171,7 @@ export function spoofsSection(
 
   const render = (): void => {
     const color = select.value as TeamColorName;
-    types.replaceChildren(...typeCards(color));
+    types.replaceChildren(...markCards(color));
     stateList.replaceChildren(...states(color));
   };
   select.addEventListener('change', render);
@@ -157,7 +179,7 @@ export function spoofsSection(
 
   return section(
     'Spoofs',
-    'Every avatar on the white court. Top row: home kit. Bottom row: away kit. Left to right: radius 10, 16 and 24 court units (the smallest and largest a spoof can be), drawn here at 1 unit = 1 px. In the arena they scale with the court. There are 8 spoof types but 6 avatars: pawn subtypes (basic, noble, angry) are hidden and look the same, showing only through how they play. These are the draft marks, for review in #18.',
+    "Every mark, 16 in all (#74). Top row: home kit. Bottom row: away kit. Left to right: radius 10, 16 and 24 court units on the white mosh (the smallest and largest a spoof can be), then radius 10 on the gray apron and the red crush, drawn here at 1 unit = 1 px. In the arena they scale with the court. The first six are the types' defaults; pawn subtypes (basic, noble, angry) are hidden, so every pawn starts with the dot. Any spoof on your team can wear any mark. Draft shapes, for the owner's review in #74.",
     [picker, types, h3('States'), stateList],
   );
 }

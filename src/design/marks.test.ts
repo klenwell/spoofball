@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { avatars } from '../game/spoof-types';
+import { markNames } from '../game/spoof-types';
 import { MARK_SAFE_RADIUS, marks, shapeExtent } from './marks';
 
 describe('marks', () => {
-  it('defines a mark for every avatar', () => {
-    expect(Object.keys(marks).sort()).toEqual([...avatars].sort());
+  it('defines a shape for every mark', () => {
+    expect(Object.keys(marks).sort()).toEqual([...markNames].sort());
   });
 
-  it.each(avatars)('keeps the %s mark inside the safe radius', (avatar) => {
-    for (const shape of marks[avatar]) {
+  it.each(markNames)('keeps the %s mark inside the safe radius', (name) => {
+    for (const shape of marks[name]) {
       expect(shapeExtent(shape)).toBeLessThanOrEqual(MARK_SAFE_RADIUS);
     }
   });
 
-  it('gives every avatar a different mark', () => {
-    const signatures = avatars.map((avatar) => JSON.stringify(marks[avatar]));
-    expect(new Set(signatures).size).toBe(avatars.length);
+  it('gives every mark a different shape', () => {
+    const signatures = markNames.map((name) => JSON.stringify(marks[name]));
+    expect(new Set(signatures).size).toBe(markNames.length);
   });
 });
 
@@ -26,6 +26,14 @@ describe('shapeExtent', () => {
 
   it('includes half the stroke of a ring', () => {
     expect(shapeExtent({ kind: 'ring', cx: 0, cy: 0, r: 0.3, width: 0.1 })).toBeCloseTo(0.35);
+  });
+
+  it('includes half the width of a cut, like a line', () => {
+    const points = [
+      [0, 0],
+      [0, 0.4],
+    ] as const;
+    expect(shapeExtent({ kind: 'cut', points, width: 0.1 })).toBeCloseTo(0.45);
   });
 
   it('uses the farthest vertex of a polygon', () => {

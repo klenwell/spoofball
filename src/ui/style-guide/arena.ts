@@ -2,6 +2,7 @@ import { matchKits } from '../../design/kits';
 import { palette, teamColorNames, type TeamColorName } from '../../design/tokens';
 import { arenaBounds, benchSeats } from '../../game/arena';
 import { zoneMultiplier, type Zone } from '../../game/court';
+import { defaultMark } from '../../game/spoof-types';
 import { drawArena, drawSpoofInArena } from '../arena';
 import { arenaHeightFor, fitArena } from '../arena-view';
 import { createCanvas } from '../canvas';
@@ -81,7 +82,7 @@ export function arenaSection(
         x: seat.x,
         y: seat.y,
         radius: sample.radius,
-        type: sample.type,
+        mark: defaultMark(sample.type),
         kit: sample.side === 'home' ? kits.home : kits.visitor,
       });
     }

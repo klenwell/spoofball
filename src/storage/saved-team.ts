@@ -4,7 +4,7 @@ import { createRandom } from '../game/random';
 import { drawSpoofName } from '../game/spoof-names';
 import { createSpoof, teamProblems, type Spoof, type Team } from '../game/teams';
 import { skillNames, type Skills } from '../game/skills';
-import type { SpoofType } from '../game/spoof-types';
+import { markNames, type MarkName, type SpoofType } from '../game/spoof-types';
 import { teamColorNames, type TeamColorName } from '../design/tokens';
 
 /**
@@ -31,6 +31,9 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
  * - 3 (#72): a draft in progress too, beside the saved team or without one.
  *   The team is optional: a first-time player mid-draft has none yet. A
  *   version 2 record reads as version 3 with no draft.
+ * - 4 (#74): each spoof's mark, and the marks chosen in a draft. An older
+ *   team's spoofs, and an older draft's candidates, wear their types' marks
+ *   (since #74, the new defaults).
  *
  * The skills are saved with the team. They stay hidden on screen, but anyone
  * reading the browser's storage could see them: fine for a single-player game
@@ -41,7 +44,7 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
 export const STORAGE_KEY = 'spoofball';
 
 /** The version of the saved record this code writes. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 /** The part of the browser's `Storage` this module uses, so tests can pass a fake. */
 export type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -90,6 +93,8 @@ interface SavedSpoof {
   type: SpoofType;
   skills: Skills;
   temperament: number;
+  /** Since version 4 (#74). */
+  mark: MarkName;
 }
 
 interface SavedTeam {
@@ -119,6 +124,7 @@ function savedTeam(team: Team): SavedTeam {
       type: s.type,
       skills: { ...s.skills },
       temperament: s.temperament,
+      mark: s.mark,
     })),
   };
 }
@@ -131,6 +137,7 @@ function savedDraft(draft: Draft): SavedDraft {
     seed: draft.seed,
     picks: [...draft.picks],
     renames: { ...draft.renames },
+    marks: { ...draft.marks },
   };
 }
 
@@ -210,7 +217,7 @@ export function loadTeam(store: KeyValueStore | null): LoadResult {
   if (!read.ok) return read;
   const { data, text } = read;
   // Since version 3, a record can hold just a draft, with no team yet.
-  if (data.version === 3 && data.team === undefined) return { ok: false, problem: 'none' };
+  if (Number(data.version) >= 3 && data.team === undefined) return { ok: false, problem: 'none' };
 
   // Version 1 had no spoof names: they're drawn here, from the saved text.
   const upgrading = data.version === 1;
@@ -254,7 +261,16 @@ function draftFrom(data: unknown): Draft | null {
     if (typeof newName !== 'string') return null;
     renames[id] = newName;
   }
-  return { name, color: color as TeamColorName, logo, seed, picks, renames };
+  // Before version 4 (#74) a draft had no marks: every candidate wears its type's.
+  const marks: Record<string, MarkName> = {};
+  if (data.marks !== undefined) {
+    if (!isObject(data.marks)) return null;
+    for (const [id, mark] of Object.entries(data.marks)) {
+      if (!isMarkName(mark)) return null;
+      marks[id] = mark;
+    }
+  }
+  return { name, color: color as TeamColorName, logo, seed, picks, renames, marks };
 }
 
 /** Names a version 1 team's spoofs, in order, from a seed made from the saved text. */
@@ -314,7 +330,14 @@ function spoofFrom(data: unknown, drawnName: string | undefined): Spoof | null {
     if (typeof value !== 'number') return null;
     values[name] = value;
   }
-  return createSpoof(id, name, type as SpoofType, values as Skills, temperament);
+  // Before version 4 (#74) a spoof had no saved mark: it wears its type's.
+  const { mark } = data;
+  if (mark !== undefined && !isMarkName(mark)) return null;
+  return createSpoof(id, name, type as SpoofType, values as Skills, temperament, mark);
+}
+
+function isMarkName(value: unknown): value is MarkName {
+  return typeof value === 'string' && (markNames as readonly string[]).includes(value);
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

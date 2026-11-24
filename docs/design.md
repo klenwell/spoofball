@@ -31,18 +31,21 @@ These were chosen by the owner from a set of mockup comparisons.
    - **History:** on #17 the owner chose a light court over the dark court in the first mockups.
    - **Why it matters:** scoring depends on which zone a spoof is in, so the court's markings are part of the game.
 
-3. **Spoof avatars: custom geometric marks,** one per avatar, drawn in code.
-   - **First draft:**
-     - king: a star;
-     - queen: an asterisk with a center dot (the owner's idea in #18, replacing a ring that looked busy at 10 px);
-     - rook: a club (♣);
-     - bishop: a diamond (♦);
-     - knight: a spade (♠);
-     - pawn: a dot.
-   - **Playing-card suits for the rook, bishop and knight** (the owner's idea in #18). The heart (♥) is unused.
-   - **Pawn subtypes are hidden.** There are 8 spoof types but 6 avatars: basic, noble and angry pawns all show the same pawn mark. A subtype shows only through how the pawn plays in a match (the owner's decision on #18, 2026-11-20). The prototype did the same, sending only "pawn" to the browser. In code, `avatarOf(type)` maps a spoof type to what the player sees.
-   - **Why geometric marks:** they look the same on every device and stay readable on a 10 px disc. Chess glyphs blur at that size, and emoji vary by device and get muddy.
-   - **Status:** the owner is refining them in #18.
+3. **Spoof marks: custom geometric marks, drawn in code,** 16 in all (#74, the owner, 2026-11-24). Every spoof starts with its type's mark, and you can give a spoof of yours any of the 16 when you draft it.
+   - **Each type's default** suits the type:
+     - king: a crown;
+     - queen: a gem;
+     - rook: a mallet;
+     - bishop: a starburst;
+     - knight: a shield;
+     - pawn: a dot, whatever its hidden subtype.
+   - **Ten more to choose from:** heart, lightning bolt, infinity sign, anchor, light bulb, star, boxing glove, diamond, club and spade.
+     - The diamond (♦), club (♣) and spade (♠) were the bishop's, rook's and knight's marks before #74; the king's four-point star and the queen's asterisk were retired.
+     - The boxing glove replaced a raised fist, which blurred at 10 px. It's traced from a sample the owner chose, as a right-handed glove leaning right. The line that sets off its thumb is a `cut`: a stroke in the disc's own color.
+   - **A free choice, with no block on duplicates.** Any spoof on your team can wear any mark, and two can wear the same one. The game never picks a mark from a spoof's skills, so a mark reveals nothing hidden. Once you change it, it says nothing about the spoof's type either. Computer teams wear their types' marks.
+   - **Pawn subtypes are hidden.** There are 8 spoof types but 6 the player can know: basic, noble and angry pawns are all just pawns. A subtype shows only through how the pawn plays in a match (the owner's decision on #18, 2026-11-20). The prototype did the same, sending only "pawn" to the browser. In code, `shownType(type)` gives the type a player can know, and `defaultMark(type)` its mark.
+   - **Why geometric marks:** they look the same on every device and stay readable on a 10 px disc. Chess glyphs blur at that size, and emoji vary by device and get muddy. Every mark is checked on the style guide at radius 10, 16 and 24, in both kits, on the mosh, the apron and the crush.
+   - **History:** the first marks (#18) were a star, an asterisk, a club, a diamond, a spade and a dot, approved as placeholders. #74 replaced them (and closed #25, the plan to revisit them).
 4. **Team colors: 8 named colors, re-tuned for the light court, with home and away kits.**
    - The names come from the prototype: red, orange, gold, green, teal, blue, purple and pink.
    - Each color is just dark enough to stand out on white, so all 8 have similar weight, and pure red against pure green is avoided.
@@ -75,7 +78,7 @@ These were chosen by the owner from a set of mockup comparisons.
 7. **A spoof's abilities are hidden. Players infer them from how it moves** (the owner's decision on #20, 2026-11-20).
    - No screen shows a spoof's **skills** (11), **comps** (5) or **pawn subtype**: not the draft, not Pharm, not Stats.
    - **This is stricter than the prototype.** The prototype never showed skills, but its Pharm roster showed each spoof's 5 comps as "spangles": a circle per comp, sized and colored from red to green by its value, with an icon (`CompSpangle` in `public/js/app/models/rook.js`). There were no numbers, but you could read them at a glance.
-   - Spoof cards and stats show only the avatar and **outcomes**: matches and scrums played, points, points per scrum, and +/− per scrum (team points minus opponent points while that spoof played, from the prototype's stats page).
+   - Spoof cards and stats show only the mark and **outcomes**: matches and scrums played, points, points per scrum, and +/− per scrum (team points minus opponent points while that spoof played, from the prototype's stats page).
    - **Why:** the game should reward intuition and watching, not number-crunching.
    - **A price is the one number the combine shows** (#72, the owner, 2026-11-23). It's a rough, deliberately noisy hint of a candidate's raw skill total, never of a single skill, and it doesn't reflect which skills a spoof has.
 8. **The draft is a combine,** modeled on the NFL Scouting Combine (the owner's idea on #20).
@@ -94,7 +97,7 @@ Low-fidelity phone sketches (#20), to guide the epics that build each screen. Th
 ![Draft (New Team) wireframes](design/wireframe-draft.svg)
 
 1. **Your team:** a name (up to 16 characters, as in the prototype), one of the 8 colors, and an emoji logo, with a preview.
-2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell, with its name and price. Tap a cell for its drills (#73). Picked cells are outlined, and a strip at the bottom fills to 5, with the budget left (#72).
+2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell, with its name and price. Tap a cell for its drills (#73). Picked cells are outlined, and a strip at the bottom fills to 5, with the budget left (#72). In the strip you can rename a pick, and tap its disc to choose its mark (#74).
 3. **Drills:** sprint, blow, hold and teamwork tabs on a small court, with the candidate's name and price (#73). A caption above the court says what to watch for and why it matters, and a timer in its corner counts down the drill. "Draft this spoof" or "Next candidate".
 
 There's no tab bar until the team exists. On desktop, the warm-up grid widens to more columns and the drill court opens beside it.
@@ -200,6 +203,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **The jitter** is about 12 coins. Over 400 seeded pools, most prices fall between 23 and 77, about 1 in 4,000 is 1, and the cheaper of two candidates has more skill points about a quarter of the time.
   - The pool size, budget, spread, price swing and jitter are each one setting in `src/game/combine.ts`.
 - **You can rename a spoof as you draft it,** up to 16 characters, unlike any other name in the pool.
+- **You can choose a spoof's mark as you draft it** (#74): tap its disc in your team list, and pick any of the 16. Two of your spoofs can wear the same mark. The mark you chose shows wherever the spoof does, and it's saved with your team.
 - **Warm-ups:** each candidate wanders alone in a small round cell, by the match's own movement rules (thinking, dashing, skidding, bouncing). It doesn't tire or grow there.
 - **Four drills** (#73): _sprint_ (hints at burst and stamina), _blow_ (growth and size), _hold_ (mass) and _teamwork_ (cooperation and iq). Each plays for about 3 seconds, can be rerun, and varies a little each time. Vision, charisma and constancy show only in matches.
   - **Teamwork** was the owner's addition (2026-11-23, on #69): you tap one of two spots on the drill court, left or right, and the spoof heeds your message, or not, by a match's rules. Its 3 seconds start at the tap, and nothing says when it ignored you: the timer runs out with the spoof still in the middle (the owner, 2026-11-24, on #73). Two fixed spots, not anywhere you tap, so every run covers the same distance and candidates compare fairly. Your message comes from an average sender (charisma 50, burst 50), so it's heeded as often as the spoof's cooperation, as a share, and arrives a quarter of a second after the tap. The spoof acts on it at its next thought, which iq speeds up.
@@ -238,7 +242,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Spoof**        | A player: a 2D disc. A team has 5. (The prototype called them "rooks".)                                                                                                                                 |
 | **Spoof type**   | A spoof's archetype. It's fixed when the spoof is created and shapes its skill rolls. The types are king, queen, rook, bishop and knight, plus three pawns: basic, noble and angry                      |
-| **Avatar**       | The mark a player sees on a spoof. There's one per type, except that every pawn shows the same pawn avatar                                                                                              |
+| **Mark**         | The shape on a spoof's disc. Each type has a default (every pawn's is the dot), and you can give a spoof of yours any of the 16 marks                                                                   |
 | **Pawn subtype** | Basic, noble or angry. Hidden from the player: it shows only through how the pawn plays in a match                                                                                                      |
 | **Match**        | A whole contest against one other team, played over 3 scrums                                                                                                                                            |
 | **Scrum**        | One period of a match: the mise, then 8 seconds of the spoofs playing on their own. (The prototype called it a round)                                                                                   |

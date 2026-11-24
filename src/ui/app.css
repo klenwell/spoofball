@@ -1017,6 +1017,7 @@ a.button {
 
 .combine-pick {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   min-height: 2.75rem;
@@ -1031,6 +1032,58 @@ a.button {
 
 .combine-pick-disc {
   flex: none;
+}
+
+/* A pick's mark (#74): its disc is a button that opens the 16 marks below the row. */
+.combine-pick-mark,
+.combine-mark-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: none;
+  cursor: pointer;
+}
+
+.combine-pick-mark {
+  border-color: var(--color-line);
+  background: var(--color-surface);
+}
+
+.combine-pick-mark[aria-expanded='true'],
+.combine-mark-option[aria-pressed='true'] {
+  border-color: var(--color-accent-text);
+  box-shadow: inset 0 0 0 1px var(--color-accent-text);
+}
+
+@media (min-width: 30rem) {
+  .combine-mark-picker {
+    grid-template-columns: repeat(8, minmax(2.75rem, 1fr));
+  }
+}
+
+.combine-pick-mark:focus-visible,
+.combine-mark-option:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* 16 marks: 4 by 4 on a phone, 2 rows of 8 where there's room. Tap targets stay 44 px. */
+.combine-mark-picker {
+  display: grid;
+  flex-basis: 100%;
+  grid-template-columns: repeat(4, minmax(2.75rem, 1fr));
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
 }
 
 .combine-pick-name {

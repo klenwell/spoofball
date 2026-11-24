@@ -219,9 +219,10 @@ body {
   text-transform: capitalize;
 }
 
+/* Wide enough for a mark card's 5 columns (280 px, #74) at full size. */
 .sg-spoof-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
   gap: var(--space-3);
 }
 
