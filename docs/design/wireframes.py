@@ -152,17 +152,18 @@ def draft():
         b.line(sx - 12 * math.cos(ang), sy - 12 * math.sin(ang), sx, sy, color=LIGHT, width=2, dash=True)
         b.spoof(sx, sy, 5 + (i % 4), solid=True)
     b.note(446, 'each cell: one candidate moving on its own, its name and price')
-    b.note(461, 'tap a cell to pick · 10 candidates · budget 250')
+    b.note(461, 'tap a cell for drills · 10 candidates · budget 250')
     for i in range(5):
         b.circle(58 + i * 46, 498, 15, fill=FILL if i > 1 else INK, stroke=LIGHT if i > 1 else INK, dash=i > 1)
     b.button(16, 534, W - 32, 'Done', primary=False)
 
     c = Frame('3 · Combine: drills')
     c.header('Drills', '< Back to warm-ups')
-    for i, name in enumerate(['Sprint', 'Blow', 'Hold']):
-        x = 16 + i * 92
-        c.box(x, 72, 84, 30, name, rx=15, fill=ACCENT if i == 0 else '#ffffff', stroke=ACCENT,
-              color='#ffffff' if i == 0 else ACCENT, size=12)
+    c.text(W - 16, 36, '43 coins', size=13, anchor='end', weight=700)
+    for i, name in enumerate(['Sprint', 'Blow', 'Hold', 'Teamwork']):
+        x = 16 + i * 70
+        c.box(x, 72, 64, 30, name, rx=15, fill=ACCENT if i == 0 else '#ffffff', stroke=ACCENT,
+              color='#ffffff' if i == 0 else ACCENT, size=11)
     c.circle(W / 2, 250, 120, fill=FILL, stroke=LIGHT)
     c.circle(W / 2, 250, 80, fill='#ffffff', stroke=MID)
     c.line(W / 2 - 100, 250, W / 2 + 100, 250, color=ACCENT, width=1, dash=True)

@@ -80,7 +80,7 @@ These were chosen by the owner from a set of mockup comparisons.
    - **A price is the one number the combine shows** (#72, the owner, 2026-11-23). It's a rough, deliberately noisy hint of a candidate's raw skill total, never of a single skill, and it doesn't reflect which skills a spoof has.
 8. **The draft is a combine,** modeled on the NFL Scouting Combine (the owner's idea on #20).
    - **Warm-ups:** every candidate moves on its own in a small round cell, so you can scan the pool like a scout.
-   - **Drills:** tap a spoof to open a small drill court with 2–3 short drills, such as _sprint_ (dash across and back), _blow_ (grow from its smallest size) and _hold_ (stay in the mosh while a dummy pushes). Each is a few seconds, with no numbers.
+   - **Drills:** tap a spoof to open a small drill court with 4 short drills (#73): _sprint_ (dash across and back, again and again), _blow_ (grow from its starting size), _hold_ (stay in the mosh while a dummy pushes) and _teamwork_ (you send it a message, and see whether and how soon it acts on it). Each plays for about 3 seconds, with no numbers.
    - **Some randomness,** like a real combine: a spoof shows its traits, but not a perfectly repeatable test.
    - **The combine reuses the match simulation,** so a spoof behaves in drills exactly as it will in a match. So the Draft (New Team) epic, which builds the combine, depends on the Match epic.
    - **Scouting in Pharm:** you can run drills on your own spoofs before replacing one. Replacing uses a small pool of 3 prospects. The prototype's pharm had this idea, but felt clunky, so the owner wants it **clean and easy to use**.
@@ -94,8 +94,8 @@ Low-fidelity phone sketches (#20), to guide the epics that build each screen. Th
 ![Draft (New Team) wireframes](design/wireframe-draft.svg)
 
 1. **Your team:** a name (up to 16 characters, as in the prototype), one of the 8 colors, and an emoji logo, with a preview.
-2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell, with its name and price. Picked cells are outlined, and a strip at the bottom fills to 5, with the budget left (#72).
-3. **Drills:** sprint, blow and hold tabs on a small court. "Draft this spoof" or "Next candidate".
+2. **Combine warm-ups:** a grid of candidate cells, each spoof moving in its own cell, with its name and price. Tap a cell for its drills (#73). Picked cells are outlined, and a strip at the bottom fills to 5, with the budget left (#72).
+3. **Drills:** sprint, blow, hold and teamwork tabs on a small court, with the candidate's name and price (#73). "Draft this spoof" or "Next candidate".
 
 There's no tab bar until the team exists. On desktop, the warm-up grid widens to more columns and the drill court opens beside it.
 
@@ -201,7 +201,12 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - The pool size, budget, spread, price swing and jitter are each one setting in `src/game/combine.ts`.
 - **You can rename a spoof as you draft it,** up to 16 characters, unlike any other name in the pool.
 - **Warm-ups:** each candidate wanders alone in a small round cell, by the match's own movement rules (thinking, dashing, skidding, bouncing). It doesn't tire or grow there.
-- **Three drills:** _sprint_ (hints at burst and stamina), _blow_ (growth and size) and _hold_ (mass and constancy). Each takes about 3 seconds, can be rerun, and varies a little each time. Iq, vision, charisma and cooperation show only in matches.
+- **Four drills** (#73): _sprint_ (hints at burst and stamina), _blow_ (growth and size), _hold_ (mass) and _teamwork_ (cooperation and iq). Each plays for about 3 seconds, can be rerun, and varies a little each time. Vision, charisma and constancy show only in matches.
+  - **Teamwork** was the owner's addition (2026-11-23, on #69): you tap **Go left** or **Go right**, and the spoof heeds your message, or not, by a match's rules. Your message comes from an average sender (charisma 50, burst 50), so it's heeded as often as the spoof's cooperation, as a share, and arrives a quarter of a second after the tap. The spoof acts on it at its next thought, which iq speeds up.
+  - **Sprint and blow play sped up** (the owner, 2026-11-24, on #73). Stamina and growth only show over time: at match speed, a 3-second sprint ends before tiring adds up, and a spoof grows only 4% to 21%. So each simulates a whole scrum (8 seconds) and plays it back in 3, about 2.7× speed. Hold and teamwork play at match speed.
+  - **Hold hints at mass only** (the owner, 2026-11-24). In a match, constancy only makes a spoof stop more cleanly at its goal and think more often late in a scrum, and neither shows in a short drill: measured over 150 runs, it moved hold's result by less than 2 units.
+  - **Iq shows in every drill,** in how quickly a spoof reacts, as it does in a match.
+  - **Tap a candidate to open its drills,** and draft it from the drill court (#73). On a phone the drill court takes the screen; on a wide screen it opens beside the warm-ups.
 
 ### Pharm
 
@@ -248,7 +253,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 | **Draft**        | Creating your team: its name, color and emoji logo, then picking its 5 spoofs from a generated pool in the combine. The epic that builds it is Draft (New Team) (#69), named Expansion until 2026-11-23 |
 | **Combine**      | How you draft: candidate spoofs show their abilities by moving, in warm-ups and drills, like the NFL Scouting Combine                                                                                   |
 | **Warm-up**      | A candidate moving on its own in a small round cell, so you can compare a whole pool at a glance                                                                                                        |
-| **Drill**        | A short exercise on a small court (sprint, blow, hold) that shows one or two of a spoof's traits, without numbers                                                                                       |
+| **Drill**        | A short exercise on a small court (sprint, blow, hold, teamwork) that shows one or two of a spoof's traits, without numbers                                                                             |
 | **Temperament**  | A spoof's hidden keenness to attack: hot spoofs go after opponents, calm ones are shy of them. Not a skill; never shown                                                                                 |
 | **Pharm**        | Managing your team: your roster, replacing a spoof, re-drafting. From "farm system"                                                                                                                     |
 | **Draft pick**   | What replacing a spoof costs. A team holds up to 3 and gets one back after each loss                                                                                                                    |
