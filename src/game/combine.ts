@@ -1,13 +1,16 @@
 import { createRandom, type Random } from './random';
-import { drawSpoofType, minimumTotal, typeProfiles } from './skills';
+import { minimumTotal, typeProfiles } from './skills';
+import { spoofTypes, type SpoofType } from './spoof-types';
 import { NEW_SPOOF_SKILL_TOTAL, generateSpoof, type Spoof } from './teams';
 
 /**
  * The combine's pool (#72): about 10 candidates for your 5 picks, each with a
  * price. The owner's rules (2026-11-23, on #69 and #72):
  *
- * - Types are drawn with the prototype's draft odds, and there are no roster
- *   limits: the budget is the only limit.
+ * - Types are drawn with the combine's own odds: the prototype's, with fewer
+ *   pawns and more royals. Each pool has at most 6 pawns and at least 1
+ *   royal. There are no roster limits on your picks: the budget is the only
+ *   limit.
  * - Strength is spread widely around a new team's level, 528 skill points a
  *   spoof, so candidates really differ in points.
  * - A price follows a candidate's raw skill total, never which skills it has,
@@ -47,11 +50,51 @@ export interface PoolTuning {
  * The owner's picks on #72 (2026-11-23): totals from 453 to 603 (within each
  * type's limits), prices swinging ±20 from 50 across that spread, and a
  * jitter of about 12 coins. Over 400 seeded pools, most prices fall between
- * 24 and 76, none is 1, and the cheaper of two candidates has more skill
- * points about a quarter of the time (measured in the PR). A first try
+ * 23 and 77, about 1 in 4,000 is 1, and the cheaper of two candidates has
+ * more skill points about a quarter of the time (measured in the PR). A first try
  * swung ±45, which left the weakest candidates at a coin or two.
  */
 export const DEFAULT_POOL_TUNING: PoolTuning = { spread: 75, jitter: 12, priceSwing: 20 };
+
+/**
+ * The combine's type odds, out of 100 (the owner, #72 QA, 2026-11-23): the
+ * prototype's (`draftOdds` in skills.ts) with pawns cut from 65 to 50 and
+ * royals raised from 5 to 10, keeping the shares within each group. With the
+ * prototype's, about 60% of 10-candidate pools had no king or queen.
+ */
+export const COMBINE_TYPE_ODDS: Readonly<Record<SpoofType, number>> = {
+  king: 5,
+  queen: 5,
+  rook: 13,
+  bishop: 13,
+  knight: 14,
+  'pawn-basic': 23,
+  'pawn-noble': 15,
+  'pawn-angry': 12,
+};
+
+/** The most pawns in a pool. */
+export const MAX_POOL_PAWNS = 6;
+/** The fewest royals (kings and queens) in a pool. */
+export const MIN_POOL_ROYALS = 1;
+
+const isPawn = (type: SpoofType) => type.startsWith('pawn');
+const isRoyal = (type: SpoofType) => type === 'king' || type === 'queen';
+
+/**
+ * The next candidate's type, given the types drawn so far and how many are
+ * still to come. Once the pool has its most pawns, the rest are other types;
+ * if the last places must hold the pool's royals, they're drawn from royals.
+ */
+function drawPoolType(random: Random, drawn: readonly SpoofType[], left: number): SpoofType {
+  const pawns = drawn.filter(isPawn).length;
+  const royalsNeeded = MIN_POOL_ROYALS - drawn.filter(isRoyal).length;
+  const options = spoofTypes.filter((type) => {
+    if (royalsNeeded > 0 && left <= royalsNeeded) return isRoyal(type);
+    return !(isPawn(type) && pawns >= MAX_POOL_PAWNS);
+  });
+  return random.weighted(options.map((type) => [type, COMBINE_TYPE_ODDS[type]] as const));
+}
 
 export interface Candidate {
   readonly spoof: Spoof;
@@ -122,7 +165,11 @@ export function createPool(seed: number, tuning: PoolTuning = DEFAULT_POOL_TUNIN
   const spoofs: Spoof[] = [];
   const raw: number[] = [];
   for (let i = 0; i < POOL_SIZE; i += 1) {
-    const type = drawSpoofType(random);
+    const type = drawPoolType(
+      random,
+      spoofs.map((s) => s.type),
+      POOL_SIZE - i,
+    );
     const drawn = random.int(
       NEW_SPOOF_SKILL_TOTAL - tuning.spread,
       NEW_SPOOF_SKILL_TOTAL + tuning.spread,

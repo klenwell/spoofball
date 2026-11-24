@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { TEST_SEED } from '../test-support/random';
 import {
+  COMBINE_TYPE_ODDS,
   DEFAULT_POOL_TUNING,
+  MAX_POOL_PAWNS,
+  MIN_POOL_ROYALS,
   DRAFT_BUDGET,
   MAX_PRICE,
   MIN_PRICE,
@@ -62,16 +65,45 @@ describe('createPool', () => {
     }
   });
 
-  it("draws types with the prototype's odds: mostly pawns, kings rarely", () => {
+  it('has at most 6 pawns and at least 1 royal in every pool', () => {
+    expect([MAX_POOL_PAWNS, MIN_POOL_ROYALS]).toEqual([6, 1]);
+    for (const pool of manyPools(500)) {
+      const types = pool.map((c) => c.spoof.type);
+      expect(types.filter((t) => t.startsWith('pawn')).length).toBeLessThanOrEqual(MAX_POOL_PAWNS);
+      expect(types.filter((t) => t === 'king' || t === 'queen').length).toBeGreaterThanOrEqual(
+        MIN_POOL_ROYALS,
+      );
+    }
+  });
+
+  it("draws types with the combine's odds: about 4 or 5 pawns a pool, and often a second royal", () => {
+    const pools = manyPools(2000);
+    const count = (pred: (t: string) => boolean) =>
+      pools.map((pool) => pool.filter((c) => pred(c.spoof.type)).length);
+    const pawns = count((t) => t.startsWith('pawn'));
+    const royals = count((t) => t === 'king' || t === 'queen');
+    const mean = (xs: number[]) => sum(xs) / xs.length;
+
+    // As simulated over 100,000 pools when the owner picked these odds (#72 QA): 4.6 and 1.37.
+    expect(Math.abs(mean(pawns) - 4.6)).toBeLessThan(0.1);
+    expect(Math.abs(mean(royals) - 1.37)).toBeLessThan(0.1);
+    expect(royals.filter((r) => r >= 2).length / pools.length).toBeGreaterThan(0.2);
+  });
+
+  it("draws the first candidate, before any limit applies, with the combine's odds", () => {
     const counts = Object.fromEntries(spoofTypes.map((t) => [t, 0])) as Record<string, number>;
-    const pools = manyPools(500);
-    for (const pool of pools)
-      for (const c of pool) counts[c.spoof.type] = (counts[c.spoof.type] ?? 0) + 1;
-    const drawn = pools.length * POOL_SIZE;
-    const odds = sum(spoofTypes.map((t) => typeProfiles[t].draftOdds));
+    const pools = manyPools(4000);
+    for (const pool of pools) {
+      const first = pool[0]?.spoof.type ?? 'king';
+      counts[first] = (counts[first] ?? 0) + 1;
+    }
+    const odds = sum(spoofTypes.map((t) => COMBINE_TYPE_ODDS[t]));
+    expect(odds).toBe(100);
     for (const type of spoofTypes) {
-      const expected = typeProfiles[type].draftOdds / odds;
-      expect((counts[type] ?? 0) / drawn, type).toBeCloseTo(expected, 1);
+      expect((counts[type] ?? 0) / pools.length, type).toBeCloseTo(
+        COMBINE_TYPE_ODDS[type] / odds,
+        1,
+      );
     }
   });
 
