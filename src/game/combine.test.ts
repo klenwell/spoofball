@@ -141,8 +141,15 @@ describe('createPool', () => {
 
     it('jitter enough that the cheaper of two spoofs is sometimes the stronger', () => {
       const { cheaperStronger } = measure();
-      expect(cheaperStronger).toBeGreaterThan(0.08);
-      expect(cheaperStronger).toBeLessThan(0.25);
+      // About a quarter of the time with the owner's picks (#72).
+      expect(cheaperStronger).toBeGreaterThan(0.15);
+      expect(cheaperStronger).toBeLessThan(0.33);
+    });
+
+    it('keep even the weakest candidates well off the floor: a coin or two is rare', () => {
+      const prices = manyPools().flatMap((pool) => pool.map((c) => c.price));
+      const low = prices.filter((p) => p < 10).length / prices.length;
+      expect(low).toBeLessThan(0.005);
     });
 
     it('follow skill totals exactly with no jitter, so the jitter is all that blurs them', () => {

@@ -36,15 +36,22 @@ export interface PoolTuning {
   readonly spread: number;
   /** The typical size of a price's jitter, in coins, before the pool is scaled. */
   readonly jitter: number;
+  /**
+   * How far a price moves from 50 for a total at either end of the spread,
+   * before jitter: the stretch from skill points to coins.
+   */
+  readonly priceSwing: number;
 }
 
 /**
- * The starting picks, for the owner's review: totals from 453 to 603 (within
- * each type's limits), and a jitter of about 12 coins. Over 400 seeded pools,
- * the cheaper of two candidates has more skill points 13% of the time, and
- * price and skill total correlate at 0.85 (measured in the PR).
+ * The owner's picks on #72 (2026-11-23): totals from 453 to 603 (within each
+ * type's limits), prices swinging ±20 from 50 across that spread, and a
+ * jitter of about 12 coins. Over 400 seeded pools, most prices fall between
+ * 24 and 76, none is 1, and the cheaper of two candidates has more skill
+ * points about a quarter of the time (measured in the PR). A first try
+ * swung ±45, which left the weakest candidates at a coin or two.
  */
-export const DEFAULT_POOL_TUNING: PoolTuning = { spread: 75, jitter: 12 };
+export const DEFAULT_POOL_TUNING: PoolTuning = { spread: 75, jitter: 12, priceSwing: 20 };
 
 export interface Candidate {
   readonly spoof: Spoof;
@@ -53,11 +60,11 @@ export interface Candidate {
 
 /**
  * A raw price: about 50 for a spoof at a new team's level, rising with its
- * skill total so the spread runs from about 5 to 95, plus the jitter. The
+ * skill total by `priceSwing` coins across the spread, plus the jitter. The
  * pool's raw prices are then scaled to add up to `POOL_VALUE`.
  */
 function rawPrice(total: number, jitter: number, tuning: PoolTuning): number {
-  const slope = 45 / tuning.spread;
+  const slope = tuning.priceSwing / tuning.spread;
   return 50 + (total - NEW_SPOOF_SKILL_TOTAL) * slope + jitter;
 }
 

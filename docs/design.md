@@ -196,8 +196,9 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **The budget is 250 coins** for all 5. Every pool's prices add up to twice that, 500, so a pool of average spoofs costs about the budget for 5, and the 5 cheapest always fit.
   - **A price is 1 to 100 coins.** It follows the candidate's raw skill total, never which skills it has, plus a jitter. So two spoofs with the same total cost about the same even if one plays far better: spotting the bargains is your strategy and skill.
   - **Strength is spread wider** than a new team's: each candidate's total is drawn evenly within ±75 of 528 a spoof, within its type's limits.
-  - **The jitter** is about 12 coins. Over 400 seeded pools, the cheaper of two candidates has more skill points 13% of the time.
-  - These are the starting values; the owner settles the budget, spread and jitter in #72's review round.
+  - **Prices swing ±20 coins** from 50 across that spread, before jitter (the owner, 2026-11-23, on #72). A first try swung ±45, which left the weakest candidates at a coin or two, though they have 86% of an average spoof's points.
+  - **The jitter** is about 12 coins. Over 400 seeded pools, most prices fall between 24 and 76, none is 1, and the cheaper of two candidates has more skill points about a quarter of the time.
+  - The pool size, budget, spread, price swing and jitter are each one setting in `src/game/combine.ts`.
 - **You can rename a spoof as you draft it,** up to 16 characters, unlike any other name in the pool.
 - **Warm-ups:** each candidate wanders alone in a small round cell, by the match's own movement rules (thinking, dashing, skidding, bouncing). It doesn't tire or grow there.
 - **Three drills:** _sprint_ (hints at burst and stamina), _blow_ (growth and size) and _hold_ (mass and constancy). Each takes about 3 seconds, can be rerun, and varies a little each time. Iq, vision, charisma and cooperation show only in matches.
