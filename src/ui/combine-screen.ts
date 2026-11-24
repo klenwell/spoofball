@@ -22,6 +22,7 @@ import { STORAGE_PROBLEM_TEXT, type SaveResult } from '../storage/saved-team';
 import type { Panel } from './app-shell';
 import { backingSize } from './canvas';
 import { el } from './dom';
+import { createDrillCourt, type DraftState } from './drill-court';
 import { replaceDialog } from './replace-dialog';
 import { NEW_TEAM_HASH } from './routes';
 import { drawSpoofDisc } from './spoof-disc';
@@ -29,10 +30,12 @@ import { drawSpoofDisc } from './spoof-disc';
 /**
  * The combine (#72, wireframe 2 in docs/design.md): the pool's 10 candidates,
  * each warming up in its own cell with its name and price, and your picks in
- * a strip below, filling to 5, with the budget left. Tap a cell to pick or
- * unpick it; a pick over budget, or a sixth, isn't made, and the screen says
- * why. You can rename a pick in the strip. **Done** saves your team and plays
- * it, after a last check if it replaces your saved team.
+ * a strip below, filling to 5, with the budget left. Tap a cell to open its
+ * drills (#73, wireframe 3), where you draft it or remove it; a pick over
+ * budget, or a sixth, isn't made, and the screen says why. On a phone the
+ * drill court takes the screen; on a wide one it opens beside the warm-ups.
+ * You can rename a pick in the strip. **Done** saves your team and plays it,
+ * after a last check if it replaces your saved team.
  *
  * Every change is saved as it happens (`onChange`), so a reload brings back
  * the same pool and picks. No skills or formula show: only names, types (by
@@ -55,6 +58,8 @@ export interface CombineOptions {
 const FRAMES_PER_SECOND = FRAMES_PER_SCRUM / SCRUM_SECONDS;
 /** At most this many frames are caught up in one draw, after a stall. */
 const MAX_CATCH_UP = 4;
+/** At most this much real time moves a drill on in one draw, after a stall. */
+const MAX_DRILL_STEP = 0.1;
 
 const RENAME_PROBLEM_TEXT: Readonly<Record<RenameProblem, string>> = {
   empty: 'A spoof needs a name.',
@@ -110,7 +115,7 @@ export function createCombineScreen(options: CombineOptions): Panel {
   const intro = el(
     'p',
     'combine-intro',
-    `Watch them warm up, then pick ${String(SPOOFS_PER_TEAM)} for ${draft.logo} ${draft.name}. A price is only a rough guide.`,
+    `Watch them warm up, and tap one to run its drills. Pick ${String(SPOOFS_PER_TEAM)} for ${draft.logo} ${draft.name}. A price is only a rough guide.`,
   );
   const storageNotice = el('p', 'notice');
   storageNotice.setAttribute('role', 'status');
@@ -132,7 +137,7 @@ export function createCombineScreen(options: CombineOptions): Panel {
     item.append(button);
     grid.append(item);
     button.addEventListener('click', () => {
-      choose(candidate.spoof.id);
+      openDrills(candidate.spoof.id);
     });
     return {
       id: candidate.spoof.id,
@@ -165,7 +170,31 @@ export function createCombineScreen(options: CombineOptions): Panel {
   done.type = 'button';
   actions.append(back, done);
 
-  element.append(top, intro, storageNotice, budget, grid, message, picksSection, actions);
+  const main = el('div', 'combine-main');
+  main.append(top, intro, storageNotice, budget, grid, message, picksSection, actions);
+
+  // --- The drill court (#73) -------------------------------------------------
+  const drills = createDrillCourt({
+    teamColor: draft.color,
+    onDraft: (id) => {
+      const text = choose(id);
+      const c = candidate(id);
+      if (c) drills.update(c, draftState(id), text);
+    },
+    onNext: (id) => {
+      const at = pool.findIndex((c) => c.spoof.id === id);
+      const next = pool[(at + 1) % pool.length];
+      if (next) openDrills(next.spoof.id);
+    },
+    onBack: (id) => {
+      closeDrills(id);
+    },
+  });
+  drills.element.addEventListener('keydown', (event) => {
+    const id = drills.current();
+    if (event.key === 'Escape' && id) closeDrills(id);
+  });
+  element.append(main, drills.element);
   const confirm = savedTeam ? replaceDialog(savedTeam) : null;
   if (confirm) element.append(confirm.element);
 
@@ -189,21 +218,50 @@ export function createCombineScreen(options: CombineOptions): Panel {
     return pool.find((c) => c.spoof.id === id);
   }
 
-  function choose(id: string): void {
-    const picked = draft.picks.includes(id);
-    const problem = pickProblem(draft, pool, id);
+  /**
+   * Why a candidate can't be drafted now, in words, or null. No numbers: the
+   * drill court shows only the price (#73).
+   */
+  function problemText(id: string): string | null {
     const c = candidate(id);
-    if (!c) return;
+    if (!c) return null;
+    const problem = pickProblem(draft, pool, id);
     if (problem === 'full') {
-      message.textContent = `You've picked ${String(SPOOFS_PER_TEAM)}. Remove one to pick ${c.spoof.name}.`;
-      return;
+      return `You've picked ${String(SPOOFS_PER_TEAM)}. Remove one to draft ${c.spoof.name}.`;
     }
-    if (problem === 'over-budget') {
-      message.textContent = `${c.spoof.name} costs ${coins(c.price)}, and you have ${coins(budgetLeft(draft, pool))} left.`;
-      return;
-    }
-    message.textContent = picked ? `Removed ${c.spoof.name}.` : `Picked ${c.spoof.name}.`;
-    change(togglePick(draft, pool, id));
+    if (problem === 'over-budget') return `${c.spoof.name} costs more than you have left.`;
+    return null;
+  }
+
+  function draftState(id: string): DraftState {
+    return { picked: draft.picks.includes(id), problem: problemText(id) };
+  }
+
+  /** Picks or unpicks a candidate, and says what happened. */
+  function choose(id: string): string {
+    const picked = draft.picks.includes(id);
+    const c = candidate(id);
+    if (!c) return '';
+    const problem = problemText(id);
+    const text = problem ?? (picked ? `Removed ${c.spoof.name}.` : `Drafted ${c.spoof.name}.`);
+    message.textContent = text;
+    if (!problem) change(togglePick(draft, pool, id));
+    return text;
+  }
+
+  function openDrills(id: string): void {
+    const at = pool.findIndex((c) => c.spoof.id === id);
+    const c = pool[at];
+    if (!c) return;
+    element.classList.add('is-drilling');
+    drills.open(c, at, draftState(id));
+    drills.heading.focus();
+  }
+
+  function closeDrills(id: string): void {
+    drills.close();
+    element.classList.remove('is-drilling');
+    cells.find((cell) => cell.id === id)?.button.focus();
   }
 
   function rename(id: string, input: HTMLInputElement): void {
@@ -263,12 +321,16 @@ export function createCombineScreen(options: CombineOptions): Panel {
       const outOfReach = !picked && (full || c.price > left);
       cell.name.textContent = c.spoof.name;
       cell.price.textContent = `🪙 ${String(c.price)}`;
-      cell.button.setAttribute('aria-pressed', String(picked));
       cell.button.classList.toggle('is-picked', picked);
       cell.button.classList.toggle('is-out-of-reach', outOfReach);
+      const note = picked
+        ? ', on your team'
+        : outOfReach && !full
+          ? ', more than you have left'
+          : '';
       cell.button.setAttribute(
         'aria-label',
-        `${c.spoof.name}, ${typeName(c)}, ${coins(c.price)}${outOfReach && !full ? ', more than you have left' : ''}`,
+        `${c.spoof.name}, ${typeName(c)}, ${coins(c.price)}${note}. Open drills`,
       );
     }
     // The strip: your picks in order, then an empty slot for each still to pick.
@@ -295,6 +357,9 @@ export function createCombineScreen(options: CombineOptions): Panel {
     // and a tap before 5 says what's missing.
     done.textContent = 'Done';
     done.setAttribute('aria-disabled', String(!complete));
+    const open = drills.current();
+    const onCourt = open ? candidate(open) : undefined;
+    if (open && onCourt) drills.update(onCourt, draftState(open));
   }
 
   /** A team that couldn't be saved, waiting for "Play anyway". */
@@ -366,8 +431,10 @@ export function createCombineScreen(options: CombineOptions): Panel {
 
   function frame(now: number): void {
     if (!running) return;
-    owed += ((now - last) / 1000) * FRAMES_PER_SECOND;
+    const elapsed = Math.max(0, (now - last) / 1000);
+    owed += elapsed * FRAMES_PER_SECOND;
     last = now;
+    drills.tick(Math.min(elapsed, MAX_DRILL_STEP));
     const steps = Math.min(Math.floor(owed), MAX_CATCH_UP);
     owed = Math.min(owed - steps, 1);
     for (let i = 0; i < warmUps.length; i += 1) {
@@ -413,6 +480,10 @@ export function createCombineScreen(options: CombineOptions): Panel {
     });
   });
   resize.observe(grid);
+  const drillResize = new ResizeObserver(() => {
+    drills.resize();
+  });
+  drillResize.observe(drills.element);
 
   // Saving the draft as the screen opens tells whether this browser saves at all.
   showSaved(onChange(draft));
@@ -423,6 +494,7 @@ export function createCombineScreen(options: CombineOptions): Panel {
     stop();
     lifetime.abort();
     resize.disconnect();
+    drillResize.disconnect();
     if (confirm?.element.open) confirm.element.close();
   }
 

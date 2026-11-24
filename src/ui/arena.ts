@@ -131,6 +131,15 @@ export function drawArena(
   ctx.restore();
 }
 
+/** Draws just a court, with no benches: the combine's drill court (#73). */
+export function drawCourtOnly(ctx: CanvasRenderingContext2D, view: ArenaView, court: Court): void {
+  ctx.save();
+  ctx.translate(view.cx, view.cy);
+  ctx.scale(view.scale, view.scale);
+  drawCourt(ctx, court);
+  ctx.restore();
+}
+
 /** Draws a spoof given in court units. */
 export function drawSpoofInArena(
   ctx: CanvasRenderingContext2D,
