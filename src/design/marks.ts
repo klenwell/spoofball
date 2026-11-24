@@ -1,7 +1,7 @@
-import type { Avatar } from '../game/spoof-types';
+import type { MarkName } from '../game/spoof-types';
 
 /**
- * Avatar marks: one per avatar (pawn subtypes share the pawn's), defined in disc-relative units where the
+ * Marks: the shapes on a spoof's disc, 16 in all (#74), defined in disc-relative units where the
  * disc's radius is 1 and its center is (0, 0), with y pointing down. The
  * renderer scales them to any disc size, so a refined shape can replace a
  * definition here without touching the drawing code.
@@ -33,29 +33,201 @@ function star(points: number, outer: number, inner: number): Point[] {
 
 const STROKE = 0.13;
 
-/** Spokes radiating from the center, starting straight up, as separate strokes. */
-function asteriskSpokes(count: number, inner: number, outer: number): MarkShape[] {
-  return Array.from({ length: count }, (_, i) => {
-    const angle = ((Math.PI * 2) / count) * i - Math.PI / 2;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    return {
-      kind: 'line' as const,
-      width: STROKE,
-      points: [
-        [inner * cos, inner * sin],
-        [outer * cos, outer * sin],
-      ] as const,
-    };
+/** Turns points about the center by this many degrees, clockwise on screen. */
+function turned(points: readonly Point[], degrees: number): Point[] {
+  const a = (degrees * Math.PI) / 180;
+  const cos = Math.cos(a);
+  const sin = Math.sin(a);
+  return points.map(([x, y]) => [x * cos - y * sin, x * sin + y * cos]);
+}
+
+/** A rectangle's corners, from its top-left and bottom-right. */
+function box(x0: number, y0: number, x1: number, y1: number): Point[] {
+  return [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1],
+  ];
+}
+
+/** Points along an arc of a circle, from one angle to another (radians, y down). */
+function arc(cx: number, cy: number, r: number, from: number, to: number, steps = 12): Point[] {
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const t = from + ((to - from) * i) / steps;
+    return [cx + r * Math.cos(t), cy + r * Math.sin(t)];
   });
 }
-export const marks: Record<Avatar, readonly MarkShape[]> = {
-  // A four-point star.
-  king: [{ kind: 'polygon', points: star(4, 0.46, 0.17) }],
-  // An asterisk: six spokes around a center dot.
-  queen: [...asteriskSpokes(6, 0.1, 0.42), { kind: 'circle', cx: 0, cy: 0, r: 0.11 }],
-  // A club (♣): three lobes on a short stem.
-  rook: [
+
+/** A figure-eight, sideways: the infinity sign. Drawn as one closed stroke. */
+function lemniscate(width: number, height: number, steps = 32): Point[] {
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const t = (Math.PI * 2 * i) / steps;
+    const d = 1 + Math.sin(t) ** 2;
+    return [(width * Math.cos(t)) / d, (height * 2 * Math.sin(t) * Math.cos(t)) / d];
+  });
+}
+
+/**
+ * Every mark (#74). The first six are the shown types' defaults (crown for a
+ * king, gem for a queen, mallet for a rook, starburst for a bishop, shield
+ * for a knight, dot for every pawn). Diamond, club and spade keep the shapes
+ * the bishop, rook and knight wore before #74.
+ */
+export const marks: Record<MarkName, readonly MarkShape[]> = {
+  // A crown: a band with three points, the middle one tallest.
+  crown: [
+    {
+      kind: 'polygon',
+      points: [
+        [-0.42, 0.3],
+        [0.42, 0.3],
+        [0.42, -0.24],
+        [0.2, 0.02],
+        [0, -0.34],
+        [-0.2, 0.02],
+        [-0.42, -0.24],
+      ],
+    },
+  ],
+  // A cut gem: a flat top, wide shoulders and a point below. Unlike the
+  // diamond, which is pointed at both ends.
+  gem: [
+    {
+      kind: 'polygon',
+      points: [
+        [-0.2, -0.32],
+        [0.2, -0.32],
+        [0.43, -0.08],
+        [0, 0.42],
+        [-0.43, -0.08],
+      ],
+    },
+  ],
+  // A mallet, tilted: a big block head on a handle.
+  mallet: [
+    { kind: 'polygon', points: turned(box(-0.36, -0.42, 0.36, -0.06), 40) },
+    { kind: 'polygon', points: turned(box(-0.08, -0.08, 0.08, 0.47), 40) },
+  ],
+  // Many short points around a solid center, like ✸. Unlike the star's five long ones.
+  starburst: [{ kind: 'polygon', points: star(12, 0.45, 0.3) }],
+  // A shield: a flat top and a rounded point below.
+  shield: [
+    {
+      kind: 'polygon',
+      points: [
+        [-0.36, -0.38],
+        [0.36, -0.38],
+        [0.36, 0.02],
+        [0.31, 0.2],
+        [0.17, 0.34],
+        [0, 0.43],
+        [-0.17, 0.34],
+        [-0.31, 0.2],
+        [-0.36, 0.02],
+      ],
+    },
+  ],
+  // A dot. Every pawn's, whatever its hidden subtype.
+  dot: [{ kind: 'circle', cx: 0, cy: 0, r: 0.17 }],
+  // A heart (♥): two lobes over a point.
+  heart: [
+    { kind: 'circle', cx: -0.17, cy: -0.12, r: 0.19 },
+    { kind: 'circle', cx: 0.17, cy: -0.12, r: 0.19 },
+    {
+      kind: 'polygon',
+      points: [
+        [-0.355, -0.06],
+        [0.355, -0.06],
+        [0, 0.4],
+      ],
+    },
+  ],
+  // A lightning bolt.
+  bolt: [
+    {
+      kind: 'polygon',
+      points: [
+        [0.14, -0.46],
+        [-0.26, 0.07],
+        [-0.02, 0.07],
+        [-0.14, 0.46],
+        [0.26, -0.09],
+        [0.02, -0.09],
+      ],
+    },
+  ],
+  // The infinity sign (∞), stretched a little taller than a true one, to read when small.
+  infinity: [{ kind: 'line', width: STROKE, points: lemniscate(0.44, 0.3) }],
+  // An anchor: a ring, a shank with a stock across it, and curved arms.
+  anchor: [
+    { kind: 'ring', cx: 0, cy: -0.34, r: 0.08, width: 0.08 },
+    {
+      kind: 'line',
+      width: STROKE,
+      points: [
+        [0, -0.26],
+        [0, 0.4],
+      ],
+    },
+    {
+      kind: 'line',
+      width: STROKE,
+      points: [
+        [-0.18, -0.13],
+        [0.18, -0.13],
+      ],
+    },
+    { kind: 'line', width: STROKE, points: arc(0, 0.06, 0.33, 0, Math.PI) },
+  ],
+  // A light bulb: a round glass on a narrow screw base.
+  bulb: [
+    { kind: 'circle', cx: 0, cy: -0.12, r: 0.28 },
+    {
+      kind: 'polygon',
+      points: [
+        [-0.17, 0.06],
+        [0.17, 0.06],
+        [0.13, 0.27],
+        [-0.13, 0.27],
+      ],
+    },
+    { kind: 'polygon', points: box(-0.11, 0.31, 0.11, 0.42) },
+  ],
+  // A five-point star.
+  star: [{ kind: 'polygon', points: star(5, 0.47, 0.2) }],
+  // A fist, from the front: four knuckles over a closed hand, the thumb across.
+  fist: [
+    { kind: 'circle', cx: -0.27, cy: -0.2, r: 0.11 },
+    { kind: 'circle', cx: -0.09, cy: -0.22, r: 0.11 },
+    { kind: 'circle', cx: 0.09, cy: -0.22, r: 0.11 },
+    { kind: 'circle', cx: 0.27, cy: -0.2, r: 0.11 },
+    {
+      kind: 'polygon',
+      points: [
+        [-0.38, -0.2],
+        [0.38, -0.2],
+        [0.36, 0.18],
+        [0.2, 0.36],
+        [-0.24, 0.36],
+        [-0.38, 0.2],
+      ],
+    },
+  ],
+  // A diamond (♦), taller than wide. The bishop's mark before #74.
+  diamond: [
+    {
+      kind: 'polygon',
+      points: [
+        [0, -0.44],
+        [0.32, 0],
+        [0, 0.44],
+        [-0.32, 0],
+      ],
+    },
+  ],
+  // A club (♣): three lobes on a short stem. The rook's mark before #74.
+  club: [
     { kind: 'circle', cx: 0, cy: -0.17, r: 0.155 },
     { kind: 'circle', cx: -0.165, cy: 0.06, r: 0.155 },
     { kind: 'circle', cx: 0.165, cy: 0.06, r: 0.155 },
@@ -68,20 +240,8 @@ export const marks: Record<Avatar, readonly MarkShape[]> = {
       ],
     },
   ],
-  // A diamond (♦), taller than wide.
-  bishop: [
-    {
-      kind: 'polygon',
-      points: [
-        [0, -0.44],
-        [0.32, 0],
-        [0, 0.44],
-        [-0.32, 0],
-      ],
-    },
-  ],
-  // A spade (♠): a point, two rounded shoulders and a short stem.
-  knight: [
+  // A spade (♠): a point, two rounded shoulders and a short stem. The knight's mark before #74.
+  spade: [
     {
       kind: 'polygon',
       points: [
@@ -102,8 +262,6 @@ export const marks: Record<Avatar, readonly MarkShape[]> = {
       ],
     },
   ],
-  // A dot. Every pawn, whatever its hidden subtype.
-  pawn: [{ kind: 'circle', cx: 0, cy: 0, r: 0.17 }],
 };
 
 /** The farthest any part of a shape reaches from the disc's center. */

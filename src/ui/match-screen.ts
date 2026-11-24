@@ -30,7 +30,7 @@ import { EMBERS } from '../game/preset-teams';
 import type { Random } from '../game/random';
 import { liveScores, type Scores } from '../game/scoring';
 import type { ScrumEntry, ScrumFrame } from '../game/scrum';
-import { avatarOf, type SpoofType } from '../game/spoof-types';
+import { defaultMark, shownType, type SpoofType } from '../game/spoof-types';
 import { SCRUM_SECONDS } from '../game/spoof-motion';
 import type { Spoof, Team } from '../game/teams';
 import type { Panel } from './app-shell';
@@ -108,7 +108,7 @@ const COMPUTER: BenchSide = 'visitor';
 const SIDES: readonly BenchSide[] = ['home', 'visitor'];
 
 function avatarName(type: SpoofType): string {
-  const name = avatarOf(type);
+  const name = shownType(type);
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
@@ -271,7 +271,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
           x: seat.x,
           y: seat.y,
           radius: spoof.radius,
-          type: spoof.type,
+          mark: defaultMark(spoof.type),
           kit: kitFor(team),
           // Tired spoofs on the bench show it, so you can choose who rests.
           fatigue: Math.min(100, fatigueOf(team, spoof.id)),
@@ -286,7 +286,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
         x: s.x,
         y: s.y,
         radius: s.radius,
-        type,
+        mark: defaultMark(type),
         kit: kitFor(s.team),
         fatigue: Math.min(100, s.fatigue),
         highlighted: status === 'mise' && s.team === COMPUTER && s.id === justPlaced,
@@ -308,7 +308,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
       drawSpoofInArena(c, v, {
         ...pending.spot,
         radius: pending.spoof.radius,
-        type: pending.spoof.type,
+        mark: defaultMark(pending.spoof.type),
         kit: kitFor(YOU),
         fatigue: Math.min(100, fatigueOf(YOU, pending.spoof.id)),
       });
@@ -318,7 +318,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
     const landing = aim(hand, YOU);
     const disc = {
       radius: held.spoof.radius,
-      type: held.spoof.type,
+      mark: defaultMark(held.spoof.type),
       kit: kitFor(YOU),
       fatigue: Math.min(100, fatigueOf(YOU, held.spoof.id)),
     };
@@ -592,7 +592,13 @@ export function createMatchScreen(yourTeam: Team): Panel {
         name.scope = 'row';
         const { canvas: disc, ctx: discCtx } = createCanvas(16, 16);
         disc.setAttribute('aria-hidden', 'true');
-        drawSpoofDisc(discCtx, { x: 8, y: 8, radius: 6.5, type: spoof.type, kit: kitFor(side) });
+        drawSpoofDisc(discCtx, {
+          x: 8,
+          y: 8,
+          radius: 6.5,
+          mark: defaultMark(spoof.type),
+          kit: kitFor(side),
+        });
         const who = el('span', 'scorecard-spoof');
         who.append(disc, spoofLabel(spoof));
         name.append(who);
@@ -668,7 +674,13 @@ export function createMatchScreen(yourTeam: Team): Panel {
         const item = el('li', 'scrum-result-row');
         const { canvas: disc, ctx: discCtx } = createCanvas(18, 18);
         disc.setAttribute('aria-hidden', 'true');
-        drawSpoofDisc(discCtx, { x: 9, y: 9, radius: 7, type: line.type, kit: kitFor(side) });
+        drawSpoofDisc(discCtx, {
+          x: 9,
+          y: 9,
+          radius: 7,
+          mark: defaultMark(line.type),
+          kit: kitFor(side),
+        });
         const points =
           line.points === null
             ? el('span', 'scrum-result-out', 'sat out')

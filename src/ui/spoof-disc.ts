@@ -1,10 +1,10 @@
 import type { DiscColors } from '../design/kits';
 import { marks, type MarkShape } from '../design/marks';
 import { palette } from '../design/tokens';
-import { avatarOf, type SpoofType } from '../game/spoof-types';
+import type { MarkName } from '../game/spoof-types';
 
 /**
- * Draws a spoof as a disc: filled and trimmed per its kit, with its type's
+ * Draws a spoof as a disc: filled and trimmed per its kit, with its
  * mark. The Match epic reuses this to animate spoofs, so it takes plain
  * values and a canvas context, and keeps no state.
  */
@@ -14,7 +14,8 @@ export interface SpoofDisc {
   y: number;
   /** Disc radius in CSS pixels. Grows and shrinks during a scrum. */
   radius: number;
-  type: SpoofType;
+  /** The mark on the disc (#74): its type's default, or one you chose. */
+  mark: MarkName;
   kit: DiscColors;
   /** 0 (fresh) to 100 (spent). The disc fades as it tires. */
   fatigue?: number;
@@ -85,7 +86,7 @@ let scratch: HTMLCanvasElement | null = null;
 function drawBody(
   ctx: CanvasRenderingContext2D,
   radius: number,
-  type: SpoofType,
+  mark: MarkName,
   kit: DiscColors,
 ): void {
   const trim = trimWidth(radius);
@@ -108,7 +109,7 @@ function drawBody(
   ctx.strokeStyle = kit.mark;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (const shape of marks[avatarOf(type)]) traceShape(ctx, shape, radius);
+  for (const shape of marks[mark]) traceShape(ctx, shape, radius);
 }
 
 /**
@@ -120,7 +121,7 @@ function drawBody(
 function drawFadedBody(
   ctx: CanvasRenderingContext2D,
   radius: number,
-  type: SpoofType,
+  mark: MarkName,
   kit: DiscColors,
   opacity: number,
 ): void {
@@ -142,7 +143,7 @@ function drawFadedBody(
   // anything left there by a bigger disc earlier showed as thin lines (#49).
   layer.clearRect(0, 0, scratch.width, scratch.height);
   layer.setTransform(scale, 0, 0, scale, size / 2, size / 2);
-  drawBody(layer, radius, type, kit);
+  drawBody(layer, radius, mark, kit);
 
   // Centered exactly on the disc: the layer is `size` device pixels across.
   const across = size / scale;
@@ -153,14 +154,14 @@ function drawFadedBody(
 }
 
 export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): void {
-  const { x, y, radius, type, kit } = disc;
+  const { x, y, radius, mark, kit } = disc;
   const opacity = fatigueOpacity(disc.fatigue ?? 0);
 
   ctx.save();
   ctx.translate(x, y);
 
-  if (opacity < 1) drawFadedBody(ctx, radius, type, kit, opacity);
-  else drawBody(ctx, radius, type, kit);
+  if (opacity < 1) drawFadedBody(ctx, radius, mark, kit, opacity);
+  else drawBody(ctx, radius, mark, kit);
 
   // Highlight: a dark ring just outside the disc, never faded.
   if (disc.highlighted) {

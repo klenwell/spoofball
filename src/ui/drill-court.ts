@@ -13,6 +13,7 @@ import {
   type DrillRun,
 } from '../game/drills';
 import type { ScrumFrame } from '../game/scrum';
+import { defaultMark } from '../game/spoof-types';
 import { SECONDS_PER_FRAME } from '../game/spoof-motion';
 import type { ArenaView } from './arena-view';
 import { drawCourtOnly, drawSpoofInArena } from './arena';
@@ -333,7 +334,7 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
         x: spoof.x,
         y: spoof.y,
         radius: spoof.radius,
-        type: mine ? candidate.spoof.type : 'pawn-basic',
+        mark: mine ? defaultMark(candidate.spoof.type) : 'dot',
         kit: mine ? teamKit : DUMMY_COLORS,
         fatigue: spoof.fatigue,
       });

@@ -14,7 +14,7 @@ import {
   type Draft,
   type RenameProblem,
 } from '../game/draft';
-import { avatarOf } from '../game/spoof-types';
+import { defaultMark, shownType } from '../game/spoof-types';
 import { FRAMES_PER_SCRUM, SCRUM_SECONDS } from '../game/spoof-motion';
 import { MAX_SPOOF_NAME_LENGTH, SPOOFS_PER_TEAM, type Team } from '../game/teams';
 import { WARM_UP_CELL, startWarmUp, stepWarmUp, warmUpSeed, type WarmUp } from '../game/warm-up';
@@ -71,7 +71,7 @@ const DRAFT_NOT_SAVED_TEXT =
   "Your draft can't be saved in this browser, so it will be lost if you leave or reload.";
 
 function typeName(candidate: Candidate): string {
-  return avatarOf(candidate.spoof.type);
+  return shownType(candidate.spoof.type);
 }
 
 function coins(price: number): string {
@@ -96,7 +96,13 @@ function discCanvas(candidate: Candidate, teamKit: Kit): HTMLCanvasElement {
   canvas.setAttribute('aria-hidden', 'true');
   const ctx = sizeCanvas(canvas, 22);
   if (ctx)
-    drawSpoofDisc(ctx, { x: 11, y: 11, radius: 9, type: candidate.spoof.type, kit: teamKit });
+    drawSpoofDisc(ctx, {
+      x: 11,
+      y: 11,
+      radius: 9,
+      mark: defaultMark(candidate.spoof.type),
+      kit: teamKit,
+    });
   return canvas;
 }
 
@@ -436,7 +442,7 @@ export function createCombineScreen(options: CombineOptions): Panel {
       x: size / 2 + warmUp.position.x * scale,
       y: size / 2 + warmUp.position.y * scale,
       radius: warmUp.spoof.radius * scale,
-      type: warmUp.spoof.type,
+      mark: defaultMark(warmUp.spoof.type),
       kit: teamKit,
     });
   }
