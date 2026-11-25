@@ -59,6 +59,12 @@ export const palette = {
    */
   placeOk: '#13803F',
   /**
+   * Your spoof's countdown ring in the mise (the owner, 2026-11-24, on #76): a
+   * lime green, drawn over a white ring, so it keeps 3:1 against white, about
+   * the brightest lime that does.
+   */
+  graceRing: '#65A30D',
+  /**
    * Behind the warm-up cell of the candidate whose drills are open (#73): a
    * light yellow, like a highlighter. Text keeps at least 4.5:1 on it.
    */

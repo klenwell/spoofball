@@ -1,6 +1,6 @@
 {
   "name": "spoofball",
-  "version": "0.2.0",
+  "version": "0.3.0-alpha.1",
   "description": "A simple one-player 2D sports simulation for the browser",
   "private": true,
   "type": "module",

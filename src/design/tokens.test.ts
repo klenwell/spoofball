@@ -72,6 +72,10 @@ describe('page colors', () => {
     expect(contrastRatio(color, palette.selected)).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('the countdown ring has at least 3:1 contrast on the white ring under it (#76)', () => {
+    expect(contrastRatio(palette.graceRing, palette.white)).toBeGreaterThanOrEqual(3);
+  });
+
   it("the hold drill's dummy has a ring with at least 3:1 contrast on the mosh, the apron and the crush", () => {
     for (const behind of [palette.mosh, palette.apron, palette.crush]) {
       expect(contrastRatio(palette.dummyTrim, behind)).toBeGreaterThanOrEqual(3);

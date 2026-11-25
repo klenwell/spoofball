@@ -20,6 +20,14 @@ export interface SpoofDisc {
   /** 0 (fresh) to 100 (spent). The disc fades as it tires. */
   fatigue?: number;
   highlighted?: boolean;
+  /** How strongly the highlight ring shows, 0 to 1: 1 unless it's fading out (#76). */
+  highlightOpacity?: number;
+  /**
+   * The highlight ring's color: the dark highlight unless given one. A
+   * colored ring is drawn on a white track, as the mise's countdown ring is,
+   * so it keeps its contrast on any ground (#76).
+   */
+  highlightColor?: string;
 }
 
 /** A spent spoof stays this visible, so it never vanishes from the court. */
@@ -168,12 +176,23 @@ export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): v
   if (opacity < 1) drawFadedBody(ctx, radius, mark, kit, opacity);
   else drawBody(ctx, radius, mark, kit);
 
-  // Highlight: a dark ring just outside the disc, never faded.
+  // Highlight: a ring just outside the disc (dark, or the given color on a
+  // white track), never faded by fatigue.
   if (disc.highlighted) {
+    ctx.globalAlpha = Math.min(1, Math.max(0, disc.highlightOpacity ?? 1));
+    const ringRadius = radius + Math.max(2, radius * 0.18);
+    const width = Math.max(1.5, radius * 0.1);
+    if (disc.highlightColor) {
+      ctx.beginPath();
+      ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+      ctx.lineWidth = width + 2;
+      ctx.strokeStyle = palette.white;
+      ctx.stroke();
+    }
     ctx.beginPath();
-    ctx.arc(0, 0, radius + Math.max(2, radius * 0.18), 0, Math.PI * 2);
-    ctx.lineWidth = Math.max(1.5, radius * 0.1);
-    ctx.strokeStyle = palette.highlight;
+    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+    ctx.lineWidth = width;
+    ctx.strokeStyle = disc.highlightColor ?? palette.highlight;
     ctx.stroke();
   }
 

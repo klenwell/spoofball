@@ -104,6 +104,9 @@ What a player gets: **create and draft your own team, play matches, and see stat
   - draft 5 spoofs from a generated pool of 10 through **the combine**, within a budget: candidates show their hidden abilities by moving, in warm-ups and drills, and the only number is each one's price (#72; see [design](../design.md)). The combine reuses the Match epic's simulation;
   - save locally;
   - play your team against a generated opponent.
+
+  **Playable in `v0.3.0-alpha.1`** (#69): create a team, then draft 5 spoofs in the combine, within a budget of 250 coins. You can watch candidates warm up and put them through 4 drills, rename your picks and give each one any of 16 marks. Your team is saved in your browser and plays a league of 7 computer teams, from easiest to hardest, one drawn for each match. The quick start's Spoofs still play the Embers. The rules are in [design](../design.md#draft-new-team-1).
+
 - **Epic 4, `stats`:** record team and spoof stats for each match. A stats screen shows the team record and a line for each spoof. History survives a reload.
 
 ### Pharm (`v0.4.0`)

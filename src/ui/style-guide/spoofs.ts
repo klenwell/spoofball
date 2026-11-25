@@ -125,9 +125,18 @@ function states(color: TeamColorName): HTMLElement[] {
         caption: String(radius),
       })),
     ),
-    stateStrip('Highlight: selected', [
+    stateStrip("Highlight: your picked spoof (lime, #76), and the opponent's latest placement", [
       { x: 0, y: 0, radius: 16, mark: 'gem', kit: home, caption: 'off' },
-      { x: 0, y: 0, radius: 16, mark: 'gem', kit: home, highlighted: true, caption: 'on' },
+      {
+        x: 0,
+        y: 0,
+        radius: 16,
+        mark: 'gem',
+        kit: home,
+        highlighted: true,
+        highlightColor: palette.graceRing,
+        caption: 'picked',
+      },
       {
         x: 0,
         y: 0,
@@ -135,7 +144,7 @@ function states(color: TeamColorName): HTMLElement[] {
         mark: 'gem',
         kit: kit(color, 'away'),
         highlighted: true,
-        caption: 'away',
+        caption: 'placed',
       },
     ]),
     stateStrip('In a match, the visitor always wears away (even in the same color)', [

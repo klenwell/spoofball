@@ -69,8 +69,8 @@ export function drawInsideLine(ctx: CanvasRenderingContext2D, view: ArenaView, c
 }
 
 /**
- * The grace ring around a placed spoof: a faint track, filled clockwise from
- * the top as `progress` goes from 0 to 1. When it's full, the spoof locks.
+ * The grace ring around a placed spoof: a white track, filled clockwise in
+ * lime green (#76) from the top as `progress` goes from 0 to 1. When it's full, the spoof locks.
  */
 export function drawGraceRing(
   ctx: CanvasRenderingContext2D,
@@ -89,7 +89,7 @@ export function drawGraceRing(
   ctx.stroke();
   ctx.beginPath();
   ctx.arc(p.x, p.y, r, -Math.PI / 2, -Math.PI / 2 + progress * Math.PI * 2);
-  ctx.strokeStyle = palette.highlight;
+  ctx.strokeStyle = palette.graceRing;
   ctx.stroke();
   ctx.restore();
 }
