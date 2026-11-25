@@ -11,8 +11,10 @@ import {
   matchesText,
   pointsPerMatchText,
   recordText,
+  pctText,
   scoreText,
   signed,
+  standingsRecordText,
   spoofLineText,
 } from './stats-text';
 
@@ -169,5 +171,27 @@ describe('signed', () => {
   it('rounds to the nearest tenth before choosing the sign', () => {
     expect(signed(-0.06)).toBe('−0.1');
     expect(signed(0.05)).toBe('+0.1');
+  });
+});
+
+describe('pctText', () => {
+  it('shows a win percentage baseball-style, to three places', () => {
+    expect(pctText(2 / 3)).toBe('.667');
+    expect(pctText(0.5)).toBe('.500');
+    expect(pctText(0)).toBe('.000');
+  });
+
+  it('keeps the 1 of a perfect record', () => {
+    expect(pctText(1)).toBe('1.000');
+  });
+
+  it('shows no number without a percentage', () => {
+    expect(pctText(null)).toBe(NO_NUMBER);
+  });
+});
+
+describe('standingsRecordText', () => {
+  it('gives wins–losses–ties as they are', () => {
+    expect(standingsRecordText({ won: 4, lost: 5, tied: 1 })).toBe('4–5–1');
   });
 });

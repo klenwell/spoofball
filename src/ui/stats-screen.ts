@@ -1,4 +1,6 @@
 import { kit } from '../design/kits';
+import { LEAGUE } from '../game/league';
+import { leagueStandings } from '../game/standings';
 import type { LoggedMatch, TeamStats } from '../game/stats';
 import type { Team } from '../game/teams';
 import { STORAGE_PROBLEM_TEXT, type StatsResult } from '../storage/saved-team';
@@ -14,16 +16,18 @@ import {
   matchesText,
   pointsPerMatchText,
   recordText,
+  pctText,
   scoreText,
   spoofLineText,
+  standingsRecordText,
   type SpoofLineText,
 } from './stats-text';
 import { markDisc, spoofLabel } from './spoof-label';
 import { hashFor } from './tabs';
 
 /**
- * The Stats tab (#91): your team's record, a line for each spoof (#92) and
- * its match log (wireframes 1 and 2).
+ * The Stats tab (#91): your team's record, a line for each spoof (#92), the
+ * league standings (#93) and its match log (wireframes 1 and 2).
  * Outcomes only: no skills, comps or pawn subtypes (Decision 7). It reads the
  * saved stats each time it's shown, so it's up to date after every match.
  */
@@ -80,6 +84,7 @@ function teamPanel(team: Team, stats: TeamStats): HTMLElement {
     teamHeader(team, stats),
     tiles(stats),
     spoofLines(team, stats),
+    standings(team, stats),
     matchLog(stats.log),
   );
   return section;
@@ -178,6 +183,51 @@ function spoofLines(team: Team, stats: TeamStats): HTMLElement {
       "+/− per scrum: your team's points minus the opponent's in each scrum the spoof played, averaged.",
     ),
   );
+  return section;
+}
+
+/**
+ * League standings (#93): your team, in bold, among the league's 7, by win
+ * percentage. Each league team's record is its own, from its matches with
+ * you. The Embers play only the quick start, so they aren't listed.
+ */
+function standings(team: Team, stats: TeamStats): HTMLElement {
+  const section = el('section', 'standings');
+  section.append(el('h3', 'stats-section-title', 'League standings'));
+  const table = el('table', 'standings-table');
+  const head = el('tr');
+  for (const [text, full] of [
+    ['Team', 'Team'],
+    ['W–L–T', 'Wins, losses and ties'],
+    ['Pct', 'Win percentage'],
+  ] as const) {
+    const th = el('th');
+    th.scope = 'col';
+    const short = el('span', undefined, text);
+    short.setAttribute('aria-hidden', 'true');
+    th.append(short, el('span', 'visually-hidden', full));
+    head.append(th);
+  }
+  table.append(el('thead'), el('tbody'));
+  table.tHead?.append(head);
+  for (const line of leagueStandings(stats, team, LEAGUE)) {
+    const row = el('tr', line.yours ? 'is-yours' : undefined);
+    const name = el('th', 'standings-name');
+    name.scope = 'row';
+    name.append(teamLogo(line.logo), ` ${line.name}`);
+    if (line.yours) name.append(el('span', 'visually-hidden', ' (your team)'));
+    row.append(name);
+    if (line.played === 0) {
+      row.append(el('td', 'standings-unplayed', 'Not played'), el('td', undefined, pctText(null)));
+    } else {
+      row.append(
+        el('td', undefined, standingsRecordText(line.record)),
+        el('td', undefined, pctText(line.pct)),
+      );
+    }
+    table.tBodies[0]?.append(row);
+  }
+  section.append(table);
   return section;
 }
 

@@ -6,6 +6,7 @@ import {
   type SpoofTotals,
   type TeamStats,
 } from '../game/stats';
+import type { Record3 } from '../game/standings';
 
 /**
  * How the Stats screen words and formats your team's stats (#91). Plain
@@ -120,4 +121,16 @@ export function signed(value: number): string {
   if (tenths === 0) return '0.0';
   const text = (Math.abs(tenths) / 10).toFixed(1);
   return tenths > 0 ? `+${text}` : `−${text}`;
+}
+
+/** A win percentage baseball-style, to three places: ".667", "1.000", ".000"; no number when there's none. */
+export function pctText(pct: number | null): string {
+  if (pct === null) return NO_NUMBER;
+  const text = pct.toFixed(3);
+  return text.startsWith('0') ? text.slice(1) : text;
+}
+
+/** A record as wins–losses–ties, for the standings, where forfeits are already losses. */
+export function standingsRecordText(record: Record3): string {
+  return `${String(record.won)}–${String(record.lost)}–${String(record.tied)}`;
 }
