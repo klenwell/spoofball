@@ -3,8 +3,9 @@ import { blockedStorage, fullStorage, memoryStorage } from '../test-support/stor
 import { EMBERS, SPOOFS } from '../game/preset-teams';
 import { matchRecord } from '../game/match';
 import { skillNames } from '../game/skills';
-import { addMatch, emptyTeamStats } from '../game/stats';
+import { LOG_LENGTH, addMatch, emptyTeamStats } from '../game/stats';
 import { computerMatch } from '../test-support/match';
+import { spoofLine } from '../test-support/match-record';
 import { teamProblems, type Spoof, type Team } from '../game/teams';
 import {
   SAVE_VERSION,
@@ -487,13 +488,57 @@ describe("your team's stats (#89)", () => {
       expect(loadStats(blockedStorage())).toEqual({ ok: false, problem: 'unavailable' });
     });
 
-    it('reports stats it can’t read', () => {
-      const store = newTeamStore();
-      const record = rawRecord(store);
-      record.stats = { ...(record.stats as object), points: -1 };
-      store.items.set(STORAGE_KEY, JSON.stringify(record));
+    describe('when the saved stats can’t be read', () => {
+      /** Storage holding the Spoofs with one recorded match, its stats changed by `edit`. */
+      function storeWithStats(edit: (stats: Record<string, unknown>) => void) {
+        const store = newTeamStore();
+        recordMatch(store, PLAYED, DAY);
+        const record = rawRecord(store);
+        const stats = record.stats as Record<string, unknown>;
+        edit(stats);
+        store.items.set(STORAGE_KEY, JSON.stringify(record));
+        return store;
+      }
+      const firstLogged = (stats: Record<string, unknown>) =>
+        (stats.log as Record<string, unknown>[])[0] ?? {};
 
-      expect(loadStats(store)).toEqual({ ok: false, problem: 'unreadable' });
+      it.each<[string, (stats: Record<string, unknown>) => void]>([
+        ['negative points', (s) => (s.points = -1)],
+        ['a join date that isn’t a day', (s) => (s.joined = 'Nov 25')],
+        ['a best score that isn’t a number', (s) => (s.best = '12')],
+        [
+          'a result count that’s missing',
+          (s) => delete (s.results as Record<string, unknown>).tied,
+        ],
+        [
+          `a log longer than ${String(LOG_LENGTH)}`,
+          (s) => (s.log = Array.from({ length: LOG_LENGTH + 1 }, () => firstLogged(s))),
+        ],
+        ['a logged result it doesn’t know', (s) => (firstLogged(s).result = 'won?')],
+        ['a logged day that isn’t a day', (s) => (firstLogged(s).date = 'today')],
+        [
+          'logged points below 0',
+          (s) =>
+            ((firstLogged(s).spoofs as Record<string, unknown>[])[0] = {
+              id: 'a',
+              name: 'A',
+              pointsByScrum: [-1],
+            }),
+        ],
+        [
+          'a spoof’s behavior stat that’s missing',
+          (s) =>
+            delete (Object.values(s.spoofs as object)[0] as { behavior: Record<string, unknown> })
+              .behavior.dings,
+        ],
+        ['an opponent’s record that isn’t one', (s) => (s.opponents = { Embers: 3 })],
+      ])('reports %s as unreadable', (_what, edit) => {
+        expect(loadStats(storeWithStats(edit))).toEqual({ ok: false, problem: 'unreadable' });
+      });
+
+      it('reads the same stats unchanged', () => {
+        expect(loadStats(storeWithStats(() => undefined)).ok).toBe(true);
+      });
     });
   });
 
@@ -547,6 +592,23 @@ describe("your team's stats (#89)", () => {
 
       expect(recordMatch(store, PLAYED, DAY)).toEqual({ ok: false, problem: 'invalid' });
       expect(loadStats(store)).toEqual({ ok: true, stats: emptyTeamStats(DAY) });
+    });
+
+    it('refuses a match whose home team has the same spoofs but another name', () => {
+      const store = memoryStorage();
+      saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: DAY });
+
+      expect(recordMatch(store, PLAYED, DAY)).toEqual({ ok: false, problem: 'invalid' });
+    });
+
+    it('refuses a match whose home team had a spoof more than the saved team', () => {
+      const extra = spoofLine('extra', [1, null, null]);
+      const record = { ...PLAYED, spoofs: [...PLAYED.spoofs, extra] };
+
+      expect(recordMatch(newTeamStore(), record, DAY)).toEqual({
+        ok: false,
+        problem: 'invalid',
+      });
     });
 
     it('refuses a date that isn’t a day', () => {

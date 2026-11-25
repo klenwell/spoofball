@@ -270,11 +270,20 @@ export function recordMatch(
   return written.ok ? { ok: true, stats } : written;
 }
 
-/** Whether the match's home team is this team: the same spoofs, by id. */
+/**
+ * Whether the match's home team is this team: the same name and the same
+ * spoofs, by id. Ids alone aren't enough: every drafted team's spoofs are
+ * numbered from the same pool (`p1`–`p10`), so a new team could match an old
+ * one's match from another browser tab (#96 review).
+ */
 function playedBy(record: MatchRecord, team: Team): boolean {
   const ids = record.spoofs.filter((s) => s.team === 'home').map((s) => s.id);
   const teamIds = team.spoofs.map((s) => s.id);
-  return ids.length === teamIds.length && teamIds.every((id) => ids.includes(id));
+  return (
+    record.teams.home === team.name &&
+    ids.length === teamIds.length &&
+    teamIds.every((id) => ids.includes(id))
+  );
 }
 
 /** The record's data and text, or why there's none to read. */
