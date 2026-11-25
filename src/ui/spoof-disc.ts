@@ -176,7 +176,8 @@ export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): v
   if (opacity < 1) drawFadedBody(ctx, radius, mark, kit, opacity);
   else drawBody(ctx, radius, mark, kit);
 
-  // Highlight: a dark ring just outside the disc, never faded by fatigue.
+  // Highlight: a ring just outside the disc (dark, or the given color on a
+  // white track), never faded by fatigue.
   if (disc.highlighted) {
     ctx.globalAlpha = Math.min(1, Math.max(0, disc.highlightOpacity ?? 1));
     const ringRadius = radius + Math.max(2, radius * 0.18);
