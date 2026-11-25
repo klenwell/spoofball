@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { blockedStorage, fullStorage, memoryStorage } from '../test-support/storage';
-import { SPOOFS } from '../game/preset-teams';
+import { EMBERS, SPOOFS } from '../game/preset-teams';
+import { matchRecord } from '../game/match';
+import { skillNames } from '../game/skills';
+import { LOG_LENGTH, addMatch, emptyTeamStats } from '../game/stats';
+import { computerMatch } from '../test-support/match';
+import { spoofLine } from '../test-support/match-record';
 import { teamProblems, type Spoof, type Team } from '../game/teams';
 import {
   SAVE_VERSION,
@@ -8,7 +13,9 @@ import {
   STORAGE_PROBLEM_TEXT,
   browserStorage,
   loadDraft,
+  loadStats,
   loadTeam,
+  recordMatch,
   saveDraft,
   saveTeam,
 } from './saved-team';
@@ -77,9 +84,9 @@ describe('saveTeam and loadTeam', () => {
     saveTeam(store, SPOOFS);
 
     expect([...store.items.keys()]).toEqual([STORAGE_KEY]);
-    expect(SAVE_VERSION).toBe(4);
+    expect(SAVE_VERSION).toBe(5);
     expect(JSON.parse(store.items.get(STORAGE_KEY) ?? '')).toMatchObject({
-      version: 4,
+      version: 5,
       team: { name: 'Spoofs', color: 'blue', logo: '👻' },
     });
   });
@@ -443,5 +450,243 @@ describe('STORAGE_PROBLEM_TEXT', () => {
 describe('browserStorage', () => {
   it('is null where there is no localStorage, as in Node', () => {
     expect(browserStorage()).toBeNull();
+  });
+});
+
+describe("your team's stats (#89)", () => {
+  const DAY = '2026-11-25';
+  /** A finished match your team (the Spoofs, saved) played against the Embers. */
+  const PLAYED = matchRecord(computerMatch(SPOOFS, EMBERS, TEST_SEED));
+
+  /** Storage holding the Spoofs, created on `DAY` with a fresh record. */
+  function newTeamStore() {
+    const store = memoryStorage();
+    saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+    return store;
+  }
+
+  /** The saved record's raw data, to check or break. */
+  function rawRecord(store: ReturnType<typeof memoryStorage>): Record<string, unknown> {
+    return JSON.parse(store.items.get(STORAGE_KEY) ?? '') as Record<string, unknown>;
+  }
+
+  describe('loadStats', () => {
+    it('gives a new team a fresh record, with the day it joined', () => {
+      expect(loadStats(newTeamStore())).toEqual({ ok: true, stats: emptyTeamStats(DAY) });
+    });
+
+    it('gives a team saved before stats (version 4) an empty record and no join date', () => {
+      const store = storeWith((record) => {
+        record.version = 4;
+      });
+
+      expect(loadStats(store)).toEqual({ ok: true, stats: emptyTeamStats(null) });
+    });
+
+    it('has no stats without a team, and says why', () => {
+      expect(loadStats(memoryStorage())).toEqual({ ok: false, problem: 'none' });
+      expect(loadStats(blockedStorage())).toEqual({ ok: false, problem: 'unavailable' });
+    });
+
+    describe('when the saved stats can’t be read', () => {
+      /** Storage holding the Spoofs with one recorded match, its stats changed by `edit`. */
+      function storeWithStats(edit: (stats: Record<string, unknown>) => void) {
+        const store = newTeamStore();
+        recordMatch(store, PLAYED, DAY);
+        const record = rawRecord(store);
+        const stats = record.stats as Record<string, unknown>;
+        edit(stats);
+        store.items.set(STORAGE_KEY, JSON.stringify(record));
+        return store;
+      }
+      const firstLogged = (stats: Record<string, unknown>) =>
+        (stats.log as Record<string, unknown>[])[0] ?? {};
+
+      it.each<[string, (stats: Record<string, unknown>) => void]>([
+        ['negative points', (s) => (s.points = -1)],
+        ['a join date that isn’t a day', (s) => (s.joined = 'Nov 25')],
+        ['a best score that isn’t a number', (s) => (s.best = '12')],
+        [
+          'a result count that’s missing',
+          (s) => delete (s.results as Record<string, unknown>).tied,
+        ],
+        [
+          `a log longer than ${String(LOG_LENGTH)}`,
+          (s) => (s.log = Array.from({ length: LOG_LENGTH + 1 }, () => firstLogged(s))),
+        ],
+        ['a logged result it doesn’t know', (s) => (firstLogged(s).result = 'won?')],
+        ['a logged day that isn’t a day', (s) => (firstLogged(s).date = 'today')],
+        [
+          'logged points below 0',
+          (s) =>
+            ((firstLogged(s).spoofs as Record<string, unknown>[])[0] = {
+              id: 'a',
+              name: 'A',
+              pointsByScrum: [-1],
+            }),
+        ],
+        [
+          'a spoof’s behavior stat that’s missing',
+          (s) =>
+            delete (Object.values(s.spoofs as object)[0] as { behavior: Record<string, unknown> })
+              .behavior.dings,
+        ],
+        ['an opponent’s record that isn’t one', (s) => (s.opponents = { Embers: 3 })],
+      ])('reports %s as unreadable', (_what, edit) => {
+        expect(loadStats(storeWithStats(edit))).toEqual({ ok: false, problem: 'unreadable' });
+      });
+
+      it('reads the same stats unchanged', () => {
+        expect(loadStats(storeWithStats(() => undefined)).ok).toBe(true);
+      });
+    });
+  });
+
+  describe('recordMatch', () => {
+    it('adds the match to the saved stats, which load back the same', () => {
+      const store = newTeamStore();
+
+      const result = recordMatch(store, PLAYED, DAY);
+
+      const expected = addMatch(emptyTeamStats(DAY), PLAYED, DAY);
+      expect(result).toEqual({ ok: true, stats: expected });
+      expect(loadStats(store)).toEqual({ ok: true, stats: expected });
+    });
+
+    it('keeps adding: the totals and log grow with each match', () => {
+      const store = newTeamStore();
+
+      recordMatch(store, PLAYED, DAY);
+      recordMatch(store, PLAYED, '2026-11-26');
+
+      const stats = loadStats(store);
+      expect(stats.ok && stats.stats.log.map((m) => m.date)).toEqual(['2026-11-26', DAY]);
+    });
+
+    it('keeps the team and a draft in progress beside the stats', () => {
+      const store = newTeamStore();
+      const draft = startDraft({ name: 'Night Owls', color: 'teal', logo: '🦉' }, TEST_SEED);
+      saveDraft(store, draft);
+
+      recordMatch(store, PLAYED, DAY);
+
+      expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
+      expect(loadDraft(store)).toEqual(draft);
+    });
+
+    it('records a match for a team saved before stats, which then has no join date', () => {
+      const store = storeWith((record) => {
+        record.version = 4;
+      });
+
+      recordMatch(store, PLAYED, DAY);
+
+      const stats = loadStats(store);
+      expect(stats.ok && [stats.stats.joined, stats.stats.log.length]).toEqual([null, 1]);
+    });
+
+    it('refuses a match another team played, such as the quick start’s', () => {
+      const store = memoryStorage();
+      const other = { ...SPOOFS, name: 'Owls', spoofs: EMBERS.spoofs };
+      saveTeam(store, other, { endDraft: true, joined: DAY });
+
+      expect(recordMatch(store, PLAYED, DAY)).toEqual({ ok: false, problem: 'invalid' });
+      expect(loadStats(store)).toEqual({ ok: true, stats: emptyTeamStats(DAY) });
+    });
+
+    it('refuses a match whose home team has the same spoofs but another name', () => {
+      const store = memoryStorage();
+      saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: DAY });
+
+      expect(recordMatch(store, PLAYED, DAY)).toEqual({ ok: false, problem: 'invalid' });
+    });
+
+    it('refuses a match whose home team had a spoof more than the saved team', () => {
+      const extra = spoofLine('extra', [1, null, null]);
+      const record = { ...PLAYED, spoofs: [...PLAYED.spoofs, extra] };
+
+      expect(recordMatch(newTeamStore(), record, DAY)).toEqual({
+        ok: false,
+        problem: 'invalid',
+      });
+    });
+
+    it('refuses a date that isn’t a day', () => {
+      expect(recordMatch(newTeamStore(), PLAYED, 'today')).toEqual({
+        ok: false,
+        problem: 'invalid',
+      });
+    });
+
+    it('leaves stats it can’t read in place, and doesn’t add to them', () => {
+      const store = newTeamStore();
+      const record = rawRecord(store);
+      record.stats = { broken: true };
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+      const before = store.items.get(STORAGE_KEY);
+
+      expect(recordMatch(store, PLAYED, DAY)).toEqual({ ok: false, problem: 'unreadable' });
+      expect(store.items.get(STORAGE_KEY)).toBe(before);
+    });
+
+    it('reports storage that is missing, blocked or full, without throwing', () => {
+      const full = fullStorage({ [STORAGE_KEY]: newTeamStore().items.get(STORAGE_KEY) ?? '' });
+
+      expect(recordMatch(null, PLAYED, DAY)).toEqual({ ok: false, problem: 'unavailable' });
+      expect(recordMatch(blockedStorage(), PLAYED, DAY)).toEqual({
+        ok: false,
+        problem: 'unavailable',
+      });
+      expect(recordMatch(full, PLAYED, DAY)).toEqual({ ok: false, problem: 'full' });
+    });
+
+    it('saves no skills', () => {
+      const store = newTeamStore();
+
+      recordMatch(store, PLAYED, DAY);
+
+      const stats = JSON.stringify(rawRecord(store).stats);
+      for (const skill of skillNames) expect(stats).not.toContain(`"${skill}"`);
+    });
+  });
+
+  describe('saving the team again', () => {
+    it('keeps its stats when it’s the same team', () => {
+      const store = newTeamStore();
+      recordMatch(store, PLAYED, DAY);
+      const before = loadStats(store);
+
+      saveTeam(store, SPOOFS);
+
+      expect(loadStats(store)).toEqual(before);
+    });
+
+    it('starts a fresh record for a new team, created on its own day', () => {
+      const store = newTeamStore();
+      recordMatch(store, PLAYED, DAY);
+
+      saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: '2026-12-01' });
+
+      expect(loadStats(store)).toEqual({ ok: true, stats: emptyTeamStats('2026-12-01') });
+    });
+
+    it('keeps stats it can’t read as they were, when a draft is saved beside them', () => {
+      const store = newTeamStore();
+      const record = rawRecord(store);
+      record.stats = { broken: true };
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      saveDraft(store, startDraft({ name: 'Night Owls', color: 'teal', logo: '🦉' }, TEST_SEED));
+      saveTeam(store, SPOOFS);
+
+      expect(rawRecord(store).stats).toEqual({ broken: true });
+    });
+
+    it('refuses a join date that isn’t a day', () => {
+      expect(saveTeam(memoryStorage(), SPOOFS, { joined: 'Nov 25' })).toMatchObject({
+        ok: false,
+        problem: 'invalid',
+      });
+    });
   });
 });

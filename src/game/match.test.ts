@@ -10,7 +10,6 @@ import {
   matchRecord,
   matchScorecard,
   matchScore,
-  miseRandom,
   nextMise,
   outcomeFor,
   playScrum,
@@ -24,7 +23,7 @@ import {
   type Match,
   type MatchSpoof,
 } from './match';
-import { computerMove, placeSpoof, whoseTurn, type MiseState } from './mise';
+import { computerMatch as wholeMatch, computerMise } from '../test-support/match';
 import { PRESET_HOME, PRESET_VISITOR } from './preset-teams';
 import type { Random } from './random';
 import { MAX_SKEW, SKEWED_SKILLS } from './skew';
@@ -33,22 +32,9 @@ import { skillNames, type Skills } from './skills';
 const HOME = PRESET_HOME.team;
 const VISITOR = PRESET_VISITOR.team;
 
-/** Places every spoof of a mise with the computer's moves, for both teams. */
-function computerMise(match: Match): MiseState {
-  let mise = nextMise(match);
-  const random = miseRandom(match);
-  for (let team = whoseTurn(mise); team; team = whoseTurn(mise)) {
-    const move = computerMove(mise, team, match.teams[team].spoofs, random);
-    mise = placeSpoof(mise, move.spoof, team, move.spot);
-  }
-  return mise;
-}
-
 /** A whole match, with the computer placing for both teams. */
 function computerMatch(seed: number, home = HOME): Match {
-  let match = startMatch(home, VISITOR, seed);
-  while (!isMatchOver(match)) match = playScrum(match, computerMise(match));
-  return match;
+  return wholeMatch(home, VISITOR, seed);
 }
 
 /** A random source that always gives the top (or bottom) of every range. */
