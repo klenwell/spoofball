@@ -85,8 +85,9 @@ function setLeaveWarning(on: boolean): void {
 function matchRecorder(store: KeyValueStore | null): MatchRecorder {
   return {
     progress: (soFar) => {
-      saveMatchInProgress(store, soFar, today());
-      setLeaveWarning(true);
+      // Only warn when there's a forfeit to record: with storage full or
+      // blocked, leaving loses nothing (#97 review).
+      setLeaveWarning(saveMatchInProgress(store, soFar, today()).ok);
     },
     end: (record) => {
       recordMatch(store, record, today());

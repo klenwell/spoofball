@@ -774,6 +774,39 @@ describe('a match in progress (#90)', () => {
       ['no record', (p) => delete p.record],
       ['an unknown result', (p) => ((p.record as Record<string, unknown>).result = 'won?')],
       ['a host that isn’t a side', (p) => ((p.record as Record<string, unknown>).host = 'away')],
+      ['a seed that isn’t a number', (p) => ((p.record as Record<string, unknown>).seed = '7')],
+      [
+        'an opponent’s name that isn’t text',
+        (p) => ((p.record as { teams: Record<string, unknown> }).teams.visitor = 7),
+      ],
+      [
+        'a spoof on no side',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          if (spoofs[0]) spoofs[0].team = 'bench';
+        },
+      ],
+      [
+        'a spoof with no id',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          delete spoofs[0]?.id;
+        },
+      ],
+      [
+        'a spoof whose name isn’t text',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          if (spoofs[0]) spoofs[0].name = null;
+        },
+      ],
+      [
+        'a spoof’s points by scrum holding text',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          if (spoofs[0]) spoofs[0].pointsByScrum = ['3'];
+        },
+      ],
       [
         'a spoof with a missing behavior stat',
         (p) => {
