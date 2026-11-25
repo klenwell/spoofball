@@ -8,14 +8,16 @@ import {
   browserStorage,
   loadDraft,
   loadTeam,
+  recordForfeit,
   recordMatch,
   saveDraft,
+  saveMatchInProgress,
   saveTeam,
   type KeyValueStore,
 } from '../storage/saved-team';
 import { createCombineScreen } from './combine-screen';
 import { el, newSeed, today } from './dom';
-import { createMatchScreen } from './match-screen';
+import { createMatchScreen, type MatchRecorder } from './match-screen';
 import { createNewTeamScreen } from './new-team-screen';
 import { COMBINE_HASH, START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
 import { createSplashScreen } from './splash-screen';
@@ -59,6 +61,42 @@ function opponentsFor(team: Team): (seed: number) => Team {
 }
 
 /**
+ * The browser's "Leave site?" prompt (#90), while your saved team has a
+ * match in progress. Browsers show their own text and may skip it (mobile
+ * browsers often do), but the forfeit is recorded either way: the match in
+ * progress is already saved. Only listened for while needed, since a
+ * `beforeunload` listener can keep a page out of the browser's back-forward
+ * cache.
+ */
+function warnOnLeave(event: BeforeUnloadEvent): void {
+  event.preventDefault();
+}
+
+function setLeaveWarning(on: boolean): void {
+  window.removeEventListener('beforeunload', warnOnLeave);
+  if (on) window.addEventListener('beforeunload', warnOnLeave);
+}
+
+/**
+ * Records your saved team's matches (#89), and its match in progress, which
+ * becomes a forfeit if you leave (#90). A record that can't be saved never
+ * stops the match: its scorecard still shows.
+ */
+function matchRecorder(store: KeyValueStore | null): MatchRecorder {
+  return {
+    progress: (soFar) => {
+      // Only warn when there's a forfeit to record: with storage full or
+      // blocked, leaving loses nothing (#97 review).
+      setLeaveWarning(saveMatchInProgress(store, soFar, today()).ok);
+    },
+    end: (record) => {
+      recordMatch(store, record, today());
+      setLeaveWarning(false);
+    },
+  };
+}
+
+/**
  * The tabs with a screen of their own, built for the team in play. Only the
  * team saved in this browser has its matches recorded (#89): never the quick
  * start's Spoofs (the owner, #88).
@@ -69,16 +107,7 @@ function panelBuilders(
 ): Partial<Record<TabId, (team: Team) => Panel>> {
   return {
     match: (team) =>
-      createMatchScreen(
-        team,
-        opponentsFor(team),
-        isSaved(team)
-          ? (record) => {
-              // A record that can't be saved never stops the match: its scorecard still shows.
-              recordMatch(store, record, today());
-            }
-          : undefined,
-      ),
+      createMatchScreen(team, opponentsFor(team), isSaved(team) ? matchRecorder(store) : undefined),
   };
 }
 
@@ -109,6 +138,8 @@ export function mountAppShell(root: HTMLElement): void {
   // so it no longer depends on the upgrade. If that fails, the upgrade runs
   // again next time, with the same result.
   if (loaded.ok && loaded.upgraded) saveTeam(store, loaded.team);
+  // A match left unfinished last time is a forfeit (#90).
+  recordForfeit(store);
   /** The team saved in this browser. */
   let savedTeam: Team | null = loaded.ok ? loaded.team : null;
   /** The team being played: none until one is loaded, picked or created. */
@@ -160,9 +191,19 @@ export function mountAppShell(root: HTMLElement): void {
     return built;
   }
 
-  /** Puts a team in play: tab screens are built afresh for it, and the game goes to Match. */
+  /**
+   * Puts a team in play: tab screens are built afresh for it, and the game
+   * goes to Match. The team already in play goes back to its match instead,
+   * paused where you left it (the owner, #90).
+   */
   function play(next: Team): void {
+    if (next === team) {
+      window.location.hash = hashFor('match');
+      return;
+    }
     shownPanel?.hide?.();
+    // The old team's match in progress goes with it (#90): no warning for it now.
+    setLeaveWarning(false);
     shownPanel = undefined;
     team = next;
     // The old team's screens stop for good, so none keeps running offscreen.

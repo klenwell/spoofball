@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { blockedStorage, fullStorage, memoryStorage } from '../test-support/storage';
 import { EMBERS, SPOOFS } from '../game/preset-teams';
-import { matchRecord } from '../game/match';
+import { matchRecord, playScrum, startMatch } from '../game/match';
 import { skillNames } from '../game/skills';
 import { LOG_LENGTH, addMatch, emptyTeamStats } from '../game/stats';
-import { computerMatch } from '../test-support/match';
+import { computerMatch, computerMise } from '../test-support/match';
 import { spoofLine } from '../test-support/match-record';
 import { teamProblems, type Spoof, type Team } from '../game/teams';
 import {
@@ -15,8 +15,10 @@ import {
   loadDraft,
   loadStats,
   loadTeam,
+  recordForfeit,
   recordMatch,
   saveDraft,
+  saveMatchInProgress,
   saveTeam,
 } from './saved-team';
 import {
@@ -687,6 +689,271 @@ describe("your team's stats (#89)", () => {
         ok: false,
         problem: 'invalid',
       });
+    });
+  });
+});
+
+describe('a match in progress (#90)', () => {
+  const DAY = '2026-11-25';
+  const LATER = '2026-11-26';
+  /** The Spoofs against the Embers after one scrum, and the same match finished. */
+  const partway = (() => {
+    let match = startMatch(SPOOFS, EMBERS, TEST_SEED);
+    match = playScrum(match, computerMise(match));
+    return match;
+  })();
+  const SO_FAR = matchRecord(partway, { soFar: true });
+  const FINISHED = matchRecord(computerMatch(SPOOFS, EMBERS, TEST_SEED));
+
+  /** Storage holding the Spoofs, created on `DAY`, with their match in progress saved. */
+  function storeMidMatch() {
+    const store = memoryStorage();
+    saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+    saveMatchInProgress(store, SO_FAR, DAY);
+    return store;
+  }
+
+  const rawRecord = (store: ReturnType<typeof memoryStorage>) =>
+    JSON.parse(store.items.get(STORAGE_KEY) ?? '') as Record<string, unknown>;
+
+  describe('recordForfeit', () => {
+    it('records a match left unfinished as a forfeit, on the day it was played', () => {
+      const store = storeMidMatch();
+
+      const result = recordForfeit(store);
+
+      const expected = addMatch(emptyTeamStats(DAY), SO_FAR, DAY, { forfeit: true });
+      expect(result).toEqual({ ok: true, stats: expected });
+      expect(loadStats(store)).toEqual({ ok: true, stats: expected });
+      expect(expected.results.forfeited).toBe(1);
+      expect(expected.log[0]?.result).toBe('forfeited');
+    });
+
+    it('records it once: the match in progress is cleared', () => {
+      const store = storeMidMatch();
+      recordForfeit(store);
+
+      expect(recordForfeit(store)).toBeNull();
+      expect(rawRecord(store)).not.toHaveProperty('inProgress');
+    });
+
+    it('records a match left before any scrum finished as a 0–0 forfeit, crediting no spoof', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      const start = matchRecord(startMatch(SPOOFS, EMBERS, TEST_SEED), { soFar: true });
+      saveMatchInProgress(store, start, DAY);
+
+      const result = recordForfeit(store);
+
+      expect(result?.ok && result.stats.log[0]?.score).toEqual({ yours: 0, theirs: 0 });
+      expect(result?.ok && result.stats.spoofs).toEqual({});
+    });
+
+    it('does nothing without a match in progress', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+
+      expect(recordForfeit(store)).toBeNull();
+      expect(recordForfeit(memoryStorage())).toBeNull();
+      expect(recordForfeit(null)).toBeNull();
+    });
+
+    it('leaves a match in progress it can’t read in place, and records nothing', () => {
+      const store = storeMidMatch();
+      const record = rawRecord(store);
+      record.inProgress = { date: DAY, record: { ...SO_FAR, score: { home: -1, visitor: 0 } } };
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+      const before = store.items.get(STORAGE_KEY);
+
+      expect(recordForfeit(store)).toEqual({ ok: false, problem: 'unreadable' });
+      expect(store.items.get(STORAGE_KEY)).toBe(before);
+    });
+
+    it.each<[string, (inProgress: Record<string, unknown>) => void]>([
+      ['a day that isn’t a day', (p) => (p.date = 'today')],
+      ['no record', (p) => delete p.record],
+      ['an unknown result', (p) => ((p.record as Record<string, unknown>).result = 'won?')],
+      ['a host that isn’t a side', (p) => ((p.record as Record<string, unknown>).host = 'away')],
+      ['a seed that isn’t a number', (p) => ((p.record as Record<string, unknown>).seed = '7')],
+      [
+        'an opponent’s name that isn’t text',
+        (p) => ((p.record as { teams: Record<string, unknown> }).teams.visitor = 7),
+      ],
+      [
+        'a spoof on no side',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          if (spoofs[0]) spoofs[0].team = 'bench';
+        },
+      ],
+      [
+        'a spoof with no id',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          delete spoofs[0]?.id;
+        },
+      ],
+      [
+        'a spoof whose name isn’t text',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          if (spoofs[0]) spoofs[0].name = null;
+        },
+      ],
+      [
+        'a spoof’s points by scrum holding text',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          if (spoofs[0]) spoofs[0].pointsByScrum = ['3'];
+        },
+      ],
+      [
+        'a spoof with a missing behavior stat',
+        (p) => {
+          const spoofs = (p.record as { spoofs: { stats: Record<string, unknown> }[] }).spoofs;
+          delete spoofs[0]?.stats.dings;
+        },
+      ],
+      [
+        'a spoof with points below 0',
+        (p) => {
+          const spoofs = (p.record as { spoofs: Record<string, unknown>[] }).spoofs;
+          if (spoofs[0]) spoofs[0].points = -2;
+        },
+      ],
+      [
+        'a score by scrum that isn’t a list',
+        (p) => ((p.record as Record<string, unknown>).scoreByScrum = { home: 1, visitor: [] }),
+      ],
+      [
+        'a logo that isn’t text',
+        (p) => ((p.record as Record<string, unknown>).logos = { home: 1 }),
+      ],
+    ])('reports a match in progress with %s as unreadable', (_what, edit) => {
+      const store = storeMidMatch();
+      const record = rawRecord(store);
+      edit(record.inProgress as Record<string, unknown>);
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      expect(recordForfeit(store)).toEqual({ ok: false, problem: 'unreadable' });
+    });
+  });
+
+  describe('saveMatchInProgress', () => {
+    it('refuses a match another team is playing', () => {
+      const store = memoryStorage();
+      saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: DAY });
+
+      expect(saveMatchInProgress(store, SO_FAR, DAY)).toEqual({ ok: false, problem: 'invalid' });
+      expect(recordForfeit(store)).toBeNull();
+    });
+
+    it('refuses without a saved team, or a day', () => {
+      expect(saveMatchInProgress(memoryStorage(), SO_FAR, DAY)).toEqual({
+        ok: false,
+        problem: 'none',
+      });
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      expect(saveMatchInProgress(store, SO_FAR, 'today')).toEqual({
+        ok: false,
+        problem: 'invalid',
+      });
+    });
+
+    it('keeps the team, its stats and a draft beside it', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      recordMatch(store, FINISHED, DAY);
+      const stats = loadStats(store);
+      const draft = startDraft({ name: 'Night Owls', color: 'teal', logo: '🦉' }, TEST_SEED);
+      saveDraft(store, draft);
+
+      saveMatchInProgress(store, SO_FAR, DAY);
+
+      expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
+      expect(loadStats(store)).toEqual(stats);
+      expect(loadDraft(store)).toEqual(draft);
+    });
+
+    it('replaces the last save of the same match, so a forfeit records the latest scrums', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      const start = matchRecord(startMatch(SPOOFS, EMBERS, TEST_SEED), { soFar: true });
+      saveMatchInProgress(store, start, DAY);
+
+      saveMatchInProgress(store, SO_FAR, LATER);
+
+      const result = recordForfeit(store);
+      expect(result?.ok && result.stats.log[0]?.date).toBe(LATER);
+      expect(result?.ok && result.stats.log[0]?.scoreByScrum.yours).toHaveLength(1);
+    });
+  });
+
+  describe('when the match ends', () => {
+    it('records it as finished, and clears the match in progress: no forfeit follows', () => {
+      const store = storeMidMatch();
+
+      recordMatch(store, FINISHED, DAY);
+
+      expect(recordForfeit(store)).toBeNull();
+      const stats = loadStats(store);
+      expect(stats.ok && stats.stats.results.forfeited).toBe(0);
+    });
+
+    it('clears the match in progress even when its stats can’t be added', () => {
+      const store = storeMidMatch();
+      const record = rawRecord(store);
+      record.stats = { broken: true };
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      expect(recordMatch(store, FINISHED, DAY)).toEqual({ ok: false, problem: 'unreadable' });
+
+      expect(recordForfeit(store)).toBeNull();
+      expect(rawRecord(store).stats).toEqual({ broken: true });
+    });
+
+    it('clears the match in progress when storage is too full to add the match', () => {
+      const store = storeMidMatch();
+      // Full, as a browser's storage can be: room for the record without the
+      // match in progress, but not for the stats with the match added.
+      const cleared = rawRecord(store);
+      delete cleared.inProgress;
+      const room = JSON.stringify(cleared).length;
+      const full = {
+        getItem: store.getItem,
+        setItem: (key: string, value: string) => {
+          if (value.length > room) {
+            throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+          }
+          store.setItem(key, value);
+        },
+      };
+
+      expect(recordMatch(full, FINISHED, DAY)).toEqual({ ok: false, problem: 'full' });
+
+      expect(recordForfeit(store)).toBeNull();
+      expect(loadStats(store)).toEqual({ ok: true, stats: emptyTeamStats(DAY) });
+    });
+  });
+
+  describe('other saves', () => {
+    it('keep it: saving the same team again, or a draft for a new one', () => {
+      const store = storeMidMatch();
+
+      saveTeam(store, SPOOFS);
+      saveDraft(store, startDraft({ name: 'Night Owls', color: 'teal', logo: '🦉' }, TEST_SEED));
+
+      expect(recordForfeit(store)?.ok).toBe(true);
+    });
+
+    it('drop it when a new team replaces the old one, with its record (the owner, #90)', () => {
+      const store = storeMidMatch();
+
+      saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: LATER });
+
+      expect(recordForfeit(store)).toBeNull();
+      expect(loadStats(store)).toEqual({ ok: true, stats: emptyTeamStats(LATER) });
     });
   });
 });

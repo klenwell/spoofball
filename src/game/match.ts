@@ -365,6 +365,11 @@ export type Outcome = 'won' | 'lost' | 'tied';
 
 export function outcomeFor(match: Match, side: BenchSide): Outcome {
   if (!isMatchOver(match)) throw new Error('The match is not over');
+  return leading(match, side);
+}
+
+/** Whether a side is ahead, behind or level on the scrums played so far. */
+function leading(match: Match, side: BenchSide): Outcome {
   const score = matchScore(match);
   const mine = score[side];
   const theirs = score[side === 'home' ? 'visitor' : 'home'];
@@ -449,8 +454,16 @@ export interface MatchRecord {
   }[];
 }
 
-export function matchRecord(match: Match): MatchRecord {
-  if (!isMatchOver(match)) throw new Error('The match is not over');
+/**
+ * The record of a finished match, or with `soFar`, of the scrums played so
+ * far in one that isn't (#90): what a forfeit records. Its `result` is then
+ * how the home team stands so far, which a forfeit doesn't use.
+ */
+export function matchRecord(
+  match: Match,
+  { soFar = false }: { soFar?: boolean } = {},
+): MatchRecord {
+  if (!soFar && !isMatchOver(match)) throw new Error('The match is not over');
   const sides: readonly BenchSide[] = ['home', 'visitor'];
   return {
     seed: match.seed,
@@ -459,7 +472,7 @@ export function matchRecord(match: Match): MatchRecord {
     logos: { home: match.teams.home.logo, visitor: match.teams.visitor.logo },
     scoreByScrum: scoreByScrum(match),
     score: matchScore(match),
-    result: outcomeFor(match, 'home'),
+    result: leading(match, 'home'),
     spoofs: sides.flatMap((team) =>
       match.spoofs[team].map((m) => ({
         team,

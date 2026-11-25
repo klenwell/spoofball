@@ -139,6 +139,17 @@ function spoofLabel(spoof: { readonly name: string; readonly type: SpoofType }):
   return label;
 }
 
+/** Hears how each match goes (#89, #90). */
+export interface MatchRecorder {
+  /**
+   * The match so far: as its first scrum starts (with no scrums), then as
+   * each scrum's result shows. Leaving before the match ends forfeits it.
+   */
+  readonly progress: (soFar: MatchRecord) => void;
+  /** The finished match, once, as its scorecard shows. */
+  readonly end: (record: MatchRecord) => void;
+}
+
 /** A scrum being played back: its frames, live scores and final score. */
 interface Played {
   readonly frames: readonly ScrumFrame[];
@@ -154,13 +165,13 @@ interface Played {
  * **Play another match** may bring a new opponent, and a match still replays
  * from its seed.
  *
- * `onMatchEnd` hears about each match once, as its scorecard shows, so your
- * saved team's stats can record it (#89).
+ * A `recorder`, given for your saved team only, hears how each match goes,
+ * so its stats can record it.
  */
 export function createMatchScreen(
   yourTeam: Team,
   opponentFor: (seed: number) => Team,
-  onMatchEnd?: (record: MatchRecord) => void,
+  recorder?: MatchRecorder,
 ): Panel {
   /** A new match against the opponent its seed draws. */
   const begin = (seed: number): Match => startMatch(yourTeam, opponentFor(seed), seed);
@@ -925,10 +936,12 @@ export function createMatchScreen(
     say('');
     if (isMatchOver(match)) {
       status = 'done';
-      onMatchEnd?.(matchRecord(match));
+      recorder?.end(matchRecord(match));
       showScorecard();
     } else {
       status = 'break';
+      // The scrum counts once you've seen it end: leaving during its playback doesn't credit it.
+      recorder?.progress(matchRecord(match, { soFar: true }));
       showScrumResult();
     }
     refresh();
@@ -954,6 +967,8 @@ export function createMatchScreen(
     const entries = scrumEntries(match, hand.mise);
     scoreBefore = matchScore(match);
     matchBefore = match;
+    // From its first scrum, leaving the match forfeits it (#90): not during the first mise.
+    if (match.scrums.length === 0) recorder?.progress(matchRecord(match, { soFar: true }));
     match = playScrum(match, hand.mise);
     const played = match.scrums[match.scrums.length - 1];
     if (!played) throw new Error('No scrum was played');

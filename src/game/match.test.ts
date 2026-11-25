@@ -764,4 +764,33 @@ describe('matchRecord', () => {
   it("refuses a match that isn't over", () => {
     expect(() => matchRecord(startMatch(HOME, VISITOR, TEST_SEED))).toThrow(/not over/);
   });
+
+  describe('so far, for a forfeit (#90)', () => {
+    it('records a match before its first scrum: no scores, and no spoof has played', () => {
+      const soFar = matchRecord(startMatch(HOME, VISITOR, TEST_SEED), { soFar: true });
+
+      expect(soFar.scoreByScrum).toEqual({ home: [], visitor: [] });
+      expect(soFar.score).toEqual({ home: 0, visitor: 0 });
+      expect(soFar.result).toBe('tied');
+      expect(soFar.spoofs.every((s) => s.scrumsPlayed === 0)).toBe(true);
+    });
+
+    it('records the scrums played so far, and who leads', () => {
+      let partway = startMatch(HOME, VISITOR, TEST_SEED);
+      partway = playScrum(partway, computerMise(partway));
+
+      const soFar = matchRecord(partway, { soFar: true });
+
+      const score = matchScore(partway);
+      expect(soFar.scoreByScrum.home).toHaveLength(1);
+      expect(soFar.score).toEqual(score);
+      expect(soFar.result).toBe(
+        score.home > score.visitor ? 'won' : score.home < score.visitor ? 'lost' : 'tied',
+      );
+    });
+
+    it('records a finished match the same as without it', () => {
+      expect(matchRecord(match, { soFar: true })).toEqual(record);
+    });
+  });
 });
