@@ -1,5 +1,7 @@
 import { appInfo } from '../app-info';
 import { startDraft, type Draft } from '../game/draft';
+import { leagueOpponent } from '../game/league';
+import { EMBERS, SPOOFS } from '../game/preset-teams';
 import type { Team } from '../game/teams';
 import {
   STORAGE_PROBLEM_TEXT,
@@ -46,9 +48,17 @@ export interface Panel {
   readonly heading?: HTMLElement;
 }
 
+/**
+ * Who a team plays (#75): the quick start's Spoofs play the Embers, as
+ * before; every other team plays a league team drawn from each match's seed.
+ */
+function opponentsFor(team: Team): (seed: number) => Team {
+  return team === SPOOFS ? () => EMBERS : leagueOpponent;
+}
+
 /** The tabs with a screen of their own, built for the team in play. */
 const panelBuilders: Partial<Record<TabId, (team: Team) => Panel>> = {
-  match: createMatchScreen,
+  match: (team) => createMatchScreen(team, opponentsFor(team)),
 };
 
 function tabLink(id: TabId, label: string): HTMLAnchorElement {

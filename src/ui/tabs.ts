@@ -31,7 +31,7 @@ export const tabs: readonly Tab[] = [
     label: 'Match',
     title: 'Match',
     coming:
-      'New in v0.2.0: play a match against the Embers, 3 scrums of 8 seconds. Before each one, you take turns placing 3 spoofs on the court; tired spoofs can rest on the bench.',
+      'New in v0.3.0: your team plays a team from the league (the Spoofs play the Embers). A match is 3 scrums of 8 seconds. Before each one, you take turns placing 3 spoofs on the court; tired spoofs can rest on the bench.',
   },
   {
     id: 'pharm',

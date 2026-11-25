@@ -663,6 +663,13 @@ describe('matchScorecard', () => {
   const match = computerMatch(TEST_SEED);
   const card = matchScorecard(match);
 
+  it("gives each team's name and logo (#75)", () => {
+    for (const side of ['home', 'visitor'] as const) {
+      expect(card.teams[side].name).toBe(match.teams[side].name);
+      expect(card.teams[side].logo).toBe(match.teams[side].logo);
+    }
+  });
+
   it('gives the home result, as outcomeFor does', () => {
     expect(card.outcome).toBe(outcomeFor(match, 'home'));
   });

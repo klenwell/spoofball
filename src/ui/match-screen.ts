@@ -26,7 +26,6 @@ import {
   whoseTurn,
   MISE_TURNS,
 } from '../game/mise';
-import { EMBERS } from '../game/preset-teams';
 import type { Random } from '../game/random';
 import { liveScores, type Scores } from '../game/scoring';
 import type { ScrumEntry, ScrumFrame } from '../game/scrum';
@@ -107,6 +106,13 @@ const YOU: BenchSide = 'home';
 const COMPUTER: BenchSide = 'visitor';
 const SIDES: readonly BenchSide[] = ['home', 'visitor'];
 
+/** A team's emoji logo beside its name. Hidden from screen readers, which hear the name. */
+function teamLogo(logo: string): HTMLElement {
+  const span = el('span', 'team-logo', logo);
+  span.setAttribute('aria-hidden', 'true');
+  return span;
+}
+
 function shownTypeName(type: SpoofType): string {
   const name = shownType(type);
   return name.charAt(0).toUpperCase() + name.slice(1);
@@ -131,23 +137,42 @@ interface Played {
   readonly entries: readonly ScrumEntry[];
 }
 
-/** The Match screen for your team (home) against the Embers (#71: your own team, or the Spoofs). */
-export function createMatchScreen(yourTeam: Team): Panel {
-  const teamOf: Readonly<Record<BenchSide, Team>> = { home: yourTeam, visitor: EMBERS };
+/**
+ * The Match screen for your team (home) against an opponent (visitor). Each
+ * match's opponent comes from `opponentFor` and the match's seed: a league
+ * team drawn at random (#75), or the Embers for the quick start's Spoofs. So
+ * **Play another match** may bring a new opponent, and a match still replays
+ * from its seed.
+ */
+export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) => Team): Panel {
+  /** A new match against the opponent its seed draws. */
+  const begin = (seed: number): Match => startMatch(yourTeam, opponentFor(seed), seed);
+  // Both teams come from the match in play, so a new match's opponent shows everywhere.
+  const teamOf = (side: BenchSide): Team => match.teams[side];
   const TEAMS: Readonly<Record<BenchSide, readonly Spoof[]>> = {
-    home: yourTeam.spoofs,
-    visitor: EMBERS.spoofs,
+    get home() {
+      return match.teams.home.spoofs;
+    },
+    get visitor() {
+      return match.teams.visitor.spoofs;
+    },
   };
-  const kits = matchKits(yourTeam.color, EMBERS.color);
+  let kits = matchKits(yourTeam.color, yourTeam.color);
   const kitFor = (side: string): Kit => (side === 'home' ? kits.home : kits.visitor);
-  const markOf = new Map(SIDES.flatMap((side) => TEAMS[side].map((s) => [s.id, s.mark] as const)));
-  const nameOf = (side: BenchSide) => teamOf[side].name;
+  let markOf = new Map<string, Spoof['mark']>();
+  const nameOf = (side: BenchSide) => teamOf(side).name;
+  /** Sets the kits and marks for the match in play. */
+  function dressTeams(): void {
+    kits = matchKits(match.teams.home.color, match.teams.visitor.color);
+    markOf = new Map(SIDES.flatMap((side) => TEAMS[side].map((s) => [s.id, s.mark] as const)));
+  }
 
   let status: Status = 'mise';
   let seconds = 0;
   let lastTick = 0;
   let raf = 0;
-  let match: Match = startMatch(yourTeam, EMBERS, 1);
+  let match: Match = begin(newSeed());
+  dressTeams();
   /** The Embers' moves in this scrum's mise, from the match's seed. */
   let moves: Random = miseRandom(match);
   /** The mise, and your spoof in hand: picked, dragged, or placed and still movable. */
@@ -171,17 +196,33 @@ export function createMatchScreen(yourTeam: Team): Panel {
   const side = (bench: BenchSide) => {
     const block = el('div', `scoreboard-team scoreboard-${bench}`);
     const swatch = el('span', 'match-swatch');
-    swatch.style.background = kitFor(bench).fill;
-    swatch.style.borderColor = kitFor(bench).trim;
     swatch.setAttribute('aria-hidden', 'true');
+    const name = el('span', 'scoreboard-name');
     const score = el('span', 'scoreboard-score', '0');
+    // The kit's swatch and the team's logo (#75) beside the score, at the
+    // board's outer edge, where there's room: beside the name they squeezed a
+    // long name, such as "Sacramento Pawns", on a phone.
+    const logo = el('span', 'team-logo scoreboard-logo');
+    logo.setAttribute('aria-hidden', 'true');
+    const scoreRow = el('span', 'scoreboard-score-row');
+    scoreRow.append(swatch, logo, score);
     // What the number counts: spoofs left to place in the mise, then points.
     const unit = el('span', 'scoreboard-unit', 'to place');
-    block.append(swatch, el('span', 'scoreboard-name', nameOf(bench)), score, unit);
-    return { block, score, unit };
+    block.append(name, scoreRow, unit);
+    return { bench, block, swatch, logo, name, score, unit };
   };
   const home = side('home');
   const visitor = side('visitor');
+  /** Each team's color, logo and name on the scoreboard, for the match in play. */
+  function paintScoreboard(): void {
+    for (const team of [home, visitor]) {
+      team.swatch.style.background = kitFor(team.bench).fill;
+      team.swatch.style.borderColor = kitFor(team.bench).trim;
+      team.logo.textContent = teamOf(team.bench).logo;
+      team.name.textContent = nameOf(team.bench);
+    }
+  }
+  paintScoreboard();
   const middle = el('div', 'scoreboard-middle');
   const middleLabel = el('span', 'scoreboard-label', 'Mise');
   const clockText = el('span', 'scoreboard-clock', '');
@@ -567,7 +608,8 @@ export function createMatchScreen(yourTeam: Team): Panel {
     for (const side of SIDES) {
       const team = card.teams[side];
       const row = el('tr');
-      const name = el('th', 'scorecard-label', team.name);
+      const name = el('th', 'scorecard-label');
+      name.append(teamLogo(team.logo), `\u00a0${team.name}`);
       name.scope = 'row';
       row.append(name);
       for (const points of team.byScrum) row.append(pointsCell(points));
@@ -584,7 +626,7 @@ export function createMatchScreen(yourTeam: Team): Panel {
       swatch.style.background = kitFor(side).fill;
       swatch.style.borderColor = kitFor(side).trim;
       swatch.setAttribute('aria-hidden', 'true');
-      label.append(swatch, el('span', undefined, team.name));
+      label.append(swatch, teamLogo(team.logo), el('span', undefined, team.name));
       section.append(scrumHeaderRow(label, 'scorecard-team-head'));
       for (const spoof of team.lines) {
         const row = el('tr');
@@ -639,7 +681,9 @@ export function createMatchScreen(yourTeam: Team): Panel {
     window.clearTimeout(computerTimer);
     cancelAnimationFrame(raf);
     cancelAnimationFrame(miseRaf);
-    match = startMatch(yourTeam, EMBERS, newSeed());
+    match = begin(newSeed());
+    dressTeams();
+    paintScoreboard();
     beginMise();
   }
 
