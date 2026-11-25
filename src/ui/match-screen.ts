@@ -1,4 +1,5 @@
 import { matchKits, type Kit } from '../design/kits';
+import { palette } from '../design/tokens';
 import { BENCH_HALF_WIDTH, arenaBounds, benchSeats, type BenchSide } from '../game/arena';
 import { COURT_RADIUS } from '../game/court';
 import {
@@ -342,6 +343,8 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
           // Tired spoofs on the bench show it, so you can choose who rests.
           fatigue: Math.min(100, fatigueOf(team, spoof.id)),
           highlighted: team === YOU && held.kind === 'picked' && held.spoof.id === spoof.id,
+          // Your picked spoof's ring matches your countdown ring (the owner, on #76).
+          highlightColor: palette.graceRing,
         });
       });
     }
