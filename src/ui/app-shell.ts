@@ -7,6 +7,7 @@ import {
   STORAGE_PROBLEM_TEXT,
   browserStorage,
   loadDraft,
+  loadStats,
   loadTeam,
   recordForfeit,
   recordMatch,
@@ -21,6 +22,7 @@ import { createMatchScreen, type MatchRecorder } from './match-screen';
 import { createNewTeamScreen } from './new-team-screen';
 import { COMBINE_HASH, START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
 import { createSplashScreen } from './splash-screen';
+import { createStatsScreen } from './stats-screen';
 import { hashFor, tabById, tabs, type TabId } from './tabs';
 
 /**
@@ -44,6 +46,8 @@ const SOURCE_URL = 'https://github.com/klenwell/spoofball';
 /** Extra content a screen shows, built the first time it opens. */
 export interface Panel {
   readonly element: HTMLElement;
+  /** Called each time the screen is shown, for example to show the latest stats (#91). */
+  readonly show?: () => void;
   /** Called when the player leaves the screen, for example to pause a scrum. */
   readonly hide?: () => void;
   /** Called when the screen is thrown away (the team changed), to stop its timers and listeners. */
@@ -108,6 +112,8 @@ function panelBuilders(
   return {
     match: (team) =>
       createMatchScreen(team, opponentsFor(team), isSaved(team) ? matchRecorder(store) : undefined),
+    stats: (team) =>
+      createStatsScreen({ team, isSaved: isSaved(team), loadStats: () => loadStats(store) }),
   };
 }
 
@@ -283,6 +289,7 @@ export function mountAppShell(root: HTMLElement): void {
     }
     if (content) panel.replaceChildren(content.element);
     else panel.replaceChildren();
+    content?.show?.();
     for (const link of links) {
       if (route.screen === 'tab' && link.dataset.tab === route.tab) {
         link.setAttribute('aria-current', 'page');
