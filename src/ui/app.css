@@ -1537,11 +1537,89 @@ a.button {
   margin-top: var(--space-6);
 }
 
-.match-log-title {
+.stats-section-title {
   margin: 0 0 var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   font-weight: 400;
+}
+
+/* The spoof lines (#92): a white card, numbers right-aligned in columns. */
+.spoof-lines {
+  margin-top: var(--space-6);
+}
+
+.spoof-lines-table {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--color-surface);
+}
+
+.spoof-lines-table th,
+.spoof-lines-table td {
+  padding: var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--color-line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.spoof-lines-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.spoof-lines-table thead th {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+
+.spoof-lines-table td {
+  font-family: var(--font-numeric);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.spoof-lines-table th:first-child {
+  padding-left: var(--space-2);
+}
+
+.spoof-lines-table tr > :last-child {
+  padding-right: var(--space-2);
+}
+
+/* A spoof's name may wrap on a narrow screen; its numbers never do. */
+.spoof-lines-table .spoof-lines-name {
+  width: 100%;
+  font-weight: 400;
+  text-align: left;
+  white-space: normal;
+}
+
+.spoof-lines-who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.spoof-lines-who canvas {
+  flex: none;
+}
+
+/* Room to spare from 30rem (480 px) up: the columns spread out. */
+@media (min-width: 30rem) {
+  .spoof-lines-table td,
+  .spoof-lines-table thead th:not(:first-child) {
+    padding-inline: var(--space-3);
+  }
+}
+
+.stats-footnote {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
 }
 
 .match-log-list {

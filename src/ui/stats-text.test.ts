@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { emptyStats } from '../game/scrum';
 import { emptyTeamStats, noResults, type TeamStats } from '../game/stats';
 import {
   NO_NUMBER,
@@ -11,6 +12,8 @@ import {
   pointsPerMatchText,
   recordText,
   scoreText,
+  signed,
+  spoofLineText,
 } from './stats-text';
 
 /** Stats with these totals, and nothing else. */
@@ -104,5 +107,67 @@ describe('RESULT_WORD', () => {
 describe('scoreText', () => {
   it('gives your score first', () => {
     expect(scoreText({ yours: 47, theirs: 38 })).toBe('47–38');
+  });
+});
+
+describe('spoofLineText', () => {
+  const totals = {
+    matches: 6,
+    scrums: 12,
+    points: 70,
+    plusMinus: 23,
+    behavior: emptyStats(),
+  };
+
+  it("gives a spoof's matches, scrums and points", () => {
+    expect(spoofLineText(totals)).toMatchObject({ matches: '6', scrums: '12', points: '70' });
+  });
+
+  it('averages points and +/− over its scrums, to one decimal place', () => {
+    expect(spoofLineText(totals)).toMatchObject({
+      pointsPerScrum: '5.8',
+      plusMinusPerScrum: '+1.9',
+    });
+  });
+
+  it('shows 0 for its counts, but no number for its averages, before it plays', () => {
+    expect(spoofLineText(undefined)).toEqual({
+      matches: '0',
+      scrums: '0',
+      points: '0',
+      pointsPerScrum: NO_NUMBER,
+      plusMinusPerScrum: NO_NUMBER,
+    });
+  });
+
+  it('shows no averages for totals with no scrums', () => {
+    const none = { ...totals, matches: 0, scrums: 0, points: 0, plusMinus: 0 };
+
+    expect(spoofLineText(none)).toMatchObject({
+      pointsPerScrum: NO_NUMBER,
+      plusMinusPerScrum: NO_NUMBER,
+    });
+  });
+});
+
+describe('signed', () => {
+  it('shows a plus sign on a positive number', () => {
+    expect(signed(1.94)).toBe('+1.9');
+  });
+
+  it('shows a true minus sign on a negative number', () => {
+    expect(signed(-1)).toBe('−1.0');
+    expect(signed(-1)).not.toContain('-');
+  });
+
+  it('shows 0.0 with no sign, including for numbers that round to it', () => {
+    expect(signed(0)).toBe('0.0');
+    expect(signed(-0.04)).toBe('0.0');
+    expect(signed(0.04)).toBe('0.0');
+  });
+
+  it('rounds to the nearest tenth before choosing the sign', () => {
+    expect(signed(-0.06)).toBe('−0.1');
+    expect(signed(0.05)).toBe('+0.1');
   });
 });

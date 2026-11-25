@@ -1,3 +1,4 @@
+import { kit } from '../design/kits';
 import type { LoggedMatch, TeamStats } from '../game/stats';
 import type { Team } from '../game/teams';
 import { STORAGE_PROBLEM_TEXT, type StatsResult } from '../storage/saved-team';
@@ -14,11 +15,15 @@ import {
   pointsPerMatchText,
   recordText,
   scoreText,
+  spoofLineText,
+  type SpoofLineText,
 } from './stats-text';
+import { markDisc, spoofLabel } from './spoof-label';
 import { hashFor } from './tabs';
 
 /**
- * The Stats tab (#91): your team's record and its match log (wireframe 1).
+ * The Stats tab (#91): your team's record, a line for each spoof (#92) and
+ * its match log (wireframes 1 and 2).
  * Outcomes only: no skills, comps or pawn subtypes (Decision 7). It reads the
  * saved stats each time it's shown, so it's up to date after every match.
  */
@@ -70,7 +75,13 @@ function quickStartNote(): HTMLElement {
 
 function teamPanel(team: Team, stats: TeamStats): HTMLElement {
   const section = el('section', 'stats-team');
-  section.append(teamHeader(team, stats), tiles(stats), matchLog(stats.log));
+  // The spoof lines before the log, which can run to 20 rows (#92).
+  section.append(
+    teamHeader(team, stats),
+    tiles(stats),
+    spoofLines(team, stats),
+    matchLog(stats.log),
+  );
   return section;
 }
 
@@ -108,9 +119,71 @@ function tiles(stats: TeamStats): HTMLElement {
   return list;
 }
 
+/** The columns of the spoof lines: short headings, and their full names for screen readers. */
+const SPOOF_COLUMNS: readonly {
+  readonly key: keyof SpoofLineText;
+  readonly short: string;
+  readonly full: string;
+}[] = [
+  { key: 'matches', short: 'Mat', full: 'Matches' },
+  { key: 'scrums', short: 'Scr', full: 'Scrums' },
+  { key: 'points', short: 'Pts', full: 'Points' },
+  { key: 'pointsPerScrum', short: 'Pts/scr', full: 'Points per scrum' },
+  { key: 'plusMinusPerScrum', short: '+/−', full: 'Plus-minus per scrum' },
+];
+
+/**
+ * A line for each of your spoofs (#92), in team order, after wireframe 2.
+ * Outcomes only: the totals are by spoof id, so a renamed spoof keeps its
+ * line, under its name now.
+ */
+function spoofLines(team: Team, stats: TeamStats): HTMLElement {
+  const section = el('section', 'spoof-lines');
+  section.append(el('h3', 'stats-section-title', 'Spoofs'));
+  const table = el('table', 'spoof-lines-table');
+  const head = el('tr');
+  const corner = el('th');
+  corner.scope = 'col';
+  corner.append(el('span', 'visually-hidden', 'Spoof'));
+  head.append(corner);
+  for (const column of SPOOF_COLUMNS) {
+    const th = el('th');
+    th.scope = 'col';
+    const short = el('span', undefined, column.short);
+    short.setAttribute('aria-hidden', 'true');
+    th.append(short, el('span', 'visually-hidden', column.full));
+    head.append(th);
+  }
+  table.append(el('thead'), el('tbody'));
+  table.tHead?.append(head);
+  const body = table.tBodies[0];
+  const disc = kit(team.color, 'home');
+  for (const spoof of team.spoofs) {
+    const row = el('tr');
+    const name = el('th', 'spoof-lines-name');
+    name.scope = 'row';
+    const who = el('span', 'spoof-lines-who');
+    who.append(markDisc(spoof.mark, disc, 18, 7), spoofLabel(spoof));
+    name.append(who);
+    row.append(name);
+    const line = spoofLineText(stats.spoofs[spoof.id]);
+    for (const column of SPOOF_COLUMNS) row.append(el('td', undefined, line[column.key]));
+    body?.append(row);
+  }
+  section.append(
+    table,
+    el(
+      'p',
+      'stats-footnote',
+      "+/− per scrum: your team's points minus the opponent's in each scrum the spoof played, averaged.",
+    ),
+  );
+  return section;
+}
+
 function matchLog(log: readonly LoggedMatch[]): HTMLElement {
   const section = el('section', 'match-log');
-  section.append(el('h3', 'match-log-title', 'Match log'));
+  section.append(el('h3', 'stats-section-title', 'Match log'));
   if (log.length === 0) {
     const empty = el('p', 'stats-note');
     const play = el('a', undefined, 'Match');

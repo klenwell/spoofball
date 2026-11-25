@@ -3,6 +3,7 @@ import {
   matchesPlayed,
   type Result,
   type Results,
+  type SpoofTotals,
   type TeamStats,
 } from '../game/stats';
 
@@ -86,4 +87,37 @@ export const RESULT_WORD: Readonly<Record<Result, string>> = {
 /** A score, yours first: "47–38". */
 export function scoreText(score: { readonly yours: number; readonly theirs: number }): string {
   return `${String(score.yours)}–${String(score.theirs)}`;
+}
+
+/** A spoof's line on the Stats tab (#92), each value as shown. */
+export interface SpoofLineText {
+  readonly matches: string;
+  readonly scrums: string;
+  readonly points: string;
+  readonly pointsPerScrum: string;
+  readonly plusMinusPerScrum: string;
+}
+
+/**
+ * A spoof's line from its totals, or from none for a spoof that hasn't
+ * played yet. Counts show 0, but averages show no number, with nothing to
+ * divide by. Averages are to one decimal place.
+ */
+export function spoofLineText(totals: SpoofTotals | undefined): SpoofLineText {
+  const scrums = totals?.scrums ?? 0;
+  return {
+    matches: String(totals?.matches ?? 0),
+    scrums: String(scrums),
+    points: String(totals?.points ?? 0),
+    pointsPerScrum: totals && scrums > 0 ? (totals.points / scrums).toFixed(1) : NO_NUMBER,
+    plusMinusPerScrum: totals && scrums > 0 ? signed(totals.plusMinus / scrums) : NO_NUMBER,
+  };
+}
+
+/** A number to one decimal place with its sign: "+1.9", "−1.0" (a true minus sign), or "0.0". */
+export function signed(value: number): string {
+  const tenths = Math.round(value * 10);
+  if (tenths === 0) return '0.0';
+  const text = (Math.abs(tenths) / 10).toFixed(1);
+  return tenths > 0 ? `+${text}` : `−${text}`;
 }
