@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { emptyTeamStats, noResults, type TeamStats } from '../game/stats';
 import {
   NO_NUMBER,
+  RESULT_LETTER,
+  RESULT_WORD,
   bestText,
   forfeitText,
   joinedText,
@@ -24,6 +26,11 @@ describe('joinedText', () => {
 
   it('gives nothing for a team with no join date', () => {
     expect(joinedText(null)).toBeNull();
+  });
+
+  it('gives nothing for a date with no such month', () => {
+    expect(joinedText('2026-13-01')).toBeNull();
+    expect(joinedText('2026-00-01')).toBeNull();
   });
 });
 
@@ -72,10 +79,25 @@ describe('pointsPerMatchText', () => {
 });
 
 describe('bestText', () => {
-  it('gives the best score, or no number before a finished match', () => {
+  it('gives the best score, 0 included', () => {
     expect(bestText(statsWith({ best: 71 }))).toBe('71');
     expect(bestText(statsWith({ best: 0 }))).toBe('0');
+  });
+
+  it('shows no number before a finished match', () => {
     expect(bestText(emptyTeamStats(null))).toBe(NO_NUMBER);
+  });
+});
+
+describe('RESULT_LETTER', () => {
+  it('gives W, L and T, and F for a forfeit', () => {
+    expect(RESULT_LETTER).toEqual({ won: 'W', lost: 'L', tied: 'T', forfeited: 'F' });
+  });
+});
+
+describe('RESULT_WORD', () => {
+  it('names each result for screen readers', () => {
+    expect(RESULT_WORD).toEqual({ won: 'Won', lost: 'Lost', tied: 'Tied', forfeited: 'Forfeited' });
   });
 });
 

@@ -2,7 +2,7 @@ import type { LoggedMatch, TeamStats } from '../game/stats';
 import type { Team } from '../game/teams';
 import { STORAGE_PROBLEM_TEXT, type StatsResult } from '../storage/saved-team';
 import type { Panel } from './app-shell';
-import { el } from './dom';
+import { el, teamLogo } from './dom';
 import { NEW_TEAM_HASH } from './routes';
 import {
   RESULT_LETTER,
@@ -46,7 +46,7 @@ export function createStatsScreen({ team, isSaved, loadStats }: StatsScreenOptio
     root.replaceChildren(teamPanel(team, loaded.stats));
   }
 
-  render();
+  // Rendered by `show`, each time the tab opens: the app shell calls it before the screen is seen.
   return { element: root, show: render };
 }
 
@@ -82,7 +82,7 @@ function teamHeader(team: Team, stats: TeamStats): HTMLElement {
   disc.style.setProperty('--dot-deep', `var(--team-${team.color}-deep)`);
   const text = el('div', 'stats-team-text');
   const name = el('h2', 'stats-team-name');
-  name.append(el('span', 'team-logo', team.logo), ` ${team.name}`);
+  name.append(teamLogo(team.logo), ` ${team.name}`);
   text.append(name);
   const joined = joinedText(stats.joined);
   if (joined) text.append(el('p', 'stats-team-joined', joined));
@@ -127,7 +127,7 @@ function matchLog(log: readonly LoggedMatch[]): HTMLElement {
     const opponent = el('span', 'match-log-opponent');
     opponent.append(
       el('span', 'visually-hidden', `${RESULT_WORD[match.result]} against `),
-      el('span', 'team-logo', match.opponent.logo),
+      teamLogo(match.opponent.logo),
       ` ${match.opponent.name}`,
     );
     const score = el('span', 'match-log-score', scoreText(match.score));

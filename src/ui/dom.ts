@@ -12,6 +12,13 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/** A team's emoji logo beside its name. Hidden from screen readers, which hear the name. */
+export function teamLogo(logo: string): HTMLElement {
+  const span = el('span', 'team-logo', logo);
+  span.setAttribute('aria-hidden', 'true');
+  return span;
+}
+
 /** Today in the player's time zone, as `YYYY-MM-DD`: the day a team joins, or a match is played (#89). */
 export function today(now: Date = new Date()): string {
   const month = String(now.getMonth() + 1).padStart(2, '0');
