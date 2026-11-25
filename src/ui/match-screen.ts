@@ -32,7 +32,6 @@ import {
 import type { Random } from '../game/random';
 import { liveScores, type Scores } from '../game/scoring';
 import type { ScrumEntry, ScrumFrame } from '../game/scrum';
-import { shownType, type SpoofType } from '../game/spoof-types';
 import { SCRUM_SECONDS } from '../game/spoof-motion';
 import type { Spoof, Team } from '../game/teams';
 import type { Panel } from './app-shell';
@@ -61,7 +60,7 @@ import {
   type Hand,
 } from './mise-hand';
 import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
-import { drawSpoofDisc } from './spoof-disc';
+import { markDisc, shownTypeName, spoofLabel } from './spoof-label';
 
 /**
  * The Match screen. First the mise (#39): the two teams take turns placing 3
@@ -115,22 +114,6 @@ type Status = 'mise' | 'ready' | 'playing' | 'paused' | 'settling' | 'break' | '
 const YOU: BenchSide = 'home';
 const COMPUTER: BenchSide = 'visitor';
 const SIDES: readonly BenchSide[] = ['home', 'visitor'];
-
-function shownTypeName(type: SpoofType): string {
-  const name = shownType(type);
-  return name.charAt(0).toUpperCase() + name.slice(1);
-}
-
-/**
- * A spoof's name, for its row in a scrum's result or on the scorecard (#28).
- * Its mark shows its type to the eye; a screen reader hears the type after the
- * name, since the mark is a picture it skips.
- */
-function spoofLabel(spoof: { readonly name: string; readonly type: SpoofType }): HTMLElement {
-  const label = el('span', 'spoof-name', spoof.name);
-  label.append(el('span', 'visually-hidden', `, ${shownTypeName(spoof.type).toLowerCase()}`));
-  return label;
-}
 
 /** Hears how each match goes (#89, #90). */
 export interface MatchRecorder {
@@ -674,15 +657,7 @@ export function createMatchScreen(
         const row = el('tr');
         const name = el('th', 'scorecard-label');
         name.scope = 'row';
-        const { canvas: disc, ctx: discCtx } = createCanvas(16, 16);
-        disc.setAttribute('aria-hidden', 'true');
-        drawSpoofDisc(discCtx, {
-          x: 8,
-          y: 8,
-          radius: 6.5,
-          mark: spoof.mark,
-          kit: kitFor(side),
-        });
+        const disc = markDisc(spoof.mark, kitFor(side), 16, 6.5);
         const who = el('span', 'scorecard-spoof');
         who.append(disc, spoofLabel(spoof));
         name.append(who);
@@ -759,15 +734,7 @@ export function createMatchScreen(
       list.setAttribute('aria-label', nameOf(side));
       for (const line of summary.spoofs[side]) {
         const item = el('li', 'scrum-result-row');
-        const { canvas: disc, ctx: discCtx } = createCanvas(18, 18);
-        disc.setAttribute('aria-hidden', 'true');
-        drawSpoofDisc(discCtx, {
-          x: 9,
-          y: 9,
-          radius: 7,
-          mark: line.mark,
-          kit: kitFor(side),
-        });
+        const disc = markDisc(line.mark, kitFor(side), 18, 7);
         const points =
           line.points === null
             ? el('span', 'scrum-result-out', 'sat out')
