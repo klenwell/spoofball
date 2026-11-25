@@ -77,7 +77,7 @@ export interface Match {
  */
 export function matchRandom(
   match: Pick<Match, 'seed'>,
-  purpose: 'host' | 'order' | 'moves' | 'scrum' | 'recovery' | 'form' | 'nudge',
+  purpose: 'host' | 'order' | 'moves' | 'scrum' | 'recovery' | 'form' | 'nudge' | 'opponent',
   scrum = 0,
 ): Random {
   const purposes = {
@@ -88,6 +88,8 @@ export function matchRandom(
     recovery: 5,
     form: 6,
     nudge: 7,
+    // Which league team a match is against (#75), drawn before the match starts.
+    opponent: 8,
   } as const;
   // A large odd multiplier spreads nearby seeds apart. Math.imul keeps the
   // product in 32-bit integers: a plain multiply passes 2^53 for most seeds
@@ -383,6 +385,8 @@ export interface ScorecardLine {
 /** A team on the match scorecard: its name, its score in each scrum and in all, and its spoofs. */
 export interface ScorecardTeam {
   readonly name: string;
+  /** The team's emoji logo, shown with its name (#75). */
+  readonly logo: string;
   readonly byScrum: readonly number[];
   readonly total: number;
   readonly lines: readonly ScorecardLine[];
@@ -400,6 +404,7 @@ export function matchScorecard(match: Match): Scorecard {
   const total = matchScore(match);
   const team = (side: BenchSide): ScorecardTeam => ({
     name: match.teams[side].name,
+    logo: match.teams[side].logo,
     byScrum: by[side],
     total: total[side],
     lines: match.spoofs[side].map((m) => ({

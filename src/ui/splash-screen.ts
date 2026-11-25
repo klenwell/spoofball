@@ -7,10 +7,12 @@ import { el } from './dom';
 import { NEW_TEAM_HASH } from './routes';
 
 /**
- * The splash screen (#71): the game's logo and its two ways in. A first visit,
- * with no saved team, opens here. **Create your team** opens the create
- * screen; **Play as Spoofs** plays the Spoofs without saving anything. With a
- * saved team, a third button plays it, so coming back here never loses it.
+ * The splash screen (#71): the game's logo and its ways in. A first visit,
+ * with no saved team, opens here: **Create your team** opens the create
+ * screen, and **Play as Spoofs** plays the Spoofs without saving anything.
+ * With a saved team (the owner, 2026-11-24, on #75), **Play a match** plays
+ * it against a league team and **Create a new team** starts another; the
+ * Spoofs are only for a player with no team of their own.
  */
 
 export interface SplashOptions {
@@ -85,10 +87,15 @@ export function createSplashScreen({ savedTeam, notice, onPlay }: SplashOptions)
   heading.tabIndex = -1;
 
   const actions = el('div', 'splash-actions');
-  if (savedTeam) actions.append(teamButton(`Play as ${savedTeam.name}`, savedTeam, true, onPlay));
-  const create = el('a', savedTeam ? 'button' : 'button button-primary', 'Create your team');
-  create.href = NEW_TEAM_HASH;
-  actions.append(create, teamButton(`Play as ${SPOOFS.name}`, SPOOFS, false, onPlay));
+  if (savedTeam) {
+    const create = el('a', 'button', 'Create a new team');
+    create.href = NEW_TEAM_HASH;
+    actions.append(teamButton('Play a match', savedTeam, true, onPlay), create);
+  } else {
+    const create = el('a', 'button button-primary', 'Create your team');
+    create.href = NEW_TEAM_HASH;
+    actions.append(create, teamButton(`Play as ${SPOOFS.name}`, SPOOFS, false, onPlay));
+  }
 
   element.append(spoofballLogo(), heading);
   if (notice) element.append(el('p', 'notice', notice));

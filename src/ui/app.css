@@ -152,25 +152,35 @@ body {
   border-radius: var(--radius-lg);
 }
 
+/* A team: its name on top, then its kit swatch, logo and score, then what the score counts. */
 .scoreboard-team {
   display: grid;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto;
-  column-gap: var(--space-1);
+  grid-template-columns: 1fr;
   align-items: center;
 }
 
 .scoreboard-visitor {
-  grid-template-columns: 1fr auto;
   text-align: right;
 }
 
-.scoreboard-visitor .match-swatch {
-  grid-column: 2;
-  grid-row: 1;
+/* The score, with the team's swatch and logo (#75) at the board's outer edge. */
+.scoreboard-score-row {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.scoreboard-visitor .scoreboard-score-row {
+  flex-direction: row-reverse;
+}
+
+.scoreboard-logo {
+  font-size: var(--text-lg);
 }
 
 .scoreboard-name {
+  grid-column: 1 / -1;
   min-width: 0;
   /* Breaks only a word too long for its column, such as a 16-letter name. */
   overflow-wrap: break-word;
@@ -200,6 +210,29 @@ body {
   padding: var(--space-1) var(--space-3);
   background: var(--color-background);
   border-radius: var(--radius-pill);
+}
+
+/*
+ * The narrowest phones: smaller names, logos and gaps, so a 16-letter name
+ * like "Sacramento Pawns" wraps between its words, and each score row fits
+ * beside the middle.
+ */
+@media (max-width: 23.99rem) {
+  .scoreboard {
+    padding: var(--space-3);
+  }
+
+  .scoreboard-name {
+    font-size: var(--text-xs);
+  }
+
+  .scoreboard-score-row {
+    gap: var(--space-1);
+  }
+
+  .scoreboard-logo {
+    font-size: var(--text-md);
+  }
 }
 
 .scoreboard-label {
