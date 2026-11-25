@@ -63,8 +63,8 @@ import { drawSpoofDisc } from './spoof-disc';
 /**
  * The Match screen. First the mise (#39): the two teams take turns placing 3
  * spoofs each. You drag a spoof from your bench onto the court, or tap it and
- * then a spot (mise-hand.ts has the rules); the Embers place theirs after a
- * short pause. A caption over the Embers' bench says what to do. Once all 6
+ * then a spot (mise-hand.ts has the rules); the opponent places its own after a
+ * short pause. A caption over the opponent's bench says what to do. Once all 6
  * are placed, a "Scrum!" cue, then the 8-second scrum (#38) starts by itself,
  * with a live scoreboard and clock. A match is 3 scrums (#40): after each,
  * a break, then Next scrum starts the next mise, with tired spoofs carrying
@@ -72,14 +72,14 @@ import { drawSpoofDisc } from './spoof-disc';
  * up front, then played back at the screen's frame rate. Tap the arena or
  * Pause to pause, and leaving the tab or the page pauses too.
  *
- * A match's random choices (the host, the turn order, the Embers' moves, the
+ * A match's random choices (the host, the turn order, the opponent's moves, the
  * scrum) all come from one seed, so with your moves it can be replayed.
  */
 
 const MAX_ARENA_WIDTH = 480;
 /** The longest a single display frame may advance playback, so a hiccup doesn't skip ahead. */
 const MAX_STEP_SECONDS = 0.1;
-/** How long the Embers wait before placing a spoof, so you can follow them. */
+/** How long the opponent waits before placing a spoof, so you can follow them. */
 const COMPUTER_PAUSE_MS = 900;
 /** How long the "Scrum!" cue shows once all 6 spoofs are placed, before the scrum starts by itself. */
 const SCRUM_CUE_MS = 1000;
@@ -173,7 +173,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
   let raf = 0;
   let match: Match = begin(newSeed());
   dressTeams();
-  /** The Embers' moves in this scrum's mise, from the match's seed. */
+  /** The opponent's moves in this scrum's mise, from the match's seed. */
   let moves: Random = miseRandom(match);
   /** The mise, and your spoof in hand: picked, dragged, or placed and still movable. */
   let hand: Hand = startHand(nextMise(match));
@@ -186,7 +186,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
    */
   let matchBefore: Match = match;
   let miseRaf = 0;
-  /** The Embers' latest placement, outlined so you can see where it went. */
+  /** The opponent's latest placement, outlined so you can see where it went. */
   let justPlaced: string | null = null;
   let computerTimer = 0;
   let scrum: Played | null = null;
@@ -267,7 +267,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
   let arenaSize = { width: 0, height: 0 };
 
   const root = el('div', 'match-screen');
-  // The caption goes over the Embers' bench, inside the arena (rebuildCanvas).
+  // The caption goes over the opponent's bench, inside the arena (rebuildCanvas).
   root.append(board, clockBar, turnStrip, stage, controls);
 
   // --- Drawing -------------------------------------------------------------
@@ -397,7 +397,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerCancel);
-    // The caption sits over the Embers' bench, where you'll see it whenever
+    // The caption sits over the opponent's bench, where you'll see it whenever
     // the arena is on screen (the owner, #39): centered on the bench's middle
     // seat, and as wide as the bench. It lets every press through to the arena.
     const seats = benchSeats(COMPUTER);
@@ -447,7 +447,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
     );
   }
 
-  /** The caption over the Embers' bench: what to do, or why a spot is refused. Also read out to screen readers. */
+  /** The caption over the opponent's bench: what to do, or why a spot is refused. Also read out to screen readers. */
   function miseMessage(): string {
     const turn = whoseTurn(hand.mise);
     if (!turn) return `All ${String(MISE_TURNS)} spoofs are placed. Scrum!`;
@@ -752,7 +752,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
     nextTurn();
   }
 
-  /** Moves the mise on: the Embers play after a pause; on your turn it waits for a tap. */
+  /** Moves the mise on: the opponent plays after a pause; on your turn it waits for a tap. */
   function nextTurn(): void {
     if (isMiseOver(hand.mise)) {
       // All placed: a quick cue, then the scrum starts by itself (the owner, #39).
@@ -971,7 +971,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
 
   /**
    * Stops everything for good when the team changes (#78 review): the
-   * Embers' and the "Scrum!" cue's timer, both animation loops, and the
+   * opponent's and the "Scrum!" cue's timer, both animation loops, and the
    * listeners. Without it, leaving during the cue started a scrum offscreen.
    */
   function dispose(): void {

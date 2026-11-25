@@ -6,6 +6,16 @@ import { EMBERS, SPOOFS } from './preset-teams';
 import { skillNames } from './skills';
 import { FACE_TYPES, ROYAL_TYPES, teamProblems } from './teams';
 
+/** A short fingerprint of a text: its 32-bit FNV-1a hash, in hex. */
+function fingerprint(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
+
 describe('LEAGUE', () => {
   it("is the owner's 7 teams, weakest (Monday's) first", () => {
     expect(LEAGUE.map((t) => t.name)).toEqual([
@@ -51,6 +61,23 @@ describe('LEAGUE', () => {
     LEAGUE_SPECS.forEach((spec, i) => {
       expect(leagueTeam(spec, i)).toEqual(LEAGUE[i]);
     });
+  });
+
+  // The strengths recorded in league.ts, design.md and #86 were measured on
+  // these exact spoofs: which skills each one's points landed on decides how
+  // it plays. A fingerprint of every team's spoofs (types, skills, temperament
+  // and names) fails if a seed, the generator, the skills or the random source
+  // changes them. If it does, measure the league again, then update these.
+  it('keeps the spoofs its strengths were measured on (#86 review)', () => {
+    expect(LEAGUE.map((team) => fingerprint(JSON.stringify(team.spoofs)))).toEqual([
+      'f138cf31',
+      '17088f20',
+      '1a8a85bb',
+      'ae612658',
+      'edfb932d',
+      '14911500',
+      '1a4b0611',
+    ]);
   });
 
   it("gives spoof ids no other team uses, so a match never mixes up two teams' spoofs", () => {
