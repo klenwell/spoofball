@@ -81,6 +81,13 @@ const MAX_ARENA_WIDTH = 480;
 const MAX_STEP_SECONDS = 0.1;
 /** How long the opponent waits before placing a spoof, so you can follow them. */
 const COMPUTER_PAUSE_MS = 900;
+
+/**
+ * How long the opponent's latest placement stays outlined, fading out, so you
+ * see where it went and then it gets out of the way (the owner, 2026-11-24,
+ * on #76). It stayed until your next move before.
+ */
+const PLACED_OUTLINE_SECONDS = 1.5;
 /** How long the "Scrum!" cue shows once all 6 spoofs are placed, before the scrum starts by itself. */
 const SCRUM_CUE_MS = 1000;
 /**
@@ -188,6 +195,24 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
   let miseRaf = 0;
   /** The opponent's latest placement, outlined so you can see where it went. */
   let justPlaced: string | null = null;
+  /** When it was placed, on the page's clock: its outline fades from then (#76). */
+  let justPlacedAt = 0;
+  let fadeRaf = 0;
+  /** How strongly the opponent's latest placement is outlined: 1, fading to 0 over 1.5 s. */
+  function placedOutline(): number {
+    return Math.max(0, 1 - (nowSeconds() - justPlacedAt) / PLACED_OUTLINE_SECONDS);
+  }
+  /** Redraws while the outline fades, then stops. */
+  function fadeOutline(): void {
+    cancelAnimationFrame(fadeRaf);
+    const step = () => {
+      if (status !== 'mise' || justPlaced === null) return;
+      draw();
+      if (placedOutline() > 0) fadeRaf = requestAnimationFrame(step);
+      else justPlaced = null;
+    };
+    fadeRaf = requestAnimationFrame(step);
+  }
   let computerTimer = 0;
   let scrum: Played | null = null;
 
@@ -331,6 +356,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
         kit: kitFor(s.team),
         fatigue: Math.min(100, s.fatigue),
         highlighted: status === 'mise' && s.team === COMPUTER && s.id === justPlaced,
+        highlightOpacity: placedOutline(),
       });
     }
     if (status === 'mise') drawHand(c, v);
@@ -681,6 +707,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
     window.clearTimeout(computerTimer);
     cancelAnimationFrame(raf);
     cancelAnimationFrame(miseRaf);
+    cancelAnimationFrame(fadeRaf);
     match = begin(newSeed());
     dressTeams();
     paintScoreboard();
@@ -767,8 +794,10 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
       const move = computerMove(hand.mise, COMPUTER, TEAMS[COMPUTER], moves);
       hand = { ...hand, mise: placeSpoof(hand.mise, move.spoof, COMPUTER, move.spot) };
       justPlaced = move.spoof.id;
+      justPlacedAt = nowSeconds();
       say(miseMessage());
       refresh();
+      fadeOutline();
       nextTurn();
     }, COMPUTER_PAUSE_MS);
   }
@@ -978,6 +1007,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
     window.clearTimeout(computerTimer);
     cancelAnimationFrame(raf);
     cancelAnimationFrame(miseRaf);
+    cancelAnimationFrame(fadeRaf);
     listening.abort();
     resizing.disconnect();
   }

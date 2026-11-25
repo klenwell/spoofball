@@ -20,6 +20,8 @@ export interface SpoofDisc {
   /** 0 (fresh) to 100 (spent). The disc fades as it tires. */
   fatigue?: number;
   highlighted?: boolean;
+  /** How strongly the highlight ring shows, 0 to 1: 1 unless it's fading out (#76). */
+  highlightOpacity?: number;
 }
 
 /** A spent spoof stays this visible, so it never vanishes from the court. */
@@ -168,8 +170,9 @@ export function drawSpoofDisc(ctx: CanvasRenderingContext2D, disc: SpoofDisc): v
   if (opacity < 1) drawFadedBody(ctx, radius, mark, kit, opacity);
   else drawBody(ctx, radius, mark, kit);
 
-  // Highlight: a dark ring just outside the disc, never faded.
+  // Highlight: a dark ring just outside the disc, never faded by fatigue.
   if (disc.highlighted) {
+    ctx.globalAlpha = Math.min(1, Math.max(0, disc.highlightOpacity ?? 1));
     ctx.beginPath();
     ctx.arc(0, 0, radius + Math.max(2, radius * 0.18), 0, Math.PI * 2);
     ctx.lineWidth = Math.max(1.5, radius * 0.1);
