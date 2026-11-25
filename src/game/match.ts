@@ -423,14 +423,16 @@ export function matchScorecard(match: Match): Scorecard {
 }
 
 /**
- * What a finished match leaves behind, ready for the Stats epic to save
- * (#40): the teams, the score by scrum, the result, and for each spoof its
+ * What a finished match leaves behind, saved in your team's stats (#40,
+ * #89): the teams, the score by scrum, the result, and for each spoof its
  * scrums played, points and behavior stats. Outcomes only: no skills.
  */
 export interface MatchRecord {
   readonly seed: number;
   readonly host: BenchSide;
   readonly teams: Readonly<Record<BenchSide, string>>;
+  /** Each team's emoji logo (#89), for the match log. */
+  readonly logos: Readonly<Record<BenchSide, string>>;
   readonly scoreByScrum: Readonly<Record<BenchSide, readonly number[]>>;
   readonly score: Readonly<Record<BenchSide, number>>;
   /** The home team's result: won, lost or tied. */
@@ -454,6 +456,7 @@ export function matchRecord(match: Match): MatchRecord {
     seed: match.seed,
     host: match.host,
     teams: { home: match.teams.home.name, visitor: match.teams.visitor.name },
+    logos: { home: match.teams.home.logo, visitor: match.teams.visitor.logo },
     scoreByScrum: scoreByScrum(match),
     score: matchScore(match),
     result: outcomeFor(match, 'home'),

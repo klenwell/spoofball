@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  isMatchOver,
-  matchScore,
-  miseRandom,
-  nextMise,
-  playScrum,
-  startMatch,
-  type Match,
-} from './match';
-import { computerMove, placeSpoof, whoseTurn, type MiseState } from './mise';
+import { isMatchOver, matchScore, playScrum, startMatch } from './match';
+import { computerMise } from '../test-support/match';
 import { PRESET_HOME, PRESET_VISITOR } from './preset-teams';
 
 /**
@@ -16,16 +8,6 @@ import { PRESET_HOME, PRESET_VISITOR } from './preset-teams';
  * match comes from its seed: if a change moves scoring out of its range, this
  * says so.
  */
-
-function computerMise(match: Match): MiseState {
-  let mise = nextMise(match);
-  const random = miseRandom(match);
-  for (let team = whoseTurn(mise); team; team = whoseTurn(mise)) {
-    const move = computerMove(mise, team, match.teams[team].spoofs, random);
-    mise = placeSpoof(mise, move.spoof, team, move.spot);
-  }
-  return mise;
-}
 
 /**
  * The nth match's seed, spread across the 32-bit range as the screen's seeds
