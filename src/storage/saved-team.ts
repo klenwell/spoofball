@@ -2,7 +2,7 @@ import { draftProblem, type Draft } from '../game/draft';
 import { isTeamLogo } from '../game/logos';
 import type { MatchRecord } from '../game/match';
 import { createRandom } from '../game/random';
-import { emptyStats } from '../game/scrum';
+import { emptyStats, type BehaviorStats } from '../game/scrum';
 import {
   LOG_LENGTH,
   addMatch,
@@ -50,6 +50,9 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
  *   A version 4 team loads with an empty record and no join date. Stats that
  *   can't be read are left in place, like the rest: a match isn't added to
  *   them, and saving the same team again keeps them as they are.
+ *   Since #90 it can also hold the match in progress: the scrums played so
+ *   far, recorded as a forfeit if the game loads with it still there. Older
+ *   version 5 code ignores it, so the version stays 5.
  *
  * The skills are saved with the team. They stay hidden on screen, but anyone
  * reading the browser's storage could see them: fine for a single-player game
@@ -132,6 +135,18 @@ interface SavedRecord {
    * before, kept as it was when it can't be read.
    */
   stats?: unknown;
+  /**
+   * Your saved team's match in progress (#90), saved once its first scrum
+   * starts and after each scrum, until it ends: `MatchInProgress`, or
+   * whatever was saved, kept as it was when it can't be read.
+   */
+  inProgress?: unknown;
+}
+
+/** A match in progress (#90): its scrums so far, and the day they were played. */
+interface MatchInProgress {
+  date: string;
+  record: MatchRecord;
 }
 
 function savedTeam(team: Team): SavedTeam {
@@ -198,8 +213,15 @@ export function saveTeam(
   const draft = endDraft ? null : loadDraft(store);
   const record: SavedRecord = { version: SAVE_VERSION, team: savedTeam(team) };
   if (draft) record.draft = savedDraft(draft);
-  const stats = joined === undefined ? savedData(store)?.stats : emptyTeamStats(joined);
-  if (stats !== undefined) record.stats = stats;
+  if (joined === undefined) {
+    const before = savedData(store);
+    if (before?.stats !== undefined) record.stats = before.stats;
+    if (before?.inProgress !== undefined) record.inProgress = before.inProgress;
+  } else {
+    // A new team replaces the old one and its record, so the old team's match
+    // in progress goes too: a forfeit would be discarded as it was written (#90).
+    record.stats = emptyTeamStats(joined);
+  }
   return write(store, record);
 }
 
@@ -215,8 +237,10 @@ export function saveDraft(store: KeyValueStore | null, draft: Draft): SaveResult
   const loaded = loadTeam(store);
   const record: SavedRecord = { version: SAVE_VERSION, draft: savedDraft(draft) };
   if (loaded.ok) record.team = savedTeam(loaded.team);
-  const stats = savedData(store)?.stats;
-  if (stats !== undefined) record.stats = stats;
+  const before = savedData(store);
+  if (before?.stats !== undefined) record.stats = before.stats;
+  // Starting a new team doesn't forfeit the match in progress (#90): it waits.
+  if (before?.inProgress !== undefined) record.inProgress = before.inProgress;
   return write(store, record);
 }
 
@@ -249,11 +273,67 @@ export type RecordResult =
  * (`YYYY-MM-DD`), and saves them. Refused (`invalid`) when the match's home
  * team isn't the saved team: only your own team is recorded (#88), never the
  * quick start's. Stats that can't be read are left alone (`unreadable`).
+ *
+ * The match is over, so the match in progress (#90) is cleared, even if the
+ * stats can't be saved: a finished match must never turn into a forfeit.
  */
 export function recordMatch(
   store: KeyValueStore | null,
   record: MatchRecord,
   date: string,
+): RecordResult {
+  const result = addToStats(store, record, date, { forfeit: false });
+  if (!result.ok && store) clearMatchInProgress(store);
+  return result;
+}
+
+/**
+ * Saves your saved team's match in progress (#90): the scrums played so far
+ * (`matchRecord(match, { soFar: true })`), on `date`. If the game next loads
+ * with it still there, `recordForfeit` records it as a forfeit. Refused
+ * (`invalid`) for any team but the saved one.
+ */
+export function saveMatchInProgress(
+  store: KeyValueStore | null,
+  record: MatchRecord,
+  date: string,
+): { readonly ok: true } | { readonly ok: false; readonly problem: RecordProblem } {
+  const loaded = loadTeam(store);
+  if (!loaded.ok) return loaded;
+  if (!store) return { ok: false, problem: 'unavailable' };
+  if (!isDay(date) || !playedBy(record, loaded.team)) return { ok: false, problem: 'invalid' };
+  const before = savedData(store);
+  const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team) };
+  const draft = loadDraft(store);
+  if (draft) saved.draft = savedDraft(draft);
+  if (before?.stats !== undefined) saved.stats = before.stats;
+  const inProgress: MatchInProgress = { date, record };
+  saved.inProgress = inProgress;
+  return write(store, saved);
+}
+
+/**
+ * Records a match left unfinished as a forfeit (#90), and clears it: called
+ * as the game loads. Null when there's no match in progress. One that can't
+ * be read, or isn't the saved team's, is left in place.
+ */
+export function recordForfeit(store: KeyValueStore | null): RecordResult | null {
+  const data = store ? savedData(store) : null;
+  if (data?.inProgress === undefined) return null;
+  const inProgress = matchInProgressFrom(data.inProgress);
+  if (!inProgress) return { ok: false, problem: 'unreadable' };
+  return addToStats(store, inProgress.record, inProgress.date, { forfeit: true });
+}
+
+/**
+ * Adds a match to the saved stats and writes them, without a match in
+ * progress: the match it was is now recorded.
+ */
+function addToStats(
+  store: KeyValueStore | null,
+  record: MatchRecord,
+  date: string,
+  { forfeit }: { forfeit: boolean },
 ): RecordResult {
   const loaded = loadTeam(store);
   if (!loaded.ok) return loaded;
@@ -262,12 +342,29 @@ export function recordMatch(
   if (!before.ok) return before;
   if (!isDay(date) || !playedBy(record, loaded.team)) return { ok: false, problem: 'invalid' };
 
-  const stats = addMatch(before.stats, record, date);
+  const stats = addMatch(before.stats, record, date, { forfeit });
   const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team), stats };
   const draft = loadDraft(store);
   if (draft) saved.draft = savedDraft(draft);
   const written = write(store, saved);
   return written.ok ? { ok: true, stats } : written;
+}
+
+/**
+ * Removes the match in progress, keeping the rest of the record as it is.
+ * Smaller than what was there, so it can be written even when storage is
+ * full. Nothing to do when the record can't be read.
+ */
+function clearMatchInProgress(store: KeyValueStore): void {
+  const before = savedData(store);
+  if (before?.inProgress === undefined) return;
+  const rest = { ...before };
+  delete rest.inProgress;
+  try {
+    store.setItem(STORAGE_KEY, JSON.stringify(rest));
+  } catch {
+    // Storage is blocked: the next load records a forfeit, the best it can do.
+  }
 }
 
 /**
@@ -469,6 +566,66 @@ function statsFrom(data: unknown): TeamStats | null {
   return { joined, results, points, best, opponents, spoofs, log };
 }
 
+/** A match in progress from saved data, or null when any part has the wrong shape. */
+function matchInProgressFrom(data: unknown): MatchInProgress | null {
+  if (!isObject(data) || !isDay(data.date)) return null;
+  const record = matchRecordFrom(data.record);
+  return record ? { date: data.date, record } : null;
+}
+
+const SIDES = ['home', 'visitor'] as const;
+const OUTCOMES: readonly unknown[] = ['won', 'lost', 'tied'];
+
+/** A match record from saved data, or null: every field `addMatch` reads is checked. */
+function matchRecordFrom(data: unknown): MatchRecord | null {
+  if (!isObject(data) || !isObject(data.teams) || !isObject(data.logos)) return null;
+  if (!isObject(data.scoreByScrum) || !isObject(data.score) || !Array.isArray(data.spoofs))
+    return null;
+  const { seed, host, result, teams, logos, scoreByScrum, score } = data;
+  if (typeof seed !== 'number' || !(SIDES as readonly unknown[]).includes(host)) return null;
+  if (!OUTCOMES.includes(result)) return null;
+  const home = countsFrom(scoreByScrum.home);
+  const visitor = countsFrom(scoreByScrum.visitor);
+  if (!home || !visitor || !isCount(score.home) || !isCount(score.visitor)) return null;
+  if (typeof teams.home !== 'string' || typeof teams.visitor !== 'string') return null;
+  if (typeof logos.home !== 'string' || typeof logos.visitor !== 'string') return null;
+
+  const spoofs: MatchRecord['spoofs'][number][] = [];
+  for (const value of data.spoofs as unknown[]) {
+    if (!isObject(value) || !(SIDES as readonly unknown[]).includes(value.team)) return null;
+    const { id, name, scrumsPlayed, points } = value;
+    if (typeof id !== 'string' || typeof name !== 'string') return null;
+    if (!isCount(scrumsPlayed) || !isCount(points) || !Array.isArray(value.pointsByScrum))
+      return null;
+    const pointsByScrum: (number | null)[] = [];
+    for (const p of value.pointsByScrum as unknown[]) {
+      if (p !== null && !isCount(p)) return null;
+      pointsByScrum.push(p);
+    }
+    const stats = behaviorFrom(value.stats);
+    if (!stats) return null;
+    spoofs.push({
+      team: value.team as (typeof SIDES)[number],
+      id,
+      name,
+      scrumsPlayed,
+      points,
+      pointsByScrum,
+      stats,
+    });
+  }
+  return {
+    seed,
+    host: host as (typeof SIDES)[number],
+    teams: { home: teams.home, visitor: teams.visitor },
+    logos: { home: logos.home, visitor: logos.visitor },
+    scoreByScrum: { home, visitor },
+    score: { home: score.home, visitor: score.visitor },
+    result: result as MatchRecord['result'],
+    spoofs,
+  };
+}
+
 const RESULTS: readonly Result[] = ['won', 'lost', 'tied', 'forfeited'];
 
 function resultsFrom(data: unknown): Results | null {
@@ -484,13 +641,20 @@ function spoofTotalsFrom(data: unknown): SpoofTotals | null {
   const { matches, scrums, points, plusMinus } = data;
   if (!isCount(matches) || !isCount(scrums) || !isCount(points)) return null;
   if (typeof plusMinus !== 'number' || !Number.isFinite(plusMinus)) return null;
+  const behavior = behaviorFrom(data.behavior);
+  return behavior ? { matches, scrums, points, plusMinus, behavior } : null;
+}
+
+/** Behavior stats from saved data, or null unless every one is a count. */
+function behaviorFrom(data: unknown): BehaviorStats | null {
+  if (!isObject(data)) return null;
   const behavior = emptyStats();
-  for (const key of Object.keys(behavior) as (keyof typeof behavior)[]) {
-    const value = data.behavior[key];
+  for (const key of Object.keys(behavior) as (keyof BehaviorStats)[]) {
+    const value = data[key];
     if (!isCount(value)) return null;
     behavior[key] = value;
   }
-  return { matches, scrums, points, plusMinus, behavior };
+  return behavior;
 }
 
 function loggedMatchFrom(data: unknown): LoggedMatch | null {
