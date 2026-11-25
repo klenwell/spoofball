@@ -121,3 +121,19 @@ export function signed(value: number): string {
   const text = (Math.abs(tenths) / 10).toFixed(1);
   return tenths > 0 ? `+${text}` : `−${text}`;
 }
+
+/** A win percentage baseball-style, to three places: ".667", "1.000", ".000"; no number when there's none. */
+export function pctText(pct: number | null): string {
+  if (pct === null) return NO_NUMBER;
+  const text = pct.toFixed(3);
+  return text.startsWith('0') ? text.slice(1) : text;
+}
+
+/** A record as wins–losses–ties, for the standings, where forfeits are already losses. */
+export function standingsRecordText(record: {
+  readonly won: number;
+  readonly lost: number;
+  readonly tied: number;
+}): string {
+  return `${String(record.won)}–${String(record.lost)}–${String(record.tied)}`;
+}
