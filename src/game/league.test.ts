@@ -60,6 +60,13 @@ describe('LEAGUE', () => {
     expect(ids.some((id) => /^p\d+$/.test(id))).toBe(false);
   });
 
+  it('raises the level every day of the week (the owner, on #86)', () => {
+    const levels = LEAGUE_SPECS.map((s) => s.level);
+    levels.slice(1).forEach((level, i) => {
+      expect(level).toBeGreaterThan(levels[i] ?? Infinity);
+    });
+  });
+
   it("sets Sunday's team far above Monday's in hidden skills", () => {
     const perSkill = (i: number) => {
       const team = LEAGUE[i];

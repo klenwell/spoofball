@@ -12,9 +12,10 @@ import { generateSpoof, type Spoof, type Team } from './teams';
  * screen shows a team's day or strength: you find out by playing it.
  *
  * A team's strength is its spoofs' hidden skills: each team has a level, in
- * skill points a skill, and every spoof's total is drawn close to it. The
- * league is plain data from fixed seeds, the same for every player and on
- * every visit. The quick start's Spoofs still play the Embers.
+ * skill points a skill, and every spoof's total is drawn close to it from
+ * the team's seed. The league is built once from those fixed seeds, the same
+ * for every player and on every visit; only a match's form and fatigue vary.
+ * The quick start's Spoofs still play the Embers.
  */
 
 /** How far a league spoof's total may stray from its team's level: 2 points a skill either way. */
@@ -26,20 +27,30 @@ export interface LeagueTeamSpec {
   readonly name: string;
   readonly color: TeamColorName;
   readonly logo: string;
-  /** Skill points a skill, on average, for its spoofs: its strength. */
+  /**
+   * Skill points a skill, on average, for its spoofs. It rises through the
+   * week, but it isn't the team's strength on its own: see `seed`.
+   */
   readonly level: number;
+  /**
+   * Its spoofs' first seed; each spoof's is the next. How a spoof plays
+   * depends on which skills its points land on, not just how many it has, so
+   * each team's seed was chosen to put its measured strength near a target.
+   */
+  readonly seed: number;
   /** Its spoofs' types, at most 1 royal and 2 of each face type. */
   readonly types: readonly SpoofType[];
 }
 
 /**
- * The owner's 7 teams (2026-11-24, on #75), weakest first. The levels were
- * tuned by measurement (in the PR): a typical drafted team, about 48 a skill,
- * beats Monday's team 88% of the time, then 78, 71, 48, 42 and 36%, and
- * Sunday's 16%. A level isn't the whole of a team's strength: its types
- * matter too. Tuesday's two knights make it harder than Monday's pawns even
- * a level lower, and a rook's skills can't go below its type's minimum, which
- * lifts Monday's rook above its level.
+ * The owner's 7 teams (2026-11-24, on #75), weakest first. Their levels rise
+ * steadily through the week, and each team's seed was searched (offline) so a
+ * typical drafted team, about 48 a skill, beats it near a target: 85, 75, 65,
+ * 50, 40, 30 and 15% (the owner's option (a) on #86). The level alone can't
+ * do it: two teams with the same total play very differently, depending on
+ * which skills their points land on. Checked on fresh drafted teams and
+ * matches the search never saw, 300 each, a typical team won 92, 78, 66, 53,
+ * 37, 35 and 15% of the time.
  */
 export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
   {
@@ -47,7 +58,8 @@ export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
     name: 'Sacramento Pawns',
     color: 'pink',
     logo: '🍕',
-    level: 41,
+    level: 42,
+    seed: 7560,
     types: ['pawn-basic', 'pawn-basic', 'pawn-noble', 'pawn-angry', 'rook'],
   },
   {
@@ -55,7 +67,8 @@ export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
     name: 'Frisco Bros',
     color: 'gold',
     logo: '🐸',
-    level: 40,
+    level: 44,
+    seed: 8530,
     types: ['knight', 'knight', 'bishop', 'pawn-basic', 'pawn-angry'],
   },
   {
@@ -64,6 +77,7 @@ export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
     color: 'teal',
     logo: '🐶',
     level: 46,
+    seed: 9570,
     types: ['rook', 'bishop', 'knight', 'pawn-noble', 'pawn-basic'],
   },
   {
@@ -71,7 +85,8 @@ export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
     name: 'Ohio Streamers',
     color: 'green',
     logo: '☄️',
-    level: 47,
+    level: 48,
+    seed: 10510,
     types: ['queen', 'bishop', 'bishop', 'knight', 'pawn-basic'],
   },
   {
@@ -79,7 +94,8 @@ export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
     name: 'Texas Muskrats',
     color: 'red',
     logo: '🍆',
-    level: 49,
+    level: 50,
+    seed: 11650,
     types: ['king', 'rook', 'rook', 'knight', 'pawn-angry'],
   },
   {
@@ -87,7 +103,8 @@ export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
     name: 'Drag Queens',
     color: 'purple',
     logo: '👑',
-    level: 51,
+    level: 52,
+    seed: 12540,
     types: ['queen', 'bishop', 'knight', 'rook', 'pawn-noble'],
   },
   {
@@ -96,6 +113,7 @@ export const LEAGUE_SPECS: readonly LeagueTeamSpec[] = [
     color: 'orange',
     logo: '⭐',
     level: 55,
+    seed: 13530,
     types: ['king', 'rook', 'bishop', 'knight', 'knight'],
   },
 ];
@@ -120,7 +138,7 @@ export function leagueTeam(spec: LeagueTeamSpec, index: number): Team {
   const spoofs: Spoof[] = [];
   spec.types.forEach((type, k) => {
     const id = `l${String(index + 1)}-${String(k + 1)}`;
-    const seed = 7500 + index * 10 + k;
+    const seed = spec.seed + k;
     spoofs.push(
       leagueSpoof(
         id,

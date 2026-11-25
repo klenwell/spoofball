@@ -196,17 +196,17 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **With a saved team** (the owner, 2026-11-24, on #75), the splash screen offers **Play a match** and **Create a new team**. **Play as Spoofs** is only for a player with no team of their own.
 - **The league** (#75): 7 computer teams your team plays, one drawn at random from each match's seed, so a match still replays. They're ordered by the days of the week, weakest first (the owner, 2026-11-24), though the days don't show: a daily challenge may use them later.
 
-  | Day       | Team             | Color  | Logo | Level | Beaten by a typical drafted team |
-  | --------- | ---------------- | ------ | ---- | ----- | -------------------------------- |
-  | Monday    | Sacramento Pawns | pink   | 🍕   | 41    | 88%                              |
-  | Tuesday   | Frisco Bros      | gold   | 🐸   | 40    | 78%                              |
-  | Wednesday | Middling Talents | teal   | 🐶   | 46    | 71%                              |
-  | Thursday  | Ohio Streamers   | green  | ☄️   | 47    | 48%                              |
-  | Friday    | Texas Muskrats   | red    | 🍆   | 49    | 42%                              |
-  | Saturday  | Drag Queens      | purple | 👑   | 51    | 36%                              |
-  | Sunday    | Yosemite Goats   | orange | ⭐   | 55    | 16%                              |
-  - **A team's strength is its spoofs' hidden skills:** its level is the skill points a skill its spoofs are drawn near, from fixed seeds (`src/game/league.ts`). Its types count too: Tuesday's two knights make it harder than Monday's mostly-pawn team, a level lower.
-  - **Measured over 200 seeded matches a team,** with the computer placing for both sides. A typical drafted team is 5 random affordable picks from a seeded pool, about 48 a skill; it beats the Embers 46% of the time.
+  | Day       | Team             | Color  | Logo | Level | Target | Beaten by a typical drafted team |
+  | --------- | ---------------- | ------ | ---- | ----- | ------ | -------------------------------- |
+  | Monday    | Sacramento Pawns | pink   | 🍕   | 42    | 85%    | 92%                              |
+  | Tuesday   | Frisco Bros      | gold   | 🐸   | 44    | 75%    | 78%                              |
+  | Wednesday | Middling Talents | teal   | 🐶   | 46    | 65%    | 66%                              |
+  | Thursday  | Ohio Streamers   | green  | ☄️   | 48    | 50%    | 53%                              |
+  | Friday    | Texas Muskrats   | red    | 🍆   | 50    | 40%    | 37%                              |
+  | Saturday  | Drag Queens      | purple | 👑   | 52    | 30%    | 35%                              |
+  | Sunday    | Yosemite Goats   | orange | ⭐   | 55    | 15%    | 15%                              |
+  - **A team's strength is its spoofs' hidden skills,** drawn from a fixed seed (`src/game/league.ts`). Its level, the skill points a skill its spoofs are drawn near, rises steadily through the week. But a level alone doesn't set a team's strength: two teams with the same total play very differently, depending on which skills their points land on. So each team's seed was searched offline until a typical drafted team beat it near a target (the owner's choice on #86, 2026-11-24).
+  - **A typical drafted team** is 5 random affordable picks from a seeded pool, about 48 a skill, with the computer placing for both sides. The last column is from 300 fresh drafted teams and matches the search never saw. Against the Embers, it wins 48%.
   - **No screen shows a league team's strength or its day** (the owner, 2026-11-24): you find out by playing it. Its record against you, and other stats, may show once the Stats epic saves them.
   - **The scoreboard and the scorecard show each team's logo** with its name. On the scoreboard, a team's kit swatch and logo sit beside its score, so a 16-letter name has its side's full width on a phone.
 
