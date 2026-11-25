@@ -37,7 +37,7 @@ import { SCRUM_SECONDS } from '../game/spoof-motion';
 import type { Spoof, Team } from '../game/teams';
 import type { Panel } from './app-shell';
 import { drawArena, drawSpoofInArena } from './arena';
-import { el, newSeed } from './dom';
+import { el, newSeed, teamLogo } from './dom';
 import { arenaHeightFor, courtPointAt, fitArena, type ArenaView } from './arena-view';
 import { createCanvas } from './canvas';
 import { drawImpactRing, impactsAt, type Impact } from './impacts';
@@ -115,13 +115,6 @@ type Status = 'mise' | 'ready' | 'playing' | 'paused' | 'settling' | 'break' | '
 const YOU: BenchSide = 'home';
 const COMPUTER: BenchSide = 'visitor';
 const SIDES: readonly BenchSide[] = ['home', 'visitor'];
-
-/** A team's emoji logo beside its name. Hidden from screen readers, which hear the name. */
-function teamLogo(logo: string): HTMLElement {
-  const span = el('span', 'team-logo', logo);
-  span.setAttribute('aria-hidden', 'true');
-  return span;
-}
 
 function shownTypeName(type: SpoofType): string {
   const name = shownType(type);

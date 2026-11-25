@@ -252,6 +252,12 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **A forfeit is a loss** in the record and against that league team, logged as **F** with the score so far. Spoofs keep credit for the scrums whose result you saw, and the match counts toward their matches. Points per match and the best score count finished matches only.
   - **Not leaving:** switching tabs, or visiting the start, create or combine screens. The match pauses and waits. **Play a match** on the start screen takes you back to it (the owner, #90).
   - **Creating a new team doesn't forfeit** (the owner, #90): when you finish the combine, the old team's record goes with it, so there's nothing to record a forfeit on.
+- **The Stats tab** (#91), after wireframe 1:
+  - **Your team:** its color disc, logo and name, and "Joined the league · Nov 2026", left out for a team saved before #89.
+  - **Four tiles,** two to a row from 320 px up: the **record** as W–L–T with forfeits counted as losses ("Including 1 forfeit" under it when there are any), **matches** (forfeits included), **points per match** to one decimal place, and the **best** score. The last two count finished matches only, and show "–" before one.
+  - **The match log,** newest first, up to 20: the result's letter (W, L, T, or F in muted ink), the opponent's logo and name, and the score with yours first. Scores line up in the numeric font. Screen readers hear "Won against Frisco Bros" rather than a bare letter.
+  - Before your first match it says so, with a link to the Match tab. The quick start's Spoofs see a note that they don't keep stats, with **Create your team**.
+  - It reads the saved stats each time it's shown, so it's current after every match.
 - **The simulation still records the prototype's behavior stats,** without showing them: imps (decisions), pings and pongs (messages sent and received), heeds and jecks (messages followed and ignored), dings and dongs (hits given and taken), and doves and trees (frames overlapping 1 or 2 teammates). Showing a few, such as dings and dongs as result-screen highlights, is a post-MVP idea. Some of them, like heeds against jecks, would come close to revealing hidden skills.
 
 ## Tokens at a glance

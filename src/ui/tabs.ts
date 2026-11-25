@@ -44,8 +44,7 @@ export const tabs: readonly Tab[] = [
     id: 'stats',
     label: 'Stats',
     title: 'Stats',
-    coming:
-      "Your team's record, a log of its matches, and a line for each spoof. Coming in v0.3.0.",
+    coming: "New in v0.3.0: your team's record and its last 20 matches, kept in this browser.",
   },
 ];
 
