@@ -247,6 +247,11 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - each spoof's matches, scrums, points and +/− (summed over the scrums it played: its team's points minus the opponent's in that scrum), and its behavior stats, never shown;
   - **a log of the last 20 matches** (the owner, #88). Older ones drop off the log, but still count in the totals.
   - Averages are worked out from the totals when shown. Creating a new team starts a fresh record, and the replace dialog says so.
+- **Leaving a match unfinished is a forfeit loss** (the owner, #88; built in #90). A match counts as started once its first scrum starts, so leaving during the first mise costs nothing.
+  - **Leaving** means reloading, closing the tab or browser, or going to another site. The browser warns first with its own "Leave site?" prompt, whose text can't be changed. Mobile browsers often skip it, but the forfeit is recorded anyway: the match in progress is saved as its first scrum starts and after each scrum's result, and the next load records it.
+  - **A forfeit is a loss** in the record and against that league team, logged as **F** with the score so far. Spoofs keep credit for the scrums whose result you saw, and the match counts toward their matches. Points per match and the best score count finished matches only.
+  - **Not leaving:** switching tabs, or visiting the start, create or combine screens. The match pauses and waits. **Play a match** on the start screen takes you back to it (the owner, #90).
+  - **Creating a new team doesn't forfeit** (the owner, #90): when you finish the combine, the old team's record goes with it, so there's nothing to record a forfeit on.
 - **The simulation still records the prototype's behavior stats,** without showing them: imps (decisions), pings and pongs (messages sent and received), heeds and jecks (messages followed and ignored), dings and dongs (hits given and taken), and doves and trees (frames overlapping 1 or 2 teammates). Showing a few, such as dings and dongs as result-screen highlights, is a post-MVP idea. Some of them, like heeds against jecks, would come close to revealing hidden skills.
 
 ## Tokens at a glance
