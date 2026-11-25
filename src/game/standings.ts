@@ -84,13 +84,13 @@ export function leagueStandings(
     row(yourTeam, yourRecord(stats.results), true),
     ...league.map((team) => row(team, theirRecord(stats.opponents[team.name]), false)),
   ];
+  // Sorting is stable and your row is first, so a team you named like a
+  // league team, with the same record, lists yours first.
   return rows.sort(
     (a, b) =>
       band(a) - band(b) ||
       (b.pct ?? 0) - (a.pct ?? 0) ||
       b.played - a.played ||
       a.name.localeCompare(b.name, 'en'),
-    // Sorting is stable and your row is first, so a team you named like a
-    // league team, with the same record, lists yours first.
   );
 }

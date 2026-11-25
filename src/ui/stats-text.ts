@@ -6,6 +6,7 @@ import {
   type SpoofTotals,
   type TeamStats,
 } from '../game/stats';
+import type { Record3 } from '../game/standings';
 
 /**
  * How the Stats screen words and formats your team's stats (#91). Plain
@@ -130,10 +131,6 @@ export function pctText(pct: number | null): string {
 }
 
 /** A record as wins–losses–ties, for the standings, where forfeits are already losses. */
-export function standingsRecordText(record: {
-  readonly won: number;
-  readonly lost: number;
-  readonly tied: number;
-}): string {
+export function standingsRecordText(record: Record3): string {
   return `${String(record.won)}–${String(record.lost)}–${String(record.tied)}`;
 }
