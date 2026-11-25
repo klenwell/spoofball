@@ -1,6 +1,18 @@
 import { draftProblem, type Draft } from '../game/draft';
 import { isTeamLogo } from '../game/logos';
+import type { MatchRecord } from '../game/match';
 import { createRandom } from '../game/random';
+import { emptyStats } from '../game/scrum';
+import {
+  LOG_LENGTH,
+  addMatch,
+  emptyTeamStats,
+  type LoggedMatch,
+  type Result,
+  type Results,
+  type SpoofTotals,
+  type TeamStats,
+} from '../game/stats';
 import { drawSpoofName } from '../game/spoof-names';
 import { createSpoof, teamProblems, type Spoof, type Team } from '../game/teams';
 import { skillNames, type Skills } from '../game/skills';
@@ -34,6 +46,10 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
  * - 4 (#74): each spoof's mark, and the marks chosen in a draft. An older
  *   team's spoofs, and an older draft's candidates, wear their types' marks
  *   (since #74, the new defaults).
+ * - 5 (#89): the team's stats: when it joined, its totals and its match log.
+ *   A version 4 team loads with an empty record and no join date. Stats that
+ *   can't be read are left in place, like the rest: a match isn't added to
+ *   them, and saving the same team again keeps them as they are.
  *
  * The skills are saved with the team. They stay hidden on screen, but anyone
  * reading the browser's storage could see them: fine for a single-player game
@@ -44,7 +60,7 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
 export const STORAGE_KEY = 'spoofball';
 
 /** The version of the saved record this code writes. */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 /** The part of the browser's `Storage` this module uses, so tests can pass a fake. */
 export type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -111,6 +127,11 @@ interface SavedRecord {
   version: number;
   team?: SavedTeam;
   draft?: SavedDraft;
+  /**
+   * The team's stats (#89): `TeamStats`, plain data, or whatever was saved
+   * before, kept as it was when it can't be read.
+   */
+  stats?: unknown;
 }
 
 function savedTeam(team: Team): SavedTeam {
@@ -150,21 +171,35 @@ function write(store: KeyValueStore, record: SavedRecord): SaveResult {
   }
 }
 
+/** The saved record's data, or null when there's none that can be read. */
+function savedData(store: KeyValueStore): Record<string, unknown> | null {
+  const read = readRecord(store);
+  return read.ok ? read.data : null;
+}
+
 /**
  * Saves your team. A draft in progress is kept beside it, unless `endDraft`
  * says the team is the draft's result (#72), which ends it.
+ *
+ * `joined` says this is a new team, created that day (`YYYY-MM-DD`): it
+ * starts a fresh record (#89), and the old team's goes with it. Without it,
+ * the team is the one already saved, and its stats are kept.
  */
 export function saveTeam(
   store: KeyValueStore | null,
   team: Team,
-  { endDraft = false }: { endDraft?: boolean } = {},
+  { endDraft = false, joined }: { endDraft?: boolean; joined?: string } = {},
 ): SaveResult {
   const problems = teamProblems(team);
+  if (joined !== undefined && !isDay(joined))
+    problems.push('The join date must be a day, as YYYY-MM-DD.');
   if (problems.length > 0) return { ok: false, problem: 'invalid', details: problems };
   if (!store) return { ok: false, problem: 'unavailable' };
   const draft = endDraft ? null : loadDraft(store);
   const record: SavedRecord = { version: SAVE_VERSION, team: savedTeam(team) };
   if (draft) record.draft = savedDraft(draft);
+  const stats = joined === undefined ? savedData(store)?.stats : emptyTeamStats(joined);
+  if (stats !== undefined) record.stats = stats;
   return write(store, record);
 }
 
@@ -180,7 +215,66 @@ export function saveDraft(store: KeyValueStore | null, draft: Draft): SaveResult
   const loaded = loadTeam(store);
   const record: SavedRecord = { version: SAVE_VERSION, draft: savedDraft(draft) };
   if (loaded.ok) record.team = savedTeam(loaded.team);
+  const stats = savedData(store)?.stats;
+  if (stats !== undefined) record.stats = stats;
   return write(store, record);
+}
+
+export type StatsResult =
+  | { readonly ok: true; readonly stats: TeamStats }
+  | { readonly ok: false; readonly problem: LoadProblem };
+
+/**
+ * The saved team's stats (#89). A team saved before them has an empty
+ * record with no join date. With no team to load, the reason there's none.
+ */
+export function loadStats(store: KeyValueStore | null): StatsResult {
+  const loaded = loadTeam(store);
+  if (!loaded.ok) return loaded;
+  const data = store ? savedData(store) : null;
+  if (data?.stats === undefined) return { ok: true, stats: emptyTeamStats(null) };
+  const stats = statsFrom(data.stats);
+  return stats ? { ok: true, stats } : { ok: false, problem: 'unreadable' };
+}
+
+/** Why a match couldn't be added to the record. */
+export type RecordProblem = LoadProblem | SaveProblem;
+
+export type RecordResult =
+  | { readonly ok: true; readonly stats: TeamStats }
+  | { readonly ok: false; readonly problem: RecordProblem };
+
+/**
+ * Adds a match your saved team played to its stats (#89), on `date`
+ * (`YYYY-MM-DD`), and saves them. Refused (`invalid`) when the match's home
+ * team isn't the saved team: only your own team is recorded (#88), never the
+ * quick start's. Stats that can't be read are left alone (`unreadable`).
+ */
+export function recordMatch(
+  store: KeyValueStore | null,
+  record: MatchRecord,
+  date: string,
+): RecordResult {
+  const loaded = loadTeam(store);
+  if (!loaded.ok) return loaded;
+  if (!store) return { ok: false, problem: 'unavailable' };
+  const before = loadStats(store);
+  if (!before.ok) return before;
+  if (!isDay(date) || !playedBy(record, loaded.team)) return { ok: false, problem: 'invalid' };
+
+  const stats = addMatch(before.stats, record, date);
+  const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team), stats };
+  const draft = loadDraft(store);
+  if (draft) saved.draft = savedDraft(draft);
+  const written = write(store, saved);
+  return written.ok ? { ok: true, stats } : written;
+}
+
+/** Whether the match's home team is this team: the same spoofs, by id. */
+function playedBy(record: MatchRecord, team: Team): boolean {
+  const ids = record.spoofs.filter((s) => s.team === 'home').map((s) => s.id);
+  const teamIds = team.spoofs.map((s) => s.id);
+  return ids.length === teamIds.length && teamIds.every((id) => ids.includes(id));
 }
 
 /** The record's data and text, or why there's none to read. */
@@ -334,6 +428,114 @@ function spoofFrom(data: unknown, drawnName: string | undefined): Spoof | null {
   const { mark } = data;
   if (mark !== undefined && !isMarkName(mark)) return null;
   return createSpoof(id, name, type as SpoofType, values as Skills, temperament, mark);
+}
+
+/** Stats from saved data, or null when any part has the wrong shape or an impossible value. */
+function statsFrom(data: unknown): TeamStats | null {
+  if (!isObject(data) || !isObject(data.opponents) || !isObject(data.spoofs)) return null;
+  const { joined, points, best } = data;
+  const results = resultsFrom(data.results);
+  if (!results || !isCount(points) || !(joined === null || isDay(joined))) return null;
+  if (!(best === null || isCount(best))) return null;
+  if (!Array.isArray(data.log) || data.log.length > LOG_LENGTH) return null;
+
+  const opponents: Record<string, Results> = {};
+  for (const [name, value] of Object.entries(data.opponents)) {
+    const against = resultsFrom(value);
+    if (!against) return null;
+    opponents[name] = against;
+  }
+  const spoofs: Record<string, SpoofTotals> = {};
+  for (const [id, value] of Object.entries(data.spoofs)) {
+    const totals = spoofTotalsFrom(value);
+    if (!totals) return null;
+    spoofs[id] = totals;
+  }
+  const log: LoggedMatch[] = [];
+  for (const value of data.log as unknown[]) {
+    const logged = loggedMatchFrom(value);
+    if (!logged) return null;
+    log.push(logged);
+  }
+  return { joined, results, points, best, opponents, spoofs, log };
+}
+
+const RESULTS: readonly Result[] = ['won', 'lost', 'tied', 'forfeited'];
+
+function resultsFrom(data: unknown): Results | null {
+  if (!isObject(data)) return null;
+  const { won, lost, tied, forfeited } = data;
+  return isCount(won) && isCount(lost) && isCount(tied) && isCount(forfeited)
+    ? { won, lost, tied, forfeited }
+    : null;
+}
+
+function spoofTotalsFrom(data: unknown): SpoofTotals | null {
+  if (!isObject(data) || !isObject(data.behavior)) return null;
+  const { matches, scrums, points, plusMinus } = data;
+  if (!isCount(matches) || !isCount(scrums) || !isCount(points)) return null;
+  if (typeof plusMinus !== 'number' || !Number.isFinite(plusMinus)) return null;
+  const behavior = emptyStats();
+  for (const key of Object.keys(behavior) as (keyof typeof behavior)[]) {
+    const value = data.behavior[key];
+    if (!isCount(value)) return null;
+    behavior[key] = value;
+  }
+  return { matches, scrums, points, plusMinus, behavior };
+}
+
+function loggedMatchFrom(data: unknown): LoggedMatch | null {
+  if (!isObject(data) || !isObject(data.opponent) || !isObject(data.score)) return null;
+  if (!isObject(data.scoreByScrum) || !Array.isArray(data.spoofs)) return null;
+  const { date, result } = data;
+  const { name, logo } = data.opponent;
+  const { yours, theirs } = data.score;
+  if (!isDay(date) || typeof name !== 'string' || typeof logo !== 'string') return null;
+  if (!(RESULTS as readonly unknown[]).includes(result)) return null;
+  if (!isCount(yours) || !isCount(theirs)) return null;
+  const byYours = countsFrom(data.scoreByScrum.yours);
+  const byTheirs = countsFrom(data.scoreByScrum.theirs);
+  if (!byYours || !byTheirs) return null;
+  const spoofs: LoggedMatch['spoofs'][number][] = [];
+  for (const value of data.spoofs as unknown[]) {
+    if (!isObject(value) || typeof value.id !== 'string' || typeof value.name !== 'string')
+      return null;
+    if (!Array.isArray(value.pointsByScrum)) return null;
+    const pointsByScrum: (number | null)[] = [];
+    for (const p of value.pointsByScrum as unknown[]) {
+      if (p !== null && !isCount(p)) return null;
+      pointsByScrum.push(p);
+    }
+    spoofs.push({ id: value.id, name: value.name, pointsByScrum });
+  }
+  return {
+    date,
+    opponent: { name, logo },
+    result: result as Result,
+    score: { yours, theirs },
+    scoreByScrum: { yours: byYours, theirs: byTheirs },
+    spoofs,
+  };
+}
+
+function countsFrom(data: unknown): number[] | null {
+  if (!Array.isArray(data)) return null;
+  const counts: number[] = [];
+  for (const value of data as unknown[]) {
+    if (!isCount(value)) return null;
+    counts.push(value);
+  }
+  return counts;
+}
+
+/** A finite number, not below 0: a count, a score or a total of points. */
+function isCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+/** A day as `YYYY-MM-DD`. */
+function isDay(value: unknown): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function isMarkName(value: unknown): value is MarkName {

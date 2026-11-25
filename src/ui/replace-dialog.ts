@@ -51,7 +51,7 @@ export function replaceDialog(savedTeam: Team): ReplaceDialog {
     open(newName, then) {
       onReplace = then;
       title.textContent = `Replace ${savedTeam.name}?`;
-      body.textContent = `${newName} will take the place of your saved team, ${savedTeam.logo} ${savedTeam.name}, and its spoofs. This can't be undone.`;
+      body.textContent = `${newName} will take the place of your saved team, ${savedTeam.logo} ${savedTeam.name}, with its spoofs and its record. This can't be undone.`;
       keep.textContent = `Keep ${savedTeam.name}`;
       element.showModal();
       keep.focus();

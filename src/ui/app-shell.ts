@@ -8,11 +8,13 @@ import {
   browserStorage,
   loadDraft,
   loadTeam,
+  recordMatch,
   saveDraft,
   saveTeam,
+  type KeyValueStore,
 } from '../storage/saved-team';
 import { createCombineScreen } from './combine-screen';
-import { el, newSeed } from './dom';
+import { el, newSeed, today } from './dom';
 import { createMatchScreen } from './match-screen';
 import { createNewTeamScreen } from './new-team-screen';
 import { COMBINE_HASH, START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
@@ -56,10 +58,29 @@ function opponentsFor(team: Team): (seed: number) => Team {
   return team === SPOOFS ? () => EMBERS : leagueOpponent;
 }
 
-/** The tabs with a screen of their own, built for the team in play. */
-const panelBuilders: Partial<Record<TabId, (team: Team) => Panel>> = {
-  match: (team) => createMatchScreen(team, opponentsFor(team)),
-};
+/**
+ * The tabs with a screen of their own, built for the team in play. Only the
+ * team saved in this browser has its matches recorded (#89): never the quick
+ * start's Spoofs (the owner, #88).
+ */
+function panelBuilders(
+  store: KeyValueStore | null,
+  isSaved: (team: Team) => boolean,
+): Partial<Record<TabId, (team: Team) => Panel>> {
+  return {
+    match: (team) =>
+      createMatchScreen(
+        team,
+        opponentsFor(team),
+        isSaved(team)
+          ? (record) => {
+              // A record that can't be saved never stops the match: its scorecard still shows.
+              recordMatch(store, record, today());
+            }
+          : undefined,
+      ),
+  };
+}
 
 function tabLink(id: TabId, label: string): HTMLAnchorElement {
   const link = el('a', 'tab');
@@ -126,8 +147,10 @@ export function mountAppShell(root: HTMLElement): void {
 
   root.replaceChildren(header, screen, footer());
 
+  const builders = panelBuilders(store, (t) => t === savedTeam);
+
   function tabPanel(id: TabId, forTeam: Team): Panel | undefined {
-    const build = panelBuilders[id];
+    const build = builders[id];
     if (!build) return undefined;
     let built = builtPanels.get(id);
     if (!built) {
@@ -181,7 +204,8 @@ export function mountAppShell(root: HTMLElement): void {
           draft = next;
           return saveDraft(store, next);
         },
-        onFinish: (team) => saveTeam(store, team, { endDraft: true }),
+        // A new team: it joins the league today, with a fresh record (#89).
+        onFinish: (team) => saveTeam(store, team, { endDraft: true, joined: today() }),
         onPlay: (team, saved) => {
           draft = null;
           if (saved) savedTeam = team;

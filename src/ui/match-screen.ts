@@ -5,6 +5,7 @@ import { COURT_RADIUS } from '../game/court';
 import {
   SCRUMS_PER_MATCH,
   isMatchOver,
+  matchRecord,
   matchScorecard,
   scrumSummary,
   matchScore,
@@ -16,6 +17,7 @@ import {
   scrumNumber,
   startMatch,
   type Match,
+  type MatchRecord,
 } from '../game/match';
 import {
   REFUSAL_TEXT,
@@ -151,8 +153,15 @@ interface Played {
  * team drawn at random (#75), or the Embers for the quick start's Spoofs. So
  * **Play another match** may bring a new opponent, and a match still replays
  * from its seed.
+ *
+ * `onMatchEnd` hears about each match once, as its scorecard shows, so your
+ * saved team's stats can record it (#89).
  */
-export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) => Team): Panel {
+export function createMatchScreen(
+  yourTeam: Team,
+  opponentFor: (seed: number) => Team,
+  onMatchEnd?: (record: MatchRecord) => void,
+): Panel {
   /** A new match against the opponent its seed draws. */
   const begin = (seed: number): Match => startMatch(yourTeam, opponentFor(seed), seed);
   // Both teams come from the match in play, so a new match's opponent shows everywhere.
@@ -916,6 +925,7 @@ export function createMatchScreen(yourTeam: Team, opponentFor: (seed: number) =>
     say('');
     if (isMatchOver(match)) {
       status = 'done';
+      onMatchEnd?.(matchRecord(match));
       showScorecard();
     } else {
       status = 'break';

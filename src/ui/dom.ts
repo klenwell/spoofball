@@ -12,6 +12,13 @@ export function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+/** Today in the player's time zone, as `YYYY-MM-DD`: the day a team joins, or a match is played (#89). */
+export function today(now: Date = new Date()): string {
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${String(now.getFullYear())}-${month}-${day}`;
+}
+
 /** A fresh seed for a match or a new team, from the browser's random source. */
 export function newSeed(): number {
   const values = new Uint32Array(1);
