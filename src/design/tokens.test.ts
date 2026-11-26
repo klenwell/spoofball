@@ -59,6 +59,24 @@ describe('page colors', () => {
     });
   });
 
+  describe('the match log (#95)', () => {
+    it.each([
+      ['won', palette.resultWon],
+      ['lost', palette.resultLost],
+    ])('the %s color has at least 4.5:1 contrast on surfaces, as text', (_label, color) => {
+      expect(contrastRatio(color, palette.surface)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    it("a tie's gray stripe has at least 3:1 contrast on surfaces", () => {
+      expect(contrastRatio(palette.resultNeutral, palette.surface)).toBeGreaterThanOrEqual(3);
+    });
+
+    it('text and muted text keep 4.5:1 on a forfeit row', () => {
+      expect(contrastRatio(palette.text, palette.forfeitRow)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(palette.textMuted, palette.forfeitRow)).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
   it('the placing halo has at least 3:1 contrast on the mosh and the apron', () => {
     expect(contrastRatio(palette.placeOk, palette.mosh)).toBeGreaterThanOrEqual(3);
     expect(contrastRatio(palette.placeOk, palette.apron)).toBeGreaterThanOrEqual(3);

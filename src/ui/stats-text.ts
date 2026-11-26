@@ -159,3 +159,18 @@ export function recordedText(result: RecordResult): {
     ? { recorded: true, text: `Recorded. Record ${recordText(result.stats.results)}` }
     : { recorded: false, text: NOT_RECORDED_TEXT[result.problem] };
 }
+
+/**
+ * When a match was played, for the match log (#95): "Nov 25, 2:41 pm" in
+ * local time, as the owner chose. A match logged before times were saved
+ * shows its day only: "Nov 25".
+ */
+export function playedText(date: string, time?: string): string {
+  const [, month, day] = date.split('-');
+  const name = MONTHS[Number(month) - 1];
+  const shownDay = name && day ? `${name} ${String(Number(day))}` : date;
+  if (time === undefined) return shownDay;
+  const [hours = 0, minutes = 0] = time.split(':').map(Number);
+  const hour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${shownDay}, ${String(hour)}:${String(minutes).padStart(2, '0')} ${hours < 12 ? 'am' : 'pm'}`;
+}

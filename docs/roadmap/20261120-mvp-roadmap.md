@@ -109,6 +109,8 @@ What a player gets: **create and draft your own team, play matches, and see stat
 
 - **Epic 4, `stats`:** record team and spoof stats for each match. A stats screen shows the team record and a line for each spoof. History survives a reload.
 
+  **Playable in `v0.3.0`** (#88): your team's matches are recorded in your browser and survive a reload. The Stats tab shows your record, matches, points per match and best score, a line for each spoof, league standings with your team among the league's 7 by win percentage, and a log of your last 20 matches, colored by result, with when each was played. Leaving a match after its first scrum starts warns you, and counts it as a forfeit loss. The match scorecard says the match was recorded, with your record now. The quick start's Spoofs aren't recorded. The decisions are in [design](../design.md#stats-1).
+
 ### Pharm (`v0.4.0`)
 
 What a player gets: **manage the roster.**
