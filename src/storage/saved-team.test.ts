@@ -545,6 +545,49 @@ describe("your team's stats (#89)", () => {
   });
 
   describe('recordMatch', () => {
+    it('saves the local time it was played with the match, and loads it back (#95)', () => {
+      const store = newTeamStore();
+
+      recordMatch(store, PLAYED, DAY, { time: '09:05' });
+
+      const loaded = loadStats(store);
+      expect(loaded.ok && loaded.stats.log[0]?.time).toBe('09:05');
+    });
+
+    it('refuses a time that isn’t HH:MM, saving nothing', () => {
+      for (const time of ['9:05', '24:00', '12:60', '2:41 pm', '']) {
+        const store = newTeamStore();
+
+        expect(recordMatch(store, PLAYED, DAY, { time })).toEqual({
+          ok: false,
+          problem: 'invalid',
+        });
+        const loaded = loadStats(store);
+        expect(loaded.ok && loaded.stats.log).toEqual([]);
+      }
+    });
+
+    it('still reads a logged match saved before times, with no time', () => {
+      const store = newTeamStore();
+      recordMatch(store, PLAYED, DAY);
+
+      const loaded = loadStats(store);
+      expect(loaded.ok && loaded.stats.log[0]).not.toHaveProperty('time');
+    });
+
+    it('can’t read a logged match whose time has the wrong shape', () => {
+      const store = newTeamStore();
+      recordMatch(store, PLAYED, DAY, { time: '09:05' });
+      const raw = JSON.parse(store.items.get(STORAGE_KEY) ?? '') as {
+        stats: { log: { time: unknown }[] };
+      };
+      const first = raw.stats.log[0];
+      if (first) first.time = 905;
+      store.items.set(STORAGE_KEY, JSON.stringify(raw));
+
+      expect(loadStats(store)).toEqual({ ok: false, problem: 'unreadable' });
+    });
+
     it('adds the match to the saved stats, which load back the same', () => {
       const store = newTeamStore();
 
@@ -727,6 +770,26 @@ describe('a match in progress (#90)', () => {
       expect(loadStats(store)).toEqual({ ok: true, stats: expected });
       expect(expected.results.forfeited).toBe(1);
       expect(expected.log[0]?.result).toBe('forfeited');
+    });
+
+    it('logs the forfeit at the time its match in progress was last saved (#95)', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      saveMatchInProgress(store, SO_FAR, DAY, { time: '21:58' });
+
+      const result = recordForfeit(store);
+
+      expect(result?.ok && result.stats.log[0]).toMatchObject({ date: DAY, time: '21:58' });
+    });
+
+    it('leaves a match in progress with a malformed time in place, unread', () => {
+      const store = storeMidMatch();
+      const raw = rawRecord(store);
+      (raw.inProgress as Record<string, unknown>).time = '25:00';
+      store.items.set(STORAGE_KEY, JSON.stringify(raw));
+
+      expect(recordForfeit(store)).toEqual({ ok: false, problem: 'unreadable' });
+      expect(rawRecord(store)).toHaveProperty('inProgress');
     });
 
     it('records it once: the match in progress is cleared', () => {

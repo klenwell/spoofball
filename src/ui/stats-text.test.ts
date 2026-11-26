@@ -12,6 +12,7 @@ import {
   pointsPerMatchText,
   recordText,
   pctText,
+  playedText,
   recordedText,
   scoreText,
   signed,
@@ -231,5 +232,22 @@ describe('recordedText', () => {
     expect(recordedText({ ok: false, problem: 'unavailable' }).text).toBe(
       "This browser isn't saving data for the game, so this match wasn't recorded.",
     );
+  });
+});
+
+describe('playedText', () => {
+  it('gives the day and the local time, 12-hour: "Nov 25, 2:41 pm"', () => {
+    expect(playedText('2026-11-25', '14:41')).toBe('Nov 25, 2:41 pm');
+    expect(playedText('2027-01-02', '09:05')).toBe('Jan 2, 9:05 am');
+  });
+
+  it('calls midnight 12 am and noon 12 pm', () => {
+    expect(playedText('2026-11-25', '00:07')).toBe('Nov 25, 12:07 am');
+    expect(playedText('2026-11-25', '12:30')).toBe('Nov 25, 12:30 pm');
+    expect(playedText('2026-11-25', '11:59')).toBe('Nov 25, 11:59 am');
+  });
+
+  it('gives the day alone for a match logged before times were saved', () => {
+    expect(playedText('2026-11-25')).toBe('Nov 25');
   });
 });

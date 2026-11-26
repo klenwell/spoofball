@@ -14,6 +14,7 @@ import {
   forfeitText,
   joinedText,
   matchesText,
+  playedText,
   pointsPerMatchText,
   recordText,
   pctText,
@@ -247,14 +248,17 @@ function matchLog(log: readonly LoggedMatch[]): HTMLElement {
     const row = el('li', `match-log-row is-${match.result}`);
     const letter = el('span', 'match-log-result', RESULT_LETTER[match.result]);
     letter.setAttribute('aria-hidden', 'true');
+    const who = el('span', 'match-log-who');
     const opponent = el('span', 'match-log-opponent');
     opponent.append(
       el('span', 'visually-hidden', `${RESULT_WORD[match.result]} against `),
       teamLogo(match.opponent.logo),
       ` ${match.opponent.name}`,
     );
+    // When it was played (#95), under the opponent: "Nov 25, 2:41 pm".
+    who.append(opponent, el('span', 'match-log-when', playedText(match.date, match.time)));
     const score = el('span', 'match-log-score', scoreText(match.score));
-    row.append(letter, opponent, score);
+    row.append(letter, who, score);
     list.append(row);
   }
   section.append(list);

@@ -1606,6 +1606,11 @@ a.button {
   padding-right: var(--space-2);
 }
 
+/* The numbers' size on a phone (#95 phone check): at 16 px, a name broke mid-word at 320 px. */
+.spoof-lines-table tbody .spoof-lines-name {
+  font-size: var(--text-sm);
+}
+
 /* A spoof's name may wrap on a narrow screen; its numbers never do. */
 .spoof-lines-table .spoof-lines-name {
   width: 100%;
@@ -1629,6 +1634,10 @@ a.button {
   .spoof-lines-table td,
   .spoof-lines-table thead th:not(:first-child) {
     padding-inline: var(--space-3);
+  }
+
+  .spoof-lines-table tbody .spoof-lines-name {
+    font-size: var(--text-md);
   }
 }
 
@@ -1719,15 +1728,55 @@ a.button {
   font-weight: 700;
 }
 
-/* A forfeit reads as a loss, and set apart. */
+/*
+ * Piping by result (#95, the owner's choice): a stripe down the row's left
+ * edge, and the letter, green for a win and red for a loss. A tie's stripe
+ * is gray; a forfeit's row is gray, set apart from a loss.
+ */
+.match-log-row {
+  border-left: 4px solid var(--color-result-neutral);
+}
+
+.match-log-row.is-won {
+  border-left-color: var(--color-result-won);
+}
+
+.match-log-row.is-won .match-log-result {
+  color: var(--color-result-won);
+}
+
+.match-log-row.is-lost {
+  border-left-color: var(--color-result-lost);
+}
+
+.match-log-row.is-lost .match-log-result {
+  color: var(--color-result-lost);
+}
+
+.match-log-row.is-forfeited {
+  border-left-color: var(--color-text-muted);
+  background: var(--color-forfeit-row);
+}
+
 .match-log-row.is-forfeited .match-log-result {
   color: var(--color-text-muted);
+}
+
+.match-log-who {
+  display: grid;
+  min-width: 0;
 }
 
 .match-log-opponent {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* When it was played (#95): under the opponent, small and muted. */
+.match-log-when {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
 }
 
 /* Scores line up down the log (#91 should). */

@@ -50,6 +50,8 @@ export interface SpoofTotals {
 export interface LoggedMatch {
   /** The day it was played, as `YYYY-MM-DD`. */
   readonly date: string;
+  /** The local time it was played, as `HH:MM` (#95). Missing for a match logged before it. */
+  readonly time?: string;
   readonly opponent: { readonly name: string; readonly logo: string };
   readonly result: Result;
   /** The final score, or the score so far for a forfeit. */
@@ -125,7 +127,7 @@ export function addMatch(
   stats: TeamStats,
   record: MatchRecord,
   date: string,
-  { forfeit = false }: { forfeit?: boolean } = {},
+  { forfeit = false, time }: { forfeit?: boolean; time?: string } = {},
 ): TeamStats {
   const result: Result = forfeit ? 'forfeited' : record.result;
   const opponent = record.teams[THEIRS];
@@ -157,6 +159,7 @@ export function addMatch(
 
   const logged: LoggedMatch = {
     date,
+    ...(time === undefined ? {} : { time }),
     opponent: { name: opponent, logo: record.logos[THEIRS] },
     result,
     score: { yours, theirs: record.score[THEIRS] },

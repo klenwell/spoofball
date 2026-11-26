@@ -17,7 +17,7 @@ import {
   type KeyValueStore,
 } from '../storage/saved-team';
 import { createCombineScreen } from './combine-screen';
-import { el, newSeed, today } from './dom';
+import { el, newSeed, timeOfDay, today } from './dom';
 import { createMatchScreen, type MatchRecorder } from './match-screen';
 import { createNewTeamScreen } from './new-team-screen';
 import { COMBINE_HASH, START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
@@ -91,10 +91,12 @@ function matchRecorder(store: KeyValueStore | null): MatchRecorder {
     progress: (soFar) => {
       // Only warn when there's a forfeit to record: with storage full or
       // blocked, leaving loses nothing (#97 review).
-      setLeaveWarning(saveMatchInProgress(store, soFar, today()).ok);
+      const now = new Date();
+      setLeaveWarning(saveMatchInProgress(store, soFar, today(now), { time: timeOfDay(now) }).ok);
     },
     end: (record) => {
-      const recorded = recordMatch(store, record, today());
+      const now = new Date();
+      const recorded = recordMatch(store, record, today(now), { time: timeOfDay(now) });
       setLeaveWarning(false);
       return recorded;
     },

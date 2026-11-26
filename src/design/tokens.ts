@@ -75,6 +75,18 @@ export const palette = {
    */
   dummy: '#4A505A',
   dummyTrim: '#1B1F24',
+  /**
+   * The match log's colors (#95, the owner's piping): a stripe down each
+   * row's left edge, and its result letter, in green for a win and red for a
+   * loss. Text colors, so at least 4.5:1 on surfaces; the letter still says
+   * the result without them.
+   */
+  resultWon: '#13803F',
+  resultLost: '#C21F33',
+  /** A tie's stripe: 3:1 on surfaces, like a graphic. A forfeit's is muted text, on its gray row. */
+  resultNeutral: '#878E99',
+  /** Behind a forfeit's row: gray, with text and muted text still at 4.5:1. */
+  forfeitRow: '#ECEFF3',
 } as const;
 
 export const teamColorNames = [

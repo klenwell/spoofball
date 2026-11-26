@@ -151,6 +151,16 @@ describe('addMatch', () => {
   });
 
   describe('the log', () => {
+    it('logs the local time it was played, when given (#95)', () => {
+      const stats = addMatch(emptyTeamStats(DAY), aMatchRecord(), DAY, { time: '14:41' });
+
+      expect(stats.log[0]).toMatchObject({ date: DAY, time: '14:41' });
+    });
+
+    it('logs no time when none is given', () => {
+      expect(addMatch(emptyTeamStats(DAY), aMatchRecord(), DAY).log[0]).not.toHaveProperty('time');
+    });
+
     it('logs the match newest first: day, opponent, result and score', () => {
       const stats = afterMatches(aMatchRecord());
       const later = addMatch(stats, aMatchRecord({ result: 'lost' }), '2026-11-26');

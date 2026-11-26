@@ -26,6 +26,13 @@ export function today(now: Date = new Date()): string {
   return `${String(now.getFullYear())}-${month}-${day}`;
 }
 
+/** The local time as `HH:MM`, 24-hour, for a match's line in the log (#95). */
+export function timeOfDay(now: Date = new Date()): string {
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
 /** A fresh seed for a match or a new team, from the browser's random source. */
 export function newSeed(): number {
   const values = new Uint32Array(1);

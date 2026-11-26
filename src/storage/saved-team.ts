@@ -143,10 +143,16 @@ interface SavedRecord {
   inProgress?: unknown;
 }
 
-/** A match in progress (#90): its scrums so far, and the day they were played. */
+/** A match in progress (#90): its scrums so far, and the day and local time (#95) they were played. */
 interface MatchInProgress {
   date: string;
+  time?: string;
   record: MatchRecord;
+}
+
+/** When a match was played: `time` is the local `HH:MM` (#95), for its line in the match log. */
+export interface PlayedAt {
+  readonly time?: string;
 }
 
 function savedTeam(team: Team): SavedTeam {
@@ -281,8 +287,9 @@ export function recordMatch(
   store: KeyValueStore | null,
   record: MatchRecord,
   date: string,
+  { time }: PlayedAt = {},
 ): RecordResult {
-  const result = addToStats(store, record, date, { forfeit: false });
+  const result = addToStats(store, record, date, { forfeit: false, time });
   if (!result.ok && store) clearMatchInProgress(store);
   return result;
 }
@@ -297,17 +304,19 @@ export function saveMatchInProgress(
   store: KeyValueStore | null,
   record: MatchRecord,
   date: string,
+  { time }: PlayedAt = {},
 ): { readonly ok: true } | { readonly ok: false; readonly problem: RecordProblem } {
   const loaded = loadTeam(store);
   if (!loaded.ok) return loaded;
   if (!store) return { ok: false, problem: 'unavailable' };
-  if (!isDay(date) || !playedBy(record, loaded.team)) return { ok: false, problem: 'invalid' };
+  if (!isDay(date) || !isTimeOrNone(time) || !playedBy(record, loaded.team))
+    return { ok: false, problem: 'invalid' };
   const before = savedData(store);
   const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team) };
   const draft = loadDraft(store);
   if (draft) saved.draft = savedDraft(draft);
   if (before?.stats !== undefined) saved.stats = before.stats;
-  const inProgress: MatchInProgress = { date, record };
+  const inProgress: MatchInProgress = { date, ...(time === undefined ? {} : { time }), record };
   saved.inProgress = inProgress;
   return write(store, saved);
 }
@@ -322,7 +331,10 @@ export function recordForfeit(store: KeyValueStore | null): RecordResult | null 
   if (data?.inProgress === undefined) return null;
   const inProgress = matchInProgressFrom(data.inProgress);
   if (!inProgress) return { ok: false, problem: 'unreadable' };
-  return addToStats(store, inProgress.record, inProgress.date, { forfeit: true });
+  return addToStats(store, inProgress.record, inProgress.date, {
+    forfeit: true,
+    time: inProgress.time,
+  });
 }
 
 /**
@@ -333,16 +345,20 @@ function addToStats(
   store: KeyValueStore | null,
   record: MatchRecord,
   date: string,
-  { forfeit }: { forfeit: boolean },
+  { forfeit, time }: { forfeit: boolean; time: string | undefined },
 ): RecordResult {
   const loaded = loadTeam(store);
   if (!loaded.ok) return loaded;
   if (!store) return { ok: false, problem: 'unavailable' };
   const before = loadStats(store);
   if (!before.ok) return before;
-  if (!isDay(date) || !playedBy(record, loaded.team)) return { ok: false, problem: 'invalid' };
+  if (!isDay(date) || !isTimeOrNone(time) || !playedBy(record, loaded.team))
+    return { ok: false, problem: 'invalid' };
 
-  const stats = addMatch(before.stats, record, date, { forfeit });
+  const stats = addMatch(before.stats, record, date, {
+    forfeit,
+    ...(time === undefined ? {} : { time }),
+  });
   const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team), stats };
   const draft = loadDraft(store);
   if (draft) saved.draft = savedDraft(draft);
@@ -568,9 +584,10 @@ function statsFrom(data: unknown): TeamStats | null {
 
 /** A match in progress from saved data, or null when any part has the wrong shape. */
 function matchInProgressFrom(data: unknown): MatchInProgress | null {
-  if (!isObject(data) || !isDay(data.date)) return null;
+  if (!isObject(data) || !isDay(data.date) || !isTimeOrNone(data.time)) return null;
   const record = matchRecordFrom(data.record);
-  return record ? { date: data.date, record } : null;
+  if (!record) return null;
+  return { date: data.date, ...(data.time === undefined ? {} : { time: data.time }), record };
 }
 
 const SIDES = ['home', 'visitor'] as const;
@@ -660,10 +677,11 @@ function behaviorFrom(data: unknown): BehaviorStats | null {
 function loggedMatchFrom(data: unknown): LoggedMatch | null {
   if (!isObject(data) || !isObject(data.opponent) || !isObject(data.score)) return null;
   if (!isObject(data.scoreByScrum) || !Array.isArray(data.spoofs)) return null;
-  const { date, result } = data;
+  const { date, time, result } = data;
   const { name, logo } = data.opponent;
   const { yours, theirs } = data.score;
-  if (!isDay(date) || typeof name !== 'string' || typeof logo !== 'string') return null;
+  if (!isDay(date) || !isTimeOrNone(time)) return null;
+  if (typeof name !== 'string' || typeof logo !== 'string') return null;
   if (!(RESULTS as readonly unknown[]).includes(result)) return null;
   if (!isCount(yours) || !isCount(theirs)) return null;
   const byYours = countsFrom(data.scoreByScrum.yours);
@@ -683,6 +701,7 @@ function loggedMatchFrom(data: unknown): LoggedMatch | null {
   }
   return {
     date,
+    ...(time === undefined ? {} : { time }),
     opponent: { name, logo },
     result: result as Result,
     score: { yours, theirs },
@@ -709,6 +728,13 @@ function isCount(value: unknown): value is number {
 /** A day as `YYYY-MM-DD`. */
 function isDay(value: unknown): value is string {
   return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+/** A local time as `HH:MM`, 24-hour (#95), or none: matches saved before it have no time. */
+function isTimeOrNone(value: unknown): value is string | undefined {
+  return (
+    value === undefined || (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value))
+  );
 }
 
 function isMarkName(value: unknown): value is MarkName {
