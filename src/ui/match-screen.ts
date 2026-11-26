@@ -34,6 +34,7 @@ import { liveScores, type Scores } from '../game/scoring';
 import type { ScrumEntry, ScrumFrame } from '../game/scrum';
 import { SCRUM_SECONDS } from '../game/spoof-motion';
 import type { Spoof, Team } from '../game/teams';
+import type { RecordResult } from '../storage/saved-team';
 import type { Panel } from './app-shell';
 import { drawArena, drawSpoofInArena } from './arena';
 import { el, newSeed, teamLogo } from './dom';
@@ -61,6 +62,8 @@ import {
 } from './mise-hand';
 import { advance, frameAt, isOver, scoresAt, startFrame } from './playback';
 import { markDisc, shownTypeName, spoofLabel } from './spoof-label';
+import { recordedText } from './stats-text';
+import { hashFor } from './tabs';
 
 /**
  * The Match screen. First the mise (#39): the two teams take turns placing 3
@@ -122,8 +125,8 @@ export interface MatchRecorder {
    * each scrum's result shows. Leaving before the match ends forfeits it.
    */
   readonly progress: (soFar: MatchRecord) => void;
-  /** The finished match, once, as its scorecard shows. */
-  readonly end: (record: MatchRecord) => void;
+  /** The finished match, once, as its scorecard shows: what saving it did, for the scorecard to say (#94). */
+  readonly end: (record: MatchRecord) => RecordResult;
 }
 
 /** A scrum being played back: its frames, live scores and final score. */
@@ -608,9 +611,10 @@ export function createMatchScreen(
   /**
    * The match scorecard over the arena (#60): who won, both teams' scores by
    * scrum, and each spoof's points by scrum, after the prototype's box score.
-   * Outcomes only.
+   * Outcomes only. For your saved team, a line saying whether the match was
+   * recorded (#94); the quick start's Spoofs aren't, so they get none.
    */
-  function showScorecard(): void {
+  function showScorecard(recorded: RecordResult | undefined): void {
     const card = matchScorecard(match);
     const you = card.teams[YOU];
     const them = card.teams[COMPUTER];
@@ -669,7 +673,20 @@ export function createMatchScreen(
       table.append(section);
     }
     body.append(table);
-    scrumPanel.replaceChildren(heading, body, playAgainButton);
+    const note = recorded ? [recordedNote(recorded)] : [];
+    scrumPanel.replaceChildren(heading, body, ...note, playAgainButton);
+  }
+
+  /** "Recorded. Record 4–2–1" with a link to the Stats tab, or why the match wasn't recorded (#94). */
+  function recordedNote(recorded: RecordResult): HTMLElement {
+    const { recorded: ok, text } = recordedText(recorded);
+    const note = el('p', 'scorecard-recorded', text);
+    if (ok) {
+      const stats = el('a', undefined, 'See stats');
+      stats.href = hashFor('stats');
+      note.append(' · ', stats);
+    }
+    return note;
   }
 
   function updateControls(): void {
@@ -896,8 +913,7 @@ export function createMatchScreen(
     say('');
     if (isMatchOver(match)) {
       status = 'done';
-      recorder?.end(matchRecord(match));
-      showScorecard();
+      showScorecard(recorder?.end(matchRecord(match)));
     } else {
       status = 'break';
       // The scrum counts once you've seen it end: leaving during its playback doesn't credit it.

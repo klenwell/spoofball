@@ -473,6 +473,12 @@ body {
   color: var(--color-text-muted);
 }
 
+/* Whether the match was recorded (#94), between the tables and Play another match. */
+.scorecard-recorded {
+  margin: 0;
+  font-weight: 400;
+}
+
 /* A team's header row: a little space above it. Its kit shows in the swatch by its name. */
 .scorecard-team-head th {
   padding-top: var(--space-3);

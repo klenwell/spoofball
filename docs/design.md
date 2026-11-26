@@ -263,6 +263,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **The match log,** newest first, up to 20: the result's letter (W, L, T, or F in muted ink), the opponent's logo and name, and the score with yours first. Scores line up in the numeric font. Screen readers hear "Won against Frisco Bros" rather than a bare letter.
   - Before your first match it says so, with a link to the Match tab. The quick start's Spoofs see a note that they don't keep stats, with **Create your team**.
   - It reads the saved stats each time it's shown, so it's current after every match.
+- **The match scorecard says whether the match was recorded** (#94), between its tables and **Play another match**, which stays the main button: "Recorded. Record 4–2–1 · See stats", with a link to the Stats tab. If the save fails, it says why in plain words ("The browser's storage is full, so this match wasn't recorded.") and never claims it was. The quick start's Spoofs see no line.
 - **The simulation still records the prototype's behavior stats,** without showing them: imps (decisions), pings and pongs (messages sent and received), heeds and jecks (messages followed and ignored), dings and dongs (hits given and taken), and doves and trees (frames overlapping 1 or 2 teammates). Showing a few, such as dings and dongs as result-screen highlights, is a post-MVP idea. Some of them, like heeds against jecks, would come close to revealing hidden skills.
 
 ## Tokens at a glance
