@@ -680,7 +680,7 @@ export function createMatchScreen(
   /** "Recorded. Record 4–2–1" with a link to the Stats tab, or why the match wasn't recorded (#94). */
   function recordedNote(recorded: RecordResult): HTMLElement {
     const { recorded: ok, text } = recordedText(recorded);
-    const note = el('p', 'scorecard-recorded', text);
+    const note = el('p', ok ? 'scorecard-recorded' : 'scorecard-recorded is-problem', text);
     if (ok) {
       const stats = el('a', undefined, 'See stats');
       stats.href = hashFor('stats');

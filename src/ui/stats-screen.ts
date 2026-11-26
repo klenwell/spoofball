@@ -144,12 +144,12 @@ const SPOOF_COLUMNS: readonly {
  */
 function spoofLines(team: Team, stats: TeamStats): HTMLElement {
   const section = el('section', 'spoof-lines');
-  section.append(el('h3', 'stats-section-title', 'Spoofs'));
+  section.append(el('h3', 'stats-section-title', 'Team Stats'));
   const table = el('table', 'spoof-lines-table');
   const head = el('tr');
-  const corner = el('th');
+  // Headed on screen too (the owner, #94).
+  const corner = el('th', 'spoof-lines-name', 'Spoof');
   corner.scope = 'col';
-  corner.append(el('span', 'visually-hidden', 'Spoof'));
   head.append(corner);
   for (const column of SPOOF_COLUMNS) {
     const th = el('th');
