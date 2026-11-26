@@ -903,6 +903,19 @@ describe('a match in progress (#90)', () => {
   });
 
   describe('saveMatchInProgress', () => {
+    it('refuses a time that isn’t HH:MM, saving no match in progress (#104 review)', () => {
+      for (const time of ['25:00', '9:05', '2:41 pm']) {
+        const store = memoryStorage();
+        saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+
+        expect(saveMatchInProgress(store, SO_FAR, DAY, { time })).toEqual({
+          ok: false,
+          problem: 'invalid',
+        });
+        expect(rawRecord(store)).not.toHaveProperty('inProgress');
+      }
+    });
+
     it('refuses a match another team is playing', () => {
       const store = memoryStorage();
       saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: DAY });
