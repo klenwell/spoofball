@@ -7,6 +7,7 @@ import {
   type TeamStats,
 } from '../game/stats';
 import type { Record3 } from '../game/standings';
+import type { RecordProblem, RecordResult } from '../storage/saved-team';
 
 /**
  * How the Stats screen words and formats your team's stats (#91). Plain
@@ -133,4 +134,28 @@ export function pctText(pct: number | null): string {
 /** A record as wins–losses–ties, for the standings, where forfeits are already losses. */
 export function standingsRecordText(record: Record3): string {
   return `${String(record.won)}–${String(record.lost)}–${String(record.tied)}`;
+}
+
+/** Why a finished match wasn't recorded, for its scorecard (#94): it never claims it was. */
+const NOT_RECORDED_TEXT: Readonly<Record<RecordProblem, string>> = {
+  none: "Your team isn't saved in this browser any more, so this match wasn't recorded.",
+  unavailable: "This browser isn't saving data for the game, so this match wasn't recorded.",
+  unreadable: "Your team's stats couldn't be read, so this match wasn't recorded.",
+  newer:
+    "Your team was saved by a newer version of the game, so this match wasn't recorded. Reload to get the latest version.",
+  full: "The browser's storage is full, so this match wasn't recorded.",
+  invalid: "This match couldn't be recorded.",
+};
+
+/**
+ * What the scorecard says about recording the match (#94): "Recorded.
+ * Record 4–2–1", forfeits as losses, or why it wasn't.
+ */
+export function recordedText(result: RecordResult): {
+  readonly recorded: boolean;
+  readonly text: string;
+} {
+  return result.ok
+    ? { recorded: true, text: `Recorded. Record ${recordText(result.stats.results)}` }
+    : { recorded: false, text: NOT_RECORDED_TEXT[result.problem] };
 }

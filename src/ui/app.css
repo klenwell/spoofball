@@ -473,6 +473,22 @@ body {
   color: var(--color-text-muted);
 }
 
+/* Whether the match was recorded (#94), between the tables and Play another match. */
+.scorecard-recorded {
+  margin: 0;
+  font-weight: 400;
+}
+
+/*
+ * A match that wasn't recorded, in bold red (the owner, #94). The crush's red
+ * is 4.95:1 on white but fell to 3.3:1 over the darkest court marks behind the
+ * see-through panel, so it's darkened a quarter: 4.5:1 or more there.
+ */
+.scorecard-recorded.is-problem {
+  color: color-mix(in srgb, var(--color-crush) 75%, black);
+  font-weight: 700;
+}
+
 /* A team's header row: a little space above it. Its kit shows in the swatch by its name. */
 .scorecard-team-head th {
   padding-top: var(--space-3);

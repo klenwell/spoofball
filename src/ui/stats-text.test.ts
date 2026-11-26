@@ -12,6 +12,7 @@ import {
   pointsPerMatchText,
   recordText,
   pctText,
+  recordedText,
   scoreText,
   signed,
   standingsRecordText,
@@ -193,5 +194,42 @@ describe('pctText', () => {
 describe('standingsRecordText', () => {
   it('gives wins–losses–ties as they are', () => {
     expect(standingsRecordText({ won: 4, lost: 5, tied: 1 })).toBe('4–5–1');
+  });
+});
+
+describe('recordedText', () => {
+  it('says the match was recorded, with the record now, forfeits as losses', () => {
+    const stats = statsWith({ results: { won: 4, lost: 1, tied: 1, forfeited: 1 } });
+
+    expect(recordedText({ ok: true, stats })).toEqual({
+      recorded: true,
+      text: 'Recorded. Record 4–2–1',
+    });
+  });
+
+  it('says why, and never that it was recorded, when it couldn’t be saved', () => {
+    for (const problem of [
+      'none',
+      'unavailable',
+      'unreadable',
+      'newer',
+      'full',
+      'invalid',
+    ] as const) {
+      const note = recordedText({ ok: false, problem });
+
+      expect(note.recorded).toBe(false);
+      expect(note.text).toMatch(/wasn't recorded|couldn't be recorded/);
+      expect(note.text).not.toMatch(/^Recorded/);
+    }
+  });
+
+  it('names a full or blocked storage plainly', () => {
+    expect(recordedText({ ok: false, problem: 'full' }).text).toBe(
+      "The browser's storage is full, so this match wasn't recorded.",
+    );
+    expect(recordedText({ ok: false, problem: 'unavailable' }).text).toBe(
+      "This browser isn't saving data for the game, so this match wasn't recorded.",
+    );
   });
 });

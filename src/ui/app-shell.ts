@@ -94,8 +94,9 @@ function matchRecorder(store: KeyValueStore | null): MatchRecorder {
       setLeaveWarning(saveMatchInProgress(store, soFar, today()).ok);
     },
     end: (record) => {
-      recordMatch(store, record, today());
+      const recorded = recordMatch(store, record, today());
       setLeaveWarning(false);
+      return recorded;
     },
   };
 }
