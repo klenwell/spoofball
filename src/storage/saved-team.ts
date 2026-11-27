@@ -55,10 +55,11 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
  *   far, recorded as a forfeit if the game loads with it still there. Older
  *   version 5 code ignores it, so the version stays 5.
  * - 6 (#106): the team's Pharm (`Roster`): its prospects, which are its
- *   draft picks (#105). Each spoof's totals also keep the name
- *   and mark it had in its latest match, for when it leaves the team (#100).
- *   A version 5 team loads with no prospects, so no picks, its stats kept. The version changes because version 5 code, saving the team
- *   again, would drop the roster.
+ *   draft picks (#105). Each spoof's totals also keep the name and mark it
+ *   had in its latest match, for when it leaves the team (#100). A version 5
+ *   team loads with no prospects, so no picks, its stats kept. The version
+ *   changes because version 5 code, saving the team again, would drop the
+ *   roster.
  *
  * The skills are saved with the team. They stay hidden on screen, but anyone
  * reading the browser's storage could see them: fine for a single-player game
@@ -218,14 +219,24 @@ function savedRoster(roster: Roster): SavedRoster {
 }
 
 /**
- * A new team's roster seed, from what doesn't change about the team: its
- * name and its spoofs' ids, in any order. So a version 5 team draws the same
- * prospects on every load, even after a spoof is renamed or the roster
- * reordered, until its roster is first saved.
+ * A version 5 team's roster seed, from what doesn't change about the team:
+ * its name and its spoofs' ids, in any order. So it draws the same prospects
+ * on every load, even after a spoof is renamed or the roster reordered,
+ * until its roster is first saved.
  */
-function rosterSeed(team: Team): number {
+function version5RosterSeed(team: Team): number {
   const ids = team.spoofs.map((s) => s.id).sort();
   return textSeed(JSON.stringify([team.name, ids]));
+}
+
+/**
+ * A new team's roster seed, from the whole team, skills included. A
+ * re-drafted team keeps its name, and every draft numbers its pool `p1`–`p10`,
+ * so its ids alone could give back its old seed, and its old prospects (#114
+ * review). Its skills come from the new draft's seed, so they don't.
+ */
+function newTeamRosterSeed(team: Team): number {
+  return textSeed(JSON.stringify(savedTeam(team)));
 }
 
 function savedDraft(draft: Draft): SavedDraft {
@@ -283,7 +294,7 @@ export function saveTeam(
     // team's match in progress goes too: a forfeit would be discarded as it
     // was written (#90).
     record.stats = emptyTeamStats(joined);
-    record.roster = savedRoster(emptyRoster(rosterSeed(team)));
+    record.roster = savedRoster(emptyRoster(newTeamRosterSeed(team)));
   }
   return write(store, record);
 }
@@ -328,15 +339,16 @@ export type RosterResult =
 
 /**
  * The saved team's Pharm (#106). A team saved before it has no prospects, so
- * no draft picks. With no team to load, the reason
- * there's none. A roster that can't be read, or holds impossible values, is
- * left in place (`unreadable`).
+ * no draft picks. With no team to load, the reason there's none. A roster
+ * that can't be read, or holds impossible values, is left in place
+ * (`unreadable`).
  */
 export function loadRoster(store: KeyValueStore | null): RosterResult {
   const loaded = loadTeam(store);
   if (!loaded.ok) return loaded;
   const data = store ? savedData(store) : null;
-  if (data?.roster === undefined) return { ok: true, roster: emptyRoster(rosterSeed(loaded.team)) };
+  if (data?.roster === undefined)
+    return { ok: true, roster: emptyRoster(version5RosterSeed(loaded.team)) };
   const roster = rosterFrom(data.roster);
   return roster && rosterProblems(roster).length === 0
     ? { ok: true, roster }

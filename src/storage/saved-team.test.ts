@@ -1087,6 +1087,30 @@ describe("the team's Pharm (#106)", () => {
       expect(rosterOf(store)).toMatchObject({ prospectsDrawn: 0, prospects: [] });
     });
 
+    it('saves its fresh roster with it', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+
+      expect(raw(store).roster).toEqual({
+        seed: rosterOf(store).seed,
+        prospectsDrawn: 0,
+        prospects: [],
+      });
+    });
+
+    it('gets a new seed when re-drafted with the same name and spoof ids (#114 review)', () => {
+      const first = memoryStorage();
+      saveTeam(first, SPOOFS, { endDraft: true, joined: DAY });
+      const redrafted = memoryStorage();
+      const others = SPOOFS.spoofs.map((s, i) => {
+        const fresh = generateSpoof(s.id, s.type, NEW_SPOOF_SKILL_TOTAL, createRandom(500 + i));
+        return { ...fresh, name: s.name };
+      });
+      saveTeam(redrafted, { ...SPOOFS, spoofs: others }, { endDraft: true, joined: DAY });
+
+      expect(rosterOf(redrafted).seed).not.toBe(rosterOf(first).seed);
+    });
+
     it('starts fresh, replacing the old team’s prospects', () => {
       const store = storeWithRoster();
 
@@ -1307,6 +1331,35 @@ describe("the team's Pharm (#106)", () => {
       store.items.set(STORAGE_KEY, JSON.stringify(record));
 
       expect(loadStats(store)).toEqual({ ok: false, problem: 'unreadable' });
+    });
+
+    it('can’t be read with a name that isn’t text', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      recordMatch(store, PLAYED, DAY);
+      const record = raw(store) as { stats: { spoofs: Record<string, Record<string, unknown>> } };
+      const first = Object.values(record.stats.spoofs)[0];
+      if (first) first.name = 42;
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      expect(loadStats(store)).toEqual({ ok: false, problem: 'unreadable' });
+    });
+
+    it('leaves a match in progress with a bad mark unread, and in place (#114 review)', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      saveMatchInProgress(store, SO_FAR, DAY);
+      const record = raw(store) as {
+        inProgress: { record: { spoofs: Record<string, unknown>[] } };
+      };
+      const line = record.inProgress.record.spoofs[0];
+      if (line) line.mark = 'nonesuch';
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+      const before = raw(store).inProgress;
+
+      expect(recordForfeit(store)).toEqual({ ok: false, problem: 'unreadable' });
+      expect(raw(store).inProgress).toEqual(before);
+      expect(loadStats(store).ok).toBe(true);
     });
 
     it('records a forfeit from a match in progress saved before marks', () => {
