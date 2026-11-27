@@ -50,14 +50,17 @@ const SOURCE_URL = 'https://github.com/klenwell/spoofball';
 /** Extra content a screen shows, built the first time it opens. */
 export interface Panel {
   readonly element: HTMLElement;
-  /** Called each time the screen is shown, for example to show the latest stats (#91). */
-  readonly show?: () => void;
+  /**
+   * Called each time the screen is shown, for example to show the latest
+   * stats (#91). The Pharm tab gets the spoof whose card to show (#109).
+   */
+  readonly show?: (spoofId?: string) => void;
   /** Called when the player leaves the screen, for example to pause a scrum. */
   readonly hide?: () => void;
   /** Called when the screen is thrown away (the team changed), to stop its timers and listeners. */
   readonly dispose?: () => void;
   /** The screen's own heading, for screens without the shell's (splash, create). */
-  readonly heading?: HTMLElement;
+  readonly heading?: HTMLElement | undefined;
 }
 
 /**
@@ -115,7 +118,7 @@ function matchRecorder(store: KeyValueStore | null): MatchRecorder {
 function panelBuilders(
   store: KeyValueStore | null,
   isSaved: (team: Team) => boolean,
-  onReorder: (team: Team) => SaveResult,
+  onChange: (team: Team) => SaveResult,
 ): Partial<Record<TabId, (team: Team) => Panel>> {
   return {
     match: (team) =>
@@ -127,7 +130,7 @@ function panelBuilders(
         loadStats: () => loadStats(store),
         loadRoster: () => loadRoster(store),
         matchInProgress: () => hasMatchInProgress(store),
-        onReorder,
+        onChange,
       }),
     stats: (team) =>
       createStatsScreen({ team, isSaved: isSaved(team), loadStats: () => loadStats(store) }),
@@ -201,14 +204,15 @@ export function mountAppShell(root: HTMLElement): void {
 
   root.replaceChildren(header, screen, footer());
 
-  const builders = panelBuilders(store, (t) => t === savedTeam, reorder);
+  const builders = panelBuilders(store, (t) => t === savedTeam, changeTeam);
 
   /**
-   * Saves the team in a new order from the Pharm (#108) and puts it in play:
-   * the order is the bench order in the next match. Match and Stats are built
-   * afresh for it; the Pharm, on screen, keeps its own.
+   * Saves the team as changed in the Pharm, in a new order (#108) or with a
+   * spoof renamed or re-marked (#109), and puts it in play: the order is the
+   * bench order in the next match. Match and Stats are built afresh for it;
+   * the Pharm, on screen, keeps its own.
    */
-  function reorder(next: Team): SaveResult {
+  function changeTeam(next: Team): SaveResult {
     const saved = saveTeam(store, next);
     if (!saved.ok) return saved;
     savedTeam = next;
@@ -309,7 +313,8 @@ export function mountAppShell(root: HTMLElement): void {
       root.dataset.tab = route.tab;
       heading.hidden = false;
       heading.textContent = tab.title;
-      body.textContent = tab.coming;
+      // A spoof's card (#109) has its own heading and no intro.
+      body.textContent = route.spoofId === undefined ? tab.coming : '';
       document.title = `${tab.title} · Spoofball`;
     } else {
       delete root.dataset.tab;
@@ -323,7 +328,7 @@ export function mountAppShell(root: HTMLElement): void {
     }
     if (content) panel.replaceChildren(content.element);
     else panel.replaceChildren();
-    content?.show?.();
+    content?.show?.(route.screen === 'tab' ? route.spoofId : undefined);
     for (const link of links) {
       if (route.screen === 'tab' && link.dataset.tab === route.tab) {
         link.setAttribute('aria-current', 'page');

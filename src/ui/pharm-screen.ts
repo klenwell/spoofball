@@ -11,7 +11,9 @@ import {
 } from '../storage/saved-team';
 import type { Panel } from './app-shell';
 import { el, newSeed, teamLogo } from './dom';
-import { NEW_TEAM_HASH } from './routes';
+import { NEW_TEAM_HASH, cardHash } from './routes';
+import { createSpoofCard, type SpoofCard } from './spoof-card';
+import { hashFor } from './tabs';
 import { spoofLabel } from './spoof-label';
 import { draftPicksText, recordText, rosterOutcomeText } from './stats-text';
 import {
@@ -30,8 +32,9 @@ import {
  * drag a row by its handle, or use its Move up and Move down buttons. Each
  * change is saved at once, and not while a match is in progress.
  *
- * Tapping a row will open the spoof's card (#109), and "Re-draft the team"
- * comes with #111: until then, neither is shown.
+ * Tapping a row, or its name, opens the spoof's card (#109): the same screen
+ * shows it, at `#/pharm/<id>`. "Re-draft the team" comes with #111: until
+ * then, it isn't shown.
  */
 
 export interface PharmScreenOptions {
@@ -43,12 +46,14 @@ export interface PharmScreenOptions {
   readonly loadRoster: () => RosterResult;
   /** Whether a match is in progress: the order can't change then. */
   readonly matchInProgress: () => boolean;
-  /** Saves the team in its new order and puts it in play; says whether it was saved. */
-  readonly onReorder: (team: Team) => SaveResult;
+  /** Saves the team as changed (a new order, a name, a mark) and puts it in play; says whether it was saved. */
+  readonly onChange: (team: Team) => SaveResult;
 }
 
 /** A warm-up cell's size on the roster, in CSS px. */
 const CELL_SIZE = 52;
+/** At most this much real time moves a drill on in one frame, after a stall, as in the combine. */
+const MAX_DRILL_STEP = 0.1;
 
 interface Row {
   readonly id: string;
@@ -57,7 +62,7 @@ interface Row {
 }
 
 export function createPharmScreen(options: PharmScreenOptions): Panel {
-  const { isSaved, loadStats, loadRoster, matchInProgress, onReorder } = options;
+  const { isSaved, loadStats, loadRoster, matchInProgress, onChange } = options;
   let team = options.team;
   const root = el('div', 'pharm-screen');
   const teamKit = kit(team.color, 'home');
@@ -66,6 +71,8 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
   const seed = newSeed();
   team.spoofs.forEach((s, i) => warmUps.set(s.id, startWarmUp(s, warmUpSeed(seed, i))));
   let rows: Row[] = [];
+  /** The spoof card on screen (#109), or null for the roster. */
+  let card: SpoofCard | null = null;
   /** A line under the roster when a new order couldn't be saved, until one is. */
   const message = el('p', 'pharm-message');
   message.setAttribute('role', 'status');
@@ -99,6 +106,29 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       target?.focus();
     }
     for (const row of rows) drawRow(row);
+  }
+
+  /** A spoof's card (#109), or the roster when the spoof isn't on the team, such as one replaced. */
+  function renderCard(spoofId: string): void {
+    if (!isSaved || !team.spoofs.some((s) => s.id === spoofId)) {
+      window.history.replaceState(null, '', hashFor('pharm'));
+      render();
+      return;
+    }
+    const stats = loadStats();
+    card = createSpoofCard({
+      team,
+      spoofId,
+      stats: stats.ok ? stats.stats : null,
+      locked: matchInProgress(),
+      onChange: (next) => {
+        const saved = onChange(next);
+        if (saved.ok) team = next;
+        return saved;
+      },
+    });
+    rows = [];
+    root.replaceChildren(card.element);
   }
 
   function header(stats: StatsResult): HTMLElement {
@@ -149,10 +179,16 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       const ctx = sizeCanvas(canvas, CELL_SIZE);
       const who = el('div', 'roster-who');
       const totals = stats.ok ? stats.stats.spoofs[spoof.id] : undefined;
-      who.append(
-        spoofLabel(spoof),
-        el('span', 'roster-outcomes', stats.ok ? rosterOutcomeText(totals) : ''),
-      );
+      // The name opens the spoof's card (#109); so does a tap anywhere else on the row.
+      const link = el('a', 'roster-name');
+      link.href = cardHash(spoof.id);
+      link.append(spoofLabel(spoof));
+      item.addEventListener('click', (event) => {
+        if (event.target instanceof Element && event.target.closest('a, button, .roster-handle'))
+          return;
+        window.location.hash = cardHash(spoof.id);
+      });
+      who.append(link, el('span', 'roster-outcomes', stats.ok ? rosterOutcomeText(totals) : ''));
       const moves = el('div', 'roster-moves');
       moves.append(
         moveButton(spoof.id, spoof.name, 'up', locked || index === 0),
@@ -198,7 +234,7 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       render(focus);
       return;
     }
-    const saved = onReorder(next);
+    const saved = onChange(next);
     if (saved.ok) {
       team = next;
       message.textContent = '';
@@ -271,11 +307,13 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
 
   function frame(now: number): void {
     if (!running) return;
-    owed += Math.max(0, (now - last) / 1000) * WARM_UP_FRAMES_PER_SECOND;
+    const elapsedSeconds = Math.min(Math.max(0, (now - last) / 1000), MAX_DRILL_STEP);
+    owed += elapsedSeconds * WARM_UP_FRAMES_PER_SECOND;
     last = now;
     const steps = Math.min(Math.floor(owed), WARM_UP_MAX_CATCH_UP);
     owed = Math.min(owed - steps, 1);
-    if (steps > 0) {
+    if (card) card.tick(elapsedSeconds, steps);
+    else if (steps > 0) {
       for (const [id, warmUp] of warmUps) {
         let next = warmUp;
         for (let s = 0; s < steps; s += 1) next = stepWarmUp(next);
@@ -287,7 +325,7 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
   }
 
   function start(): void {
-    if (running || document.hidden || rows.length === 0) return;
+    if (running || document.hidden || !isSaved) return;
     running = true;
     last = performance.now();
     raf = requestAnimationFrame(frame);
@@ -311,18 +349,28 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
 
   return {
     element: root,
-    show: () => {
+    // On a card, its spoof's name is the heading the shell moves focus to.
+    get heading() {
+      return card?.heading;
+    },
+    // `spoofId` opens that spoof's card (#109); without it, the roster.
+    show: (spoofId?: string) => {
       shown = true;
-      render();
+      card?.dispose();
+      card = null;
+      if (spoofId === undefined) render();
+      else renderCard(spoofId);
       start();
     },
     hide: () => {
       shown = false;
       stop();
+      card?.dispose();
     },
     dispose: () => {
       shown = false;
       stop();
+      card?.dispose();
       lifetime.abort();
     },
   };

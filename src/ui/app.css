@@ -1944,3 +1944,93 @@ a.button {
 .pharm-message:empty {
   display: none;
 }
+
+/* A spoof's name on the roster and the Stats tab opens its card (#109). */
+.roster-name,
+.spoof-lines-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.roster-name:hover,
+.roster-name:focus-visible,
+.spoof-lines-link:hover,
+.spoof-lines-link:focus-visible {
+  text-decoration: underline;
+}
+
+.roster-row {
+  cursor: pointer;
+}
+
+/*
+ * A spoof's card (#109, wireframe 2): back to the roster, the spoof warming
+ * up with its name and type, its outcomes, scouting, and its name and mark.
+ */
+.card-back {
+  display: inline-block;
+  margin-bottom: var(--space-3);
+  color: var(--color-accent-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.card-back:hover,
+.card-back:focus-visible {
+  text-decoration: underline;
+}
+
+.card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.card-cell {
+  display: block;
+}
+
+.card-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-xl);
+}
+
+.card-type {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.card-scout {
+  margin-top: var(--space-4);
+}
+
+.spoof-card .drill-court {
+  margin-top: var(--space-4);
+}
+
+.card-edit {
+  margin-top: var(--space-6);
+}
+
+.card-name-input {
+  max-width: 20rem;
+}
+
+.card-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.card-status {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.card-status:empty {
+  display: none;
+}

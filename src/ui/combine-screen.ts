@@ -23,6 +23,7 @@ import { createDrillCourt, type DraftState } from './drill-court';
 import { replaceDialog } from './replace-dialog';
 import { NEW_TEAM_HASH } from './routes';
 import { drawSpoofDisc } from './spoof-disc';
+import { MARK_LABELS } from './spoof-label';
 import {
   WARM_UP_FRAMES_PER_SECOND,
   WARM_UP_MAX_CATCH_UP,
@@ -81,26 +82,6 @@ function typeName(candidate: Candidate): string {
 function coins(price: number): string {
   return `${String(price)} ${price === 1 ? 'coin' : 'coins'}`;
 }
-
-/** What each mark is called, for screen readers and the picker (#74). */
-const MARK_LABELS: Readonly<Record<MarkName, string>> = {
-  crown: 'crown',
-  gem: 'gem',
-  mallet: 'mallet',
-  starburst: 'starburst',
-  shield: 'shield',
-  dot: 'dot',
-  heart: 'heart',
-  bolt: 'lightning bolt',
-  infinity: 'infinity sign',
-  anchor: 'anchor',
-  bulb: 'light bulb',
-  star: 'star',
-  glove: 'boxing glove',
-  diamond: 'diamond',
-  club: 'club',
-  spade: 'spade',
-};
 
 /** A small disc wearing a mark, in your kit: for a pick in the strip, and the mark picker. */
 function discCanvas(mark: MarkName, teamKit: Kit, css = 22): HTMLCanvasElement {

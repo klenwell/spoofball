@@ -16,10 +16,12 @@ import { hashFor, tabFromHash, type TabId } from './tabs';
  *   hash opens the create screen, where a draft starts.
  * - A first-time player who opens the game mid-draft goes back to the
  *   combine, wherever the hash points, so the draft isn't lost.
+ * - A spoof's card (#109) is on the Pharm tab, at `#/pharm/<spoof id>`.
  */
 
 export type Route =
-  | { readonly screen: 'tab'; readonly tab: TabId }
+  /** `spoofId`, on the Pharm tab only: that spoof's card (#109). */
+  | { readonly screen: 'tab'; readonly tab: TabId; readonly spoofId?: string }
   | { readonly screen: 'start' }
   | { readonly screen: 'new-team' }
   | { readonly screen: 'combine' };
@@ -27,6 +29,14 @@ export type Route =
 export const START_HASH = '#/start';
 export const NEW_TEAM_HASH = '#/new-team';
 export const COMBINE_HASH = '#/combine';
+
+/** A spoof's card on the Pharm tab (#109). Spoof ids are letters and numbers, such as `c1` or `x12`. */
+const CARD_HASH = /^#\/pharm\/([A-Za-z0-9_-]+)$/;
+
+/** The address of a spoof's card (#109). */
+export function cardHash(spoofId: string): string {
+  return `${hashFor('pharm')}/${spoofId}`;
+}
 
 export interface RouteContext {
   /** True when a team is in play: a saved one, or one picked on the splash screen. */
@@ -42,6 +52,8 @@ export function routeFromHash(hash: string, { hasTeam, hasDraft, opening }: Rout
   if (hash === COMBINE_HASH) return hasDraft ? { screen: 'combine' } : { screen: 'new-team' };
   if (!hasTeam) return hasDraft && opening ? { screen: 'combine' } : { screen: 'start' };
   if (hash === START_HASH && !opening) return { screen: 'start' };
+  const card = CARD_HASH.exec(hash);
+  if (card?.[1] !== undefined) return { screen: 'tab', tab: 'pharm', spoofId: card[1] };
   return { screen: 'tab', tab: tabFromHash(hash) };
 }
 
@@ -50,5 +62,6 @@ export function hashForRoute(route: Route): string {
   if (route.screen === 'start') return START_HASH;
   if (route.screen === 'new-team') return NEW_TEAM_HASH;
   if (route.screen === 'combine') return COMBINE_HASH;
+  if (route.tab === 'pharm' && route.spoofId !== undefined) return cardHash(route.spoofId);
   return hashFor(route.tab);
 }
