@@ -1185,10 +1185,12 @@ describe("the team's Pharm (#106)", () => {
       expect(rosterOf(store)).toEqual(aRoster());
     });
 
-    it('recording a match', () => {
-      const store = storeWithRoster();
-      expect(recordMatch(store, PLAYED, DAY).ok).toBe(true);
-      expect(rosterOf(store)).toEqual(aRoster());
+    it('recording a win or a tie', () => {
+      for (const result of ['won', 'tied'] as const) {
+        const store = storeWithRoster();
+        expect(recordMatch(store, { ...PLAYED, result }, DAY).ok).toBe(true);
+        expect(rosterOf(store)).toEqual(aRoster());
+      }
     });
 
     it('saving a match in progress, and recording it as a forfeit', () => {
@@ -1258,6 +1260,51 @@ describe("the team's Pharm (#106)", () => {
     it('is still read by its stats and team', () => {
       const store = version5Store();
       expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
+    });
+  });
+
+  describe('a loss brings a prospect (#107)', () => {
+    const LOST = { ...PLAYED, result: 'lost' as const };
+
+    it('in the same save as the match', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+
+      recordMatch(store, LOST, DAY);
+
+      const roster = rosterOf(store);
+      expect(roster.prospects).toHaveLength(1);
+      expect(roster.prospectsDrawn).toBe(1);
+      const stats = loadStats(store);
+      expect(stats.ok && stats.stats.results.lost).toBe(1);
+    });
+
+    it('replacing the oldest at 3', () => {
+      const store = storeWithRoster();
+      const [, second, third] = aRoster().prospects;
+
+      recordMatch(store, LOST, DAY);
+
+      const ids = rosterOf(store).prospects.map((p) => p.id);
+      expect(ids).toEqual([second?.id, third?.id, 'x5']);
+    });
+
+    it('but not a forfeit', () => {
+      const store = storeWithRoster();
+      saveMatchInProgress(store, SO_FAR, DAY);
+
+      expect(recordForfeit(store)?.ok).toBe(true);
+      expect(rosterOf(store)).toEqual(aRoster());
+    });
+
+    it('leaving a roster that can’t be read as it was', () => {
+      const store = storeWithRoster();
+      const record = raw(store);
+      record.roster = { broken: true };
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      expect(recordMatch(store, LOST, DAY).ok).toBe(true);
+      expect(raw(store).roster).toEqual({ broken: true });
     });
   });
 
