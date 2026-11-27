@@ -87,8 +87,33 @@ describe('hashForRoute', () => {
     [{ screen: 'new-team' }, '#/new-team'],
     [{ screen: 'combine' }, '#/combine'],
     [{ screen: 'tab', tab: 'pharm' }, '#/pharm'],
+    [{ screen: 'tab', tab: 'pharm', spoofId: 'x12' }, '#/pharm/x12'],
   ])('names %j as %s', (route, hash) => {
     expect(hashForRoute(route)).toBe(hash);
     expect(routeFromHash(hash, { ...later, hasDraft: true })).toEqual(route);
+  });
+});
+
+describe('routeFromHash, for a spoof’s card (#109)', () => {
+  it('opens the card on the Pharm tab', () => {
+    expect(routeFromHash('#/pharm/c3', later)).toEqual({
+      screen: 'tab',
+      tab: 'pharm',
+      spoofId: 'c3',
+    });
+    expect(routeFromHash('#/pharm/c3', opening)).toEqual({
+      screen: 'tab',
+      tab: 'pharm',
+      spoofId: 'c3',
+    });
+  });
+
+  it('opens the splash screen with no team in play', () => {
+    expect(routeFromHash('#/pharm/c3', noTeam)).toEqual({ screen: 'start' });
+  });
+
+  it('opens Match for a card address that names no spoof', () => {
+    expect(routeFromHash('#/pharm/', later)).toEqual({ screen: 'tab', tab: 'match' });
+    expect(routeFromHash('#/pharm/c3/x', later)).toEqual({ screen: 'tab', tab: 'match' });
   });
 });

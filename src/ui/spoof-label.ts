@@ -41,3 +41,23 @@ export function markDisc(
   drawSpoofDisc(ctx, { x: size / 2, y: size / 2, radius, mark, kit });
   return canvas;
 }
+
+/** What each mark is called, for screen readers and the picker (#74). */
+export const MARK_LABELS: Readonly<Record<MarkName, string>> = {
+  crown: 'crown',
+  gem: 'gem',
+  mallet: 'mallet',
+  starburst: 'starburst',
+  shield: 'shield',
+  dot: 'dot',
+  heart: 'heart',
+  bolt: 'lightning bolt',
+  infinity: 'infinity sign',
+  anchor: 'anchor',
+  bulb: 'light bulb',
+  star: 'star',
+  glove: 'boxing glove',
+  diamond: 'diamond',
+  club: 'club',
+  spade: 'spade',
+};

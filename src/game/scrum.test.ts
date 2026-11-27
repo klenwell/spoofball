@@ -213,7 +213,8 @@ describe('simulateScrum', () => {
       const visitorSmart = zoneScore(30, 5, 95);
       expect(homeSmart.homeScore).toBeGreaterThan(homeSmart.visitorScore);
       expect(visitorSmart.visitorScore).toBeGreaterThan(visitorSmart.homeScore);
-    });
+      // About 2 s alone, the suite's slowest: on a busy machine it passed 5 s (#109).
+    }, 15_000);
   });
 
   describe('rules, one at a time', () => {

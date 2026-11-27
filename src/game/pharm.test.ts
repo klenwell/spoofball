@@ -7,8 +7,11 @@ import {
   canDraft,
   draftProspect,
   drawProspect,
+  changeMark,
   drawProspectTotal,
   moveSpoof,
+  renameSpoof,
+  spoofRenameProblem,
   prospectRange,
   prospectTypes,
   teamSkillTotal,
@@ -338,5 +341,60 @@ describe('moveSpoof', () => {
     expect(moveSpoof(MIXED, 't1', -1)).toBe(MIXED);
     expect(moveSpoof(MIXED, 't1', 5)).toBe(MIXED);
     expect(moveSpoof(MIXED, 't1', 0)).toBe(MIXED);
+  });
+});
+
+describe('spoofRenameProblem (#109)', () => {
+  const [first, second] = MIXED.spoofs;
+  if (!first || !second) throw new Error('no spoofs');
+
+  it('allows a name of 1 to 16 characters no teammate has', () => {
+    expect(spoofRenameProblem(MIXED, first.id, 'Hoot')).toBeNull();
+    expect(spoofRenameProblem(MIXED, first.id, 'Sixteen letters!')).toBeNull();
+  });
+
+  it('allows a spoof to keep its own name, in any case', () => {
+    expect(spoofRenameProblem(MIXED, first.id, first.name.toUpperCase())).toBeNull();
+  });
+
+  it('refuses an empty or too long name', () => {
+    expect(spoofRenameProblem(MIXED, first.id, '   ')).toBe('empty');
+    expect(spoofRenameProblem(MIXED, first.id, 'Seventeen letters')).toBe('long');
+  });
+
+  it('refuses a teammate’s name, ignoring case', () => {
+    expect(spoofRenameProblem(MIXED, first.id, ` ${second.name.toLowerCase()} `)).toBe('taken');
+  });
+});
+
+describe('renameSpoof (#109)', () => {
+  it('renames the spoof, trimmed, keeping everything else', () => {
+    const [first] = MIXED.spoofs;
+    if (!first) throw new Error('no spoof');
+
+    const renamed = renameSpoof(MIXED, first.id, '  Hoot  ');
+
+    expect(renamed.spoofs[0]).toEqual({ ...first, name: 'Hoot' });
+    expect(renamed.spoofs.slice(1)).toEqual(MIXED.spoofs.slice(1));
+    expect(teamProblems(renamed)).toEqual([]);
+  });
+
+  it('leaves the team as it is for a name with a problem or an unknown spoof', () => {
+    expect(renameSpoof(MIXED, 't1', '')).toBe(MIXED);
+    expect(renameSpoof(MIXED, 't9', 'Hoot')).toBe(MIXED);
+  });
+});
+
+describe('changeMark (#109)', () => {
+  it('gives the spoof a new mark, any of the 16, even a teammate’s', () => {
+    const marked = changeMark(MIXED, 't2', 'heart');
+    expect(marked.spoofs[1]).toEqual({ ...MIXED.spoofs[1], mark: 'heart' });
+    expect(marked.spoofs.filter((_, i) => i !== 1)).toEqual(MIXED.spoofs.filter((_, i) => i !== 1));
+    expect(changeMark(marked, 't3', 'heart').spoofs[2]?.mark).toBe('heart');
+  });
+
+  it('leaves the team as it is for an unknown spoof or mark', () => {
+    expect(changeMark(MIXED, 't9', 'heart')).toBe(MIXED);
+    expect(changeMark(MIXED, 't1', 'nonesuch' as 'heart')).toBe(MIXED);
   });
 });

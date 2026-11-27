@@ -6,7 +6,7 @@ import type { Team } from '../game/teams';
 import { STORAGE_PROBLEM_TEXT, type StatsResult } from '../storage/saved-team';
 import type { Panel } from './app-shell';
 import { el, teamLogo } from './dom';
-import { NEW_TEAM_HASH } from './routes';
+import { NEW_TEAM_HASH, cardHash } from './routes';
 import {
   RESULT_LETTER,
   RESULT_WORD,
@@ -169,7 +169,11 @@ function spoofLines(team: Team, stats: TeamStats): HTMLElement {
     const name = el('th', 'spoof-lines-name');
     name.scope = 'row';
     const who = el('span', 'spoof-lines-who');
-    who.append(markDisc(spoof.mark, disc, 18, 7), spoofLabel(spoof));
+    // Its name opens its card in the Pharm (#109, the Stats wireframe).
+    const card = el('a', 'spoof-lines-link');
+    card.href = cardHash(spoof.id);
+    card.append(spoofLabel(spoof));
+    who.append(markDisc(spoof.mark, disc, 18, 7), card);
     name.append(who);
     row.append(name);
     const line = spoofLineText(stats.spoofs[spoof.id]);

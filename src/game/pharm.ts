@@ -3,7 +3,8 @@ import type { Random } from './random';
 import { createRandom } from './random';
 import { PROSPECTS, type Roster } from './roster';
 import { minimumTotal, skillNames, skillTotal, typeProfiles } from './skills';
-import { spoofTypes, type SpoofType } from './spoof-types';
+import { markNames, spoofTypes, type MarkName, type SpoofType } from './spoof-types';
+import { teamNameProblem, type NameProblem } from './new-team';
 import type { Result } from './stats';
 import { SPOOFS_PER_TEAM, generateSpoof, type Spoof, type Team } from './teams';
 
@@ -243,4 +244,43 @@ export function moveSpoof(team: Team, spoofId: string, toIndex: number): Team {
   if (from === toIndex) return team;
   const others = team.spoofs.filter((s) => s.id !== spoofId);
   return { ...team, spoofs: [...others.slice(0, toIndex), moving, ...others.slice(toIndex)] };
+}
+
+/** Why a spoof can't take a new name: the draft's name rules, or a teammate has it. */
+export type SpoofRenameProblem = NameProblem | 'taken';
+
+/**
+ * What's wrong with renaming a spoof on its card (#109), by the draft's rules
+ * (#72): 1 to 16 characters once trimmed, and no teammate with that name,
+ * ignoring case. Null when it can be used.
+ */
+export function spoofRenameProblem(
+  team: Team,
+  spoofId: string,
+  name: string,
+): SpoofRenameProblem | null {
+  const problem = teamNameProblem(name);
+  if (problem) return problem;
+  const wanted = name.trim().toLowerCase();
+  const taken = team.spoofs.some((s) => s.id !== spoofId && s.name.toLowerCase() === wanted);
+  return taken ? 'taken' : null;
+}
+
+/** The team with a spoof renamed, spaces trimmed; unchanged for a name with a problem or an unknown spoof. */
+export function renameSpoof(team: Team, spoofId: string, name: string): Team {
+  if (spoofRenameProblem(team, spoofId, name) || !team.spoofs.some((s) => s.id === spoofId)) {
+    return team;
+  }
+  const trimmed = name.trim();
+  return {
+    ...team,
+    spoofs: team.spoofs.map((s) => (s.id === spoofId ? { ...s, name: trimmed } : s)),
+  };
+}
+
+/** The team with a spoof wearing a new mark (#109), any of the 16; unchanged for an unknown spoof or mark. */
+export function changeMark(team: Team, spoofId: string, mark: MarkName): Team {
+  if (!(markNames as readonly string[]).includes(mark)) return team;
+  if (!team.spoofs.some((s) => s.id === spoofId)) return team;
+  return { ...team, spoofs: team.spoofs.map((s) => (s.id === spoofId ? { ...s, mark } : s)) };
 }

@@ -1,6 +1,5 @@
 import { DUMMY_COLORS, kit } from '../design/kits';
 import { palette, type TeamColorName } from '../design/tokens';
-import type { Candidate } from '../game/combine';
 import { courtRadius } from '../game/court';
 import {
   DRILLER_ID,
@@ -14,6 +13,7 @@ import {
 } from '../game/drills';
 import type { ScrumFrame } from '../game/scrum';
 import { SECONDS_PER_FRAME } from '../game/spoof-motion';
+import type { Spoof } from '../game/teams';
 import type { ArenaView } from './arena-view';
 import { drawCourtOnly, drawSpoofInArena } from './arena';
 import { backingSize } from './canvas';
@@ -32,16 +32,27 @@ import { frameAt, startFrame } from './playback';
  * Only the candidate's name, its price and the timer show: no numbers about
  * its skills or how it did. Every run is a match simulation (`runDrill`),
  * played back by the combine's animation loop through `tick`.
+ *
+ * Since #109 it also scouts your own spoofs on their Pharm cards: with no
+ * price, and no Draft or Next buttons, which the combine alone passes.
  */
+
+/** Who's on the drill court: a combine candidate, with its price, or one of your spoofs (#109). */
+export interface DrillSubject {
+  readonly spoof: Spoof;
+  readonly price?: number;
+}
 
 export interface DrillCourtOptions {
   readonly teamColor: TeamColorName;
-  /** Draft or remove the candidate on the court. */
-  readonly onDraft: (id: string) => void;
-  /** Open the next candidate's drills. */
-  readonly onNext: (id: string) => void;
-  /** Back to the warm-ups. */
+  /** Draft or remove the candidate on the court: the combine's. Without it, no Draft button. */
+  readonly onDraft?: (id: string) => void;
+  /** Open the next candidate's drills: the combine's. Without it, no Next button. */
+  readonly onNext?: (id: string) => void;
+  /** Back to the warm-ups, or to the spoof's card. */
   readonly onBack: (id: string) => void;
+  /** The Back button's words: "Back to warm-ups" unless given. */
+  readonly backLabel?: string;
 }
 
 /** Whether the candidate on the court is on your team, and if not, why it can't be drafted. */
@@ -55,11 +66,11 @@ export interface DrillCourt {
   readonly element: HTMLElement;
   readonly heading: HTMLElement;
   /** Opens a candidate's drills, on its current tab. */
-  open(candidate: Candidate, index: number, state: DraftState): void;
+  open(subject: DrillSubject, index: number, state?: DraftState): void;
   /** Closes the court, stopping playback. */
   close(): void;
   /** Shows a change to the candidate's draft state, or a message. */
-  update(candidate: Candidate, state: DraftState, message?: string): void;
+  update(subject: DrillSubject, state?: DraftState, message?: string): void;
   /** The candidate on the court, or null when it's closed. */
   readonly current: () => string | null;
   /** Moves playback on by this many seconds of real time, and draws. */
@@ -110,7 +121,7 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
 
   const element = el('section', 'drill-court');
   element.hidden = true;
-  const back = el('button', 'drill-back', 'Back to warm-ups');
+  const back = el('button', 'drill-back', options.backLabel ?? 'Back to warm-ups');
   back.type = 'button';
   const heading = el('h2', 'drill-title');
   heading.tabIndex = -1;
@@ -190,9 +201,12 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
   const next = el('button', 'button', 'Next candidate');
   next.type = 'button';
   actions.append(draft, next);
+  draft.hidden = onDraft === undefined;
+  next.hidden = onNext === undefined;
+  actions.hidden = onDraft === undefined && onNext === undefined;
   element.append(back, heading, tabList, panel, status, actions);
 
-  let candidate: Candidate | null = null;
+  let candidate: DrillSubject | null = null;
   let index = 0;
   let drill: DrillName = 'sprint';
   let runs = 0;
@@ -251,10 +265,10 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     if (candidate) onBack(candidate.spoof.id);
   });
   draft.addEventListener('click', () => {
-    if (candidate) onDraft(candidate.spoof.id);
+    if (candidate) onDraft?.(candidate.spoof.id);
   });
   next.addEventListener('click', () => {
-    if (candidate) onNext(candidate.spoof.id);
+    if (candidate) onNext?.(candidate.spoof.id);
   });
 
   function simulatedSeconds(): number {
@@ -355,14 +369,20 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
     draw();
   }
 
-  function update(c: Candidate, state: DraftState, message?: string): void {
+  function update(c: DrillSubject, state?: DraftState, message?: string): void {
     candidate = c;
     name.textContent = c.spoof.name;
-    priceText.textContent = `🪙 ${String(c.price)}`;
-    priceSpoken.textContent = `, ${coins(c.price)}`;
-    draft.textContent = state.picked ? 'Remove from team' : 'Draft this spoof';
-    draft.setAttribute('aria-disabled', String(!state.picked && state.problem !== null));
+    // Your own spoofs have no price (#109): only the combine's candidates do.
+    price.hidden = c.price === undefined;
+    priceText.textContent = c.price === undefined ? '' : `🪙 ${String(c.price)}`;
+    priceSpoken.textContent = c.price === undefined ? '' : `, ${coins(c.price)}`;
+    if (state) {
+      draft.textContent = state.picked ? 'Remove from team' : 'Draft this spoof';
+      draft.setAttribute('aria-disabled', String(!state.picked && state.problem !== null));
+    }
     if (message !== undefined) status.textContent = message;
+    // A new mark shows at once, even on a drill that's done (#120 review).
+    draw();
   }
 
   return {
