@@ -228,3 +228,19 @@ export function draftProspect(
   const spoofs = team.spoofs.map((s, i) => (i === index ? prospect : s));
   return { ok: true, team: { ...team, spoofs }, roster: { ...roster, prospects: [] } };
 }
+
+/**
+ * The team with one spoof moved to `toIndex` (#108), the others keeping
+ * their order: the roster's order is the bench order in the next match, seat
+ * 1 first. The team unchanged for an unknown spoof, or an index off the end.
+ */
+export function moveSpoof(team: Team, spoofId: string, toIndex: number): Team {
+  const from = team.spoofs.findIndex((s) => s.id === spoofId);
+  const moving = team.spoofs[from];
+  if (!moving || !Number.isInteger(toIndex) || toIndex < 0 || toIndex >= team.spoofs.length) {
+    return team;
+  }
+  if (from === toIndex) return team;
+  const others = team.spoofs.filter((s) => s.id !== spoofId);
+  return { ...team, spoofs: [...others.slice(0, toIndex), moving, ...others.slice(toIndex)] };
+}

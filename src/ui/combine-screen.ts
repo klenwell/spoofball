@@ -1,7 +1,5 @@
 import { kit, type Kit } from '../design/kits';
-import { palette } from '../design/tokens';
 import { DRAFT_BUDGET, type Candidate } from '../game/combine';
-import { courtRadius } from '../game/court';
 import {
   budgetLeft,
   chooseMark,
@@ -16,17 +14,21 @@ import {
   type RenameProblem,
 } from '../game/draft';
 import { markNames, shownType, type MarkName } from '../game/spoof-types';
-import { FRAMES_PER_SCRUM, SCRUM_SECONDS } from '../game/spoof-motion';
 import { MAX_SPOOF_NAME_LENGTH, SPOOFS_PER_TEAM, type Team } from '../game/teams';
-import { WARM_UP_CELL, startWarmUp, stepWarmUp, warmUpSeed, type WarmUp } from '../game/warm-up';
+import { startWarmUp, stepWarmUp, warmUpSeed, type WarmUp } from '../game/warm-up';
 import { STORAGE_PROBLEM_TEXT, type SaveResult } from '../storage/saved-team';
 import type { Panel } from './app-shell';
-import { backingSize } from './canvas';
 import { el } from './dom';
 import { createDrillCourt, type DraftState } from './drill-court';
 import { replaceDialog } from './replace-dialog';
 import { NEW_TEAM_HASH } from './routes';
 import { drawSpoofDisc } from './spoof-disc';
+import {
+  WARM_UP_FRAMES_PER_SECOND,
+  WARM_UP_MAX_CATCH_UP,
+  drawWarmUpCell,
+  sizeCanvas,
+} from './warm-up-cell';
 
 /**
  * The combine (#72, wireframe 2 in docs/design.md): the pool's 10 candidates,
@@ -57,9 +59,9 @@ export interface CombineOptions {
 }
 
 /** Warm-ups run at the match's own frame rate. */
-const FRAMES_PER_SECOND = FRAMES_PER_SCRUM / SCRUM_SECONDS;
+const FRAMES_PER_SECOND = WARM_UP_FRAMES_PER_SECOND;
 /** At most this many frames are caught up in one draw, after a stall. */
-const MAX_CATCH_UP = 4;
+const MAX_CATCH_UP = WARM_UP_MAX_CATCH_UP;
 /** At most this much real time moves a drill on in one draw, after a stall. */
 const MAX_DRILL_STEP = 0.1;
 
@@ -81,17 +83,6 @@ function coins(price: number): string {
 }
 
 /** A canvas sized to `css` pixels square, drawn at the screen's pixel ratio. */
-function sizeCanvas(canvas: HTMLCanvasElement, css: number): CanvasRenderingContext2D | null {
-  const size = backingSize(css, css, window.devicePixelRatio);
-  if (canvas.width !== size.width) canvas.width = size.width;
-  if (canvas.height !== size.height) canvas.height = size.height;
-  canvas.style.width = `${String(css)}px`;
-  canvas.style.height = `${String(css)}px`;
-  const ctx = canvas.getContext('2d');
-  ctx?.setTransform(size.scale, 0, 0, size.scale, 0, 0);
-  return ctx;
-}
-
 /** What each mark is called, for screen readers and the picker (#74). */
 const MARK_LABELS: Readonly<Record<MarkName, string>> = {
   crown: 'crown',
@@ -525,27 +516,9 @@ export function createCombineScreen(options: CombineOptions): Panel {
     const cell = cells[index];
     const warmUp = warmUps[index];
     if (!cell?.ctx || !warmUp || cell.size === 0) return;
-    const { ctx, size } = cell;
-    const scale = size / (2 * courtRadius(WARM_UP_CELL) + 4);
-    ctx.clearRect(0, 0, size, size);
-    ctx.save();
-    ctx.translate(size / 2, size / 2);
-    ctx.beginPath();
-    ctx.arc(0, 0, courtRadius(WARM_UP_CELL) * scale, 0, Math.PI * 2);
-    ctx.fillStyle = palette.mosh;
-    ctx.fill();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = palette.courtEdge;
-    ctx.stroke();
-    ctx.restore();
-    drawSpoofDisc(ctx, {
-      x: size / 2 + warmUp.position.x * scale,
-      y: size / 2 + warmUp.position.y * scale,
-      radius: warmUp.spoof.radius * scale,
-      // A mark you chose shows at once: the pool has it, the warm-up doesn't.
-      mark: candidate(cell.id)?.spoof.mark ?? warmUp.spoof.mark,
-      kit: teamKit,
-    });
+    // A mark you chose shows at once: the pool has it, the warm-up doesn't.
+    const mark = candidate(cell.id)?.spoof.mark ?? warmUp.spoof.mark;
+    drawWarmUpCell(cell.ctx, cell.size, warmUp, mark, teamKit);
   }
 
   function frame(now: number): void {

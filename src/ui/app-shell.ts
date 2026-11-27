@@ -6,7 +6,9 @@ import type { Team } from '../game/teams';
 import {
   STORAGE_PROBLEM_TEXT,
   browserStorage,
+  hasMatchInProgress,
   loadDraft,
+  loadRoster,
   loadStats,
   loadTeam,
   recordForfeit,
@@ -15,11 +17,13 @@ import {
   saveMatchInProgress,
   saveTeam,
   type KeyValueStore,
+  type SaveResult,
 } from '../storage/saved-team';
 import { createCombineScreen } from './combine-screen';
 import { el, newSeed, timeOfDay, today } from './dom';
 import { createMatchScreen, type MatchRecorder } from './match-screen';
 import { createNewTeamScreen } from './new-team-screen';
+import { createPharmScreen } from './pharm-screen';
 import { COMBINE_HASH, START_HASH, hashForRoute, routeFromHash, type Route } from './routes';
 import { createSplashScreen } from './splash-screen';
 import { createStatsScreen } from './stats-screen';
@@ -111,10 +115,20 @@ function matchRecorder(store: KeyValueStore | null): MatchRecorder {
 function panelBuilders(
   store: KeyValueStore | null,
   isSaved: (team: Team) => boolean,
+  onReorder: (team: Team) => SaveResult,
 ): Partial<Record<TabId, (team: Team) => Panel>> {
   return {
     match: (team) =>
       createMatchScreen(team, opponentsFor(team), isSaved(team) ? matchRecorder(store) : undefined),
+    pharm: (team) =>
+      createPharmScreen({
+        team,
+        isSaved: isSaved(team),
+        loadStats: () => loadStats(store),
+        loadRoster: () => loadRoster(store),
+        matchInProgress: () => hasMatchInProgress(store),
+        onReorder,
+      }),
     stats: (team) =>
       createStatsScreen({ team, isSaved: isSaved(team), loadStats: () => loadStats(store) }),
   };
@@ -187,7 +201,24 @@ export function mountAppShell(root: HTMLElement): void {
 
   root.replaceChildren(header, screen, footer());
 
-  const builders = panelBuilders(store, (t) => t === savedTeam);
+  const builders = panelBuilders(store, (t) => t === savedTeam, reorder);
+
+  /**
+   * Saves the team in a new order from the Pharm (#108) and puts it in play:
+   * the order is the bench order in the next match. Match and Stats are built
+   * afresh for it; the Pharm, on screen, keeps its own.
+   */
+  function reorder(next: Team): SaveResult {
+    const saved = saveTeam(store, next);
+    if (!saved.ok) return saved;
+    savedTeam = next;
+    team = next;
+    for (const id of ['match', 'stats'] as const) {
+      builtPanels.get(id)?.dispose?.();
+      builtPanels.delete(id);
+    }
+    return saved;
+  }
 
   function tabPanel(id: TabId, forTeam: Team): Panel | undefined {
     const build = builders[id];

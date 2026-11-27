@@ -12,6 +12,7 @@ import {
   STORAGE_KEY,
   STORAGE_PROBLEM_TEXT,
   browserStorage,
+  hasMatchInProgress,
   loadDraft,
   loadRoster,
   loadStats,
@@ -904,6 +905,24 @@ describe('a match in progress (#90)', () => {
       store.items.set(STORAGE_KEY, JSON.stringify(record));
 
       expect(recordForfeit(store)).toEqual({ ok: false, problem: 'unreadable' });
+    });
+  });
+
+  describe('hasMatchInProgress (#108)', () => {
+    it('is true from the first scrum until the match ends', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      expect(hasMatchInProgress(store)).toBe(false);
+
+      saveMatchInProgress(store, SO_FAR, DAY);
+      expect(hasMatchInProgress(store)).toBe(true);
+
+      recordMatch(store, FINISHED, DAY);
+      expect(hasMatchInProgress(store)).toBe(false);
+    });
+
+    it('is false without storage', () => {
+      expect(hasMatchInProgress(null)).toBe(false);
     });
   });
 
