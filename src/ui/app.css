@@ -1388,7 +1388,8 @@ a.button {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .drill-court {
+  /* Only beside the combine's warm-ups: on a spoof's card (#109) it scrolls with the page. */
+  .combine .drill-court {
     position: sticky;
     top: var(--space-4);
   }
