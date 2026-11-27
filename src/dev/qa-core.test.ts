@@ -55,6 +55,19 @@ describe('simUntil', () => {
     }
   });
 
+  it('counts the matches it played: every one before the last ended otherwise', () => {
+    // A win against the strongest team takes a few tries.
+    const played = simUntil(SPOOFS, STRONGEST, 'won', 100);
+    if (!played.ok) throw new Error(played.message);
+    const { record, tries } = played.value;
+
+    expect(tries).toBeGreaterThan(1);
+    expect(record).toEqual(matchRecord(computerMatch(SPOOFS, STRONGEST, 100 + tries - 1)));
+    for (let seed = 100; seed < 100 + tries - 1; seed += 1) {
+      expect(matchRecord(computerMatch(SPOOFS, STRONGEST, seed)).result).not.toBe('won');
+    }
+  });
+
   it('takes the first match when no result is asked for', () => {
     const played = simUntil(SPOOFS, STRONGEST, undefined, 100);
     expect(played.ok && played.value.tries).toBe(1);
@@ -86,7 +99,7 @@ describe('matchLine', () => {
 });
 
 describe('quickDraft', () => {
-  it('drafts a sound team of 5 within the budget, the same for the same seed', () => {
+  it('drafts a sound team of 5 within the budget', () => {
     for (let seed = 1; seed <= 40; seed += 1) {
       const team = quickDraft(seed);
       expect(teamProblems(team)).toEqual([]);
@@ -99,8 +112,16 @@ describe('quickDraft', () => {
       );
       expect(spent).toBeLessThanOrEqual(DRAFT_BUDGET);
     }
+  });
+
+  it('drafts the same team for the same seed', () => {
     expect(quickDraft(7)).toEqual(quickDraft(7));
+    expect(quickDraft(7)).not.toEqual(quickDraft(8));
+  });
+
+  it('names it "QA Team" unless given a name', () => {
     expect(quickDraft(7).name).toBe('QA Team');
+    expect(quickDraft(7, 'Owls').name).toBe('Owls');
   });
 });
 

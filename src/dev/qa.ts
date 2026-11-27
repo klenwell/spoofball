@@ -75,17 +75,24 @@ function sim(result: Outcome | undefined, n: number, opponent?: string): string 
   const team = savedTeam(store);
   if (!team) return 'No saved team.';
   const lines: string[] = [];
+  // A run that stops partway still reloads, saying what it recorded first,
+  // so the open screens aren't left out of date (#118 review).
+  const stop = (message: string): string =>
+    lines.length === 0
+      ? say(message)
+      : reloadOn(hashFor('stats'), `Recorded ${lines.join('; ')}; then: ${message}`);
   let seed = newSeed();
   for (let i = 0; i < n; i += 1) {
     const found = findOpponent(opponent, createRandom(seed));
     if (!found.ok) return say(found.message);
     const played = simUntil(team, found.value, result, seed);
-    if (!played.ok) return say(played.message);
+    if (!played.ok) return stop(played.message);
     const now = new Date();
     const saved = recordMatch(store, played.value.record, today(now), { time: timeOfDay(now) });
-    if (!saved.ok) return say(`The match couldn't be recorded: ${saved.problem}.`);
+    if (!saved.ok) return stop(`The match couldn't be recorded: ${saved.problem}.`);
     lines.push(matchLine(played.value.record));
-    seed += played.value.tries + 1;
+    // The next search starts after every seed this one tried.
+    seed += played.value.tries;
   }
   return reloadOn(hashFor('stats'), `Recorded ${lines.join('; ')}.`);
 }
