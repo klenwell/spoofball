@@ -381,6 +381,8 @@ export function createDrillCourt(options: DrillCourtOptions): DrillCourt {
       draft.setAttribute('aria-disabled', String(!state.picked && state.problem !== null));
     }
     if (message !== undefined) status.textContent = message;
+    // A new mark shows at once, even on a drill that's done (#120 review).
+    draw();
   }
 
   return {

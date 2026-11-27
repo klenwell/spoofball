@@ -111,8 +111,9 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
   /** A spoof's card (#109), or the roster when the spoof isn't on the team, such as one replaced. */
   function renderCard(spoofId: string): void {
     if (!isSaved || !team.spoofs.some((s) => s.id === spoofId)) {
-      window.history.replaceState(null, '', hashFor('pharm'));
-      render();
+      // A real navigation, without a history entry: the shell routes to the
+      // roster, with the tab's intro back (#120 review).
+      window.location.replace(hashFor('pharm'));
       return;
     }
     const stats = loadStats();
@@ -307,12 +308,13 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
 
   function frame(now: number): void {
     if (!running) return;
-    const elapsedSeconds = Math.min(Math.max(0, (now - last) / 1000), MAX_DRILL_STEP);
+    const elapsedSeconds = Math.max(0, (now - last) / 1000);
     owed += elapsedSeconds * WARM_UP_FRAMES_PER_SECOND;
     last = now;
     const steps = Math.min(Math.floor(owed), WARM_UP_MAX_CATCH_UP);
     owed = Math.min(owed - steps, 1);
-    if (card) card.tick(elapsedSeconds, steps);
+    // Only the drills are clamped after a stall, as in the combine; warm-ups catch up.
+    if (card) card.tick(Math.min(elapsedSeconds, MAX_DRILL_STEP), steps);
     else if (steps > 0) {
       for (const [id, warmUp] of warmUps) {
         let next = warmUp;

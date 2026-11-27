@@ -173,6 +173,8 @@ export function createSpoofCard(options: SpoofCardOptions): SpoofCard {
     for (const { mark, option } of markButtons) {
       option.setAttribute('aria-pressed', String(current.mark === mark));
     }
+    // With the drills open below, they show the new name and mark too (#120 review).
+    if (drills.current() !== null) drills.update({ spoof: current });
     draw();
   }
 
@@ -199,13 +201,16 @@ export function createSpoofCard(options: SpoofCardOptions): SpoofCard {
     }
     nameError.hidden = true;
     input.removeAttribute('aria-invalid');
+    // The name it already has: nothing to save, so nothing is rebuilt (#120 review).
+    if (input.value.trim() === spoof()?.name) {
+      input.value = input.value.trim();
+      return;
+    }
     const next = renameSpoof(team, spoofId, input.value);
     if (save(next, `Renamed ${input.value.trim()}.`)) input.value = input.value.trim();
   }
+  // Enter fires `change` in a text field, as leaving it does.
   input.addEventListener('change', rename);
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') rename();
-  });
 
   function choose(mark: MarkName, option: HTMLButtonElement): void {
     save(changeMark(team, spoofId, mark), `Mark: ${MARK_LABELS[mark]}.`);
