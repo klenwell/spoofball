@@ -38,7 +38,7 @@ export const tabs: readonly Tab[] = [
     label: 'Pharm',
     title: 'Pharm',
     coming:
-      'Manage your roster: scout your spoofs, replace one with a draft pick, or re-draft the team. Coming in v0.4.0.',
+      'New in v0.4.0: your roster and your draft picks. Drag a spoof by its handle, or use its arrows, to set your bench order for the next match.',
   },
   {
     id: 'stats',

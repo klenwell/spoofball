@@ -12,6 +12,8 @@ import {
   pointsPerMatchText,
   recordText,
   pctText,
+  draftPicksText,
+  rosterOutcomeText,
   playedText,
   recordedText,
   scoreText,
@@ -249,5 +251,39 @@ describe('playedText', () => {
 
   it('gives the day alone for a match logged before times were saved', () => {
     expect(playedText('2026-11-25')).toBe('Nov 25');
+  });
+});
+
+describe('rosterOutcomeText', () => {
+  const totals = { matches: 6, scrums: 12, points: 70, plusMinus: 23, behavior: emptyStats() };
+
+  it('gives matches and points per scrum, after the wireframe', () => {
+    expect(rosterOutcomeText(totals)).toBe('6 matches · 5.8 pts/scrum');
+    expect(rosterOutcomeText({ ...totals, matches: 1, scrums: 2, points: 8 })).toBe(
+      '1 match · 4.0 pts/scrum',
+    );
+  });
+
+  it('says there are none yet before the spoof plays', () => {
+    expect(rosterOutcomeText(undefined)).toBe('No matches yet');
+  });
+});
+
+describe('draftPicksText', () => {
+  it('fills a mark for each pick held, out of 3', () => {
+    expect(draftPicksText(0, 3)).toEqual({
+      marks: '○ ○ ○',
+      label: 'Draft picks: 0 of 3',
+      note: 'draft at 3',
+    });
+    expect(draftPicksText(2, 3).marks).toBe('● ● ○');
+  });
+
+  it('says you can draft at 3', () => {
+    expect(draftPicksText(3, 3)).toEqual({
+      marks: '● ● ●',
+      label: 'Draft picks: 3 of 3',
+      note: 'ready to draft',
+    });
   });
 });

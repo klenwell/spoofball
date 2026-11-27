@@ -8,6 +8,7 @@ import {
   draftProspect,
   drawProspect,
   drawProspectTotal,
+  moveSpoof,
   prospectRange,
   prospectTypes,
   teamSkillTotal,
@@ -320,5 +321,22 @@ describe('draftProspect', () => {
     // The team has a queen (t1): a king for a pawn would make 2 royals.
     expect(draftProspect(MIXED, roster, 'x1', 't4')).toEqual({ ok: false, problem: 'type-limit' });
     expect(draftProspect(MIXED, roster, 'x1', 't1').ok).toBe(true);
+  });
+});
+
+describe('moveSpoof', () => {
+  const ids = (team: Team) => team.spoofs.map((s) => s.id);
+
+  it('moves a spoof to a new place, the others keeping their order (#108)', () => {
+    expect(ids(moveSpoof(MIXED, 't4', 0))).toEqual(['t4', 't1', 't2', 't3', 't5']);
+    expect(ids(moveSpoof(MIXED, 't1', 4))).toEqual(['t2', 't3', 't4', 't5', 't1']);
+    expect(ids(moveSpoof(MIXED, 't2', 3))).toEqual(['t1', 't3', 't4', 't2', 't5']);
+  });
+
+  it('keeps the team as it is for an unknown spoof or a place off the end', () => {
+    expect(moveSpoof(MIXED, 't9', 0)).toBe(MIXED);
+    expect(moveSpoof(MIXED, 't1', -1)).toBe(MIXED);
+    expect(moveSpoof(MIXED, 't1', 5)).toBe(MIXED);
+    expect(moveSpoof(MIXED, 't1', 0)).toBe(MIXED);
   });
 });

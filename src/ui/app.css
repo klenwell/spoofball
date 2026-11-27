@@ -1785,3 +1785,162 @@ a.button {
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
+
+/*
+ * The Pharm's roster (#108, wireframe 1): the team and its record, the draft
+ * picks, and a row for each spoof, moving in its cell. Rows reorder by a
+ * drag handle, or by their arrows.
+ */
+.pharm-header {
+  margin-bottom: var(--space-3);
+}
+
+.pharm-team-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-lg);
+}
+
+.pharm-record {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.pharm-picks {
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.pharm-picks-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.pharm-picks-title {
+  font-weight: 700;
+}
+
+/* Filled for each pick held: the accent, 3:1 or more as a graphic. */
+.pharm-picks-marks {
+  color: var(--color-accent-text);
+  font-size: var(--text-lg);
+  letter-spacing: 0.1em;
+}
+
+.pharm-picks-note,
+.pharm-picks-help {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.pharm-picks-help {
+  margin: var(--space-1) 0 0;
+}
+
+.roster-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roster-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* While dragged, the row lifts off the list. */
+.roster-row.is-dragging {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+
+/*
+ * The drag handle takes the pointer, so a drag that starts on it doesn't
+ * scroll the page; the rest of the row scrolls as usual on a phone.
+ */
+.roster-handle {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 2.75rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.roster-handle[hidden] {
+  display: none;
+}
+
+.roster-row.is-dragging .roster-handle {
+  cursor: grabbing;
+}
+
+.roster-cell {
+  display: block;
+}
+
+.roster-who {
+  display: grid;
+  min-width: 0;
+}
+
+.roster-who .spoof-name {
+  overflow-wrap: anywhere;
+}
+
+.roster-outcomes {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.roster-moves {
+  display: grid;
+  gap: 2px;
+}
+
+.roster-move {
+  width: 2rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.roster-move:disabled {
+  color: var(--color-line);
+  cursor: default;
+}
+
+.pharm-note,
+.pharm-message {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.pharm-message:empty {
+  display: none;
+}

@@ -434,6 +434,15 @@ export function saveMatchInProgress(
 }
 
 /**
+ * Whether a match is in progress (#90): saved once its first scrum starts,
+ * until it ends. The roster's order can't change then (#108).
+ */
+export function hasMatchInProgress(store: KeyValueStore | null): boolean {
+  const data = store ? savedData(store) : null;
+  return data?.inProgress !== undefined;
+}
+
+/**
  * Records a match left unfinished as a forfeit (#90), and clears it: called
  * as the game loads. Null when there's no match in progress. One that can't
  * be read, or isn't the saved team's, is left in place.

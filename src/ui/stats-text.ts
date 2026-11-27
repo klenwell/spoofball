@@ -174,3 +174,29 @@ export function playedText(date: string, time?: string): string {
   const hour = hours % 12 === 0 ? 12 : hours % 12;
   return `${shownDay}, ${String(hour)}:${String(minutes).padStart(2, '0')} ${hours < 12 ? 'am' : 'pm'}`;
 }
+
+/** A spoof's outcomes on its roster row (#108), after the wireframe: "6 matches · 5.8 pts/scrum". */
+export function rosterOutcomeText(totals: SpoofTotals | undefined): string {
+  // Totals exist only for a spoof that has played.
+  if (!totals) return 'No matches yet';
+  const matches = `${String(totals.matches)} ${totals.matches === 1 ? 'match' : 'matches'}`;
+  return `${matches} · ${spoofLineText(totals).pointsPerScrum} pts/scrum`;
+}
+
+/** The draft picks held (#108): a mark for each of the 3, filled for each held, and what they mean. */
+export function draftPicksText(
+  held: number,
+  most: number,
+): {
+  readonly marks: string;
+  readonly label: string;
+  readonly note: string;
+} {
+  // A roster holds 0 to 3 prospects: `rosterProblems` refuses any other.
+  const filled = held;
+  return {
+    marks: `${'●'.repeat(filled)}${'○'.repeat(most - filled)}`.split('').join(' '),
+    label: `Draft picks: ${String(filled)} of ${String(most)}`,
+    note: filled >= most ? 'ready to draft' : `draft at ${String(most)}`,
+  };
+}
