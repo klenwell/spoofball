@@ -13,6 +13,7 @@ import {
   type SpoofTotals,
   type TeamStats,
 } from '../game/stats';
+import { afterMatch } from '../game/pharm';
 import { emptyRoster, rosterProblems, type Roster } from '../game/roster';
 import { drawSpoofName } from '../game/spoof-names';
 import { createSpoof, teamProblems, type Spoof, type Team } from '../game/teams';
@@ -450,7 +451,8 @@ export function recordForfeit(store: KeyValueStore | null): RecordResult | null 
 
 /**
  * Adds a match to the saved stats and writes them, without a match in
- * progress: the match it was is now recorded.
+ * progress: the match it was is now recorded. A loss also brings the team a
+ * prospect (#107), saved in the same write.
  */
 function addToStats(
   store: KeyValueStore | null,
@@ -475,6 +477,14 @@ function addToStats(
   if (draft) saved.draft = savedDraft(draft);
   // The match it was is now recorded, so the match in progress goes.
   keepTeamParts(savedData(store), saved, ['stats', 'inProgress']);
+  // A loss brings a prospect (#107), in the same write as the stats. A roster
+  // that can't be read is left as it was.
+  const roster = loadRoster(store);
+  if (roster.ok) {
+    saved.roster = savedRoster(
+      afterMatch(roster.roster, loaded.team, forfeit ? 'forfeited' : record.result),
+    );
+  }
   const written = write(store, saved);
   return written.ok ? { ok: true, stats } : written;
 }
