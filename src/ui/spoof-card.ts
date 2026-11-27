@@ -12,14 +12,14 @@ import { startWarmUp, stepWarmUp, warmUpSeed, type WarmUp } from '../game/warm-u
 import { STORAGE_PROBLEM_TEXT, type SaveResult } from '../storage/saved-team';
 import { el, newSeed } from './dom';
 import { createDrillCourt } from './drill-court';
-import { MARK_LABELS, markDisc, shownTypeName } from './spoof-label';
+import { MARK_LABELS, markDisc, spoofLabel } from './spoof-label';
 import { spoofLineText } from './stats-text';
 import { hashFor } from './tabs';
 import { drawWarmUpCell, sizeCanvas } from './warm-up-cell';
 
 /**
  * A spoof's card on the Pharm tab (#109, wireframe 2), at `#/pharm/<id>`:
- * the spoof warming up, its type and outcomes, and from here, scouting it
+ * the spoof warming up, its name and outcomes, and from here, scouting it
  * with the combine's drills, renaming it and changing its mark. Outcomes
  * only (Decision 7): no skills, comps, subtypes or prices.
  *
@@ -75,11 +75,13 @@ export function createSpoofCard(options: SpoofCardOptions): SpoofCard {
   canvas.setAttribute('aria-hidden', 'true');
   const ctx = sizeCanvas(canvas, CELL_SIZE);
   let warmUp: WarmUp = startWarmUp(first, warmUpSeed(newSeed(), 0));
-  const heading = el('h2', 'card-name', first.name);
+  const heading = el('h2', 'card-name');
   heading.tabIndex = -1;
-  const typeLine = el('p', 'card-type', shownTypeName(first.type));
   const who = el('div', 'card-who');
-  who.append(heading, typeLine);
+  // No type on show (the owner, QA review on #109): the mark is the only thing
+  // that identifies a spoof, and you can change it. Screen readers still hear
+  // it after the name, as everywhere a spoof is named.
+  who.append(heading);
   top.append(canvas, who);
 
   // --- Its outcomes, as on the Stats tab.
@@ -167,7 +169,7 @@ export function createSpoofCard(options: SpoofCardOptions): SpoofCard {
   function show(): void {
     const current = spoof();
     if (!current) return;
-    heading.textContent = current.name;
+    heading.replaceChildren(spoofLabel(current));
     for (const { mark, option } of markButtons) {
       option.setAttribute('aria-pressed', String(current.mark === mark));
     }

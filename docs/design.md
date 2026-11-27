@@ -248,7 +248,7 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
   - **Not during a match:** from the first scrum until the match ends, the order is locked, and the roster says why.
   - The quick start's Spoofs see a note that the Pharm is for a team you create.
 - **The spoof card** (#109, wireframe 2), at `#/pharm/<spoof id>`: tap a spoof's row or name on the roster, or its line on the Stats tab. Back, Forward and reload behave as on any website. **‹ Roster** goes back.
-  - It shows the spoof warming up in a larger cell, its name and type's shown name (pawns all look alike), and 4 tiles: matches, scrums, points per scrum and +/− per scrum.
+  - It shows the spoof warming up in a larger cell, its name, and 4 tiles: matches, scrums, points per scrum and +/− per scrum. **No type on show** (the owner, QA review on #109): the mark is the only thing that identifies a spoof, and you can change it. Screen readers still hear the type after its name, as everywhere a spoof is named.
   - **Scout: run drills** opens the combine's drill court for it: the same 4 drills, captions and timer, with no price and no Draft or Next.
   - **Name and mark,** with the draft's rules: 1 to 16 characters, and no teammate with that name, ignoring case; any of the 16 marks, even a teammate's. Each change is saved at once, and the spoof keeps its stats. Not during a match: from the first scrum until it ends, they're locked, and the card says why. Scouting still works.
 - **Re-drafting** runs a full combine (10 candidates since #72). It keeps the team's name, color, logo and join date (the owner, #105), but **resets its record, stats and prospects, after a clear warning.**

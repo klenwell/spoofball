@@ -1998,11 +1998,6 @@ a.button {
   font-size: var(--text-xl);
 }
 
-.card-type {
-  margin: 0;
-  color: var(--color-text-muted);
-}
-
 .card-scout {
   margin-top: var(--space-4);
 }
