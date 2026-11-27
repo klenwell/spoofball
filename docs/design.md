@@ -232,12 +232,12 @@ The owner settled these while reviewing the wireframes on #20. Each epic still r
 
 ### Pharm
 
-- **Replacing a spoof costs a draft pick,** as in the prototype (`models/team.py`).
-  - A team starts with 3 picks and can hold at most 3. It gets one back after each loss.
-  - Replacing happens between matches. You choose from **3 prospects**, scouted with the same warm-ups and drills, and prospects you pass on stay for next time.
-  - Keep the prototype's balance rules: a prospect's skill total is based on your weakest spoof, and a team holds at most 1 royal (king or queen) and 2 of each face type (rook, bishop, knight).
-- **Re-drafting** runs a full combine (10 candidates since #72). It keeps the team's name, color and logo, but **resets its record and stats, after a clear warning.**
-- **What's saved** (#106, save version 6): beside the team and its stats, its Pharm (`Roster` in `src/game/roster.ts`): draft picks held (0–3), losses toward the next pick (0–2), and up to 3 prospects, oldest first, saved as spoofs are. A seed and a count of prospects drawn let #107 draw each new prospect the same way every time. Each spoof's totals also keep the name and mark it had in its latest match, so a spoof that leaves the team can still be shown (#100). A new team starts with none of it; a version 5 team loads with 0 picks, no progress and no prospects, its stats kept.
+- **A draft pick is a prospect** (the owner, 2026-11-27, on #105 and #106), which replaces the prototype's picks (`models/team.py`: start with 3, one back after each loss).
+  - A team starts with none. Each loss (not a forfeit) brings one new prospect, up to 3, which you can scout at once. At 3, another loss replaces the oldest.
+  - **You draft only with 3,** between matches: one of the 3 replaces a spoof, and the slate is cleaned. The others go, and the team is back to 0.
+  - **Prospects come from the team's level** (the owner, #105): mostly between its weakest and strongest spoof by raw skill total, rarely (3–5%) outside, under a hard ceiling on the team's total. A team holds at most 1 royal (king or queen) and 2 of each face type (rook, bishop, knight), as in the prototype. The rules are #107's.
+- **Re-drafting** runs a full combine (10 candidates since #72). It keeps the team's name, color, logo and join date (the owner, #105), but **resets its record, stats and prospects, after a clear warning.**
+- **What's saved** (#106, save version 6): beside the team and its stats, its Pharm (`Roster` in `src/game/roster.ts`): up to 3 prospects, oldest first, saved as spoofs are. Their number is the team's draft picks, so there's no separate count. A seed and a count of prospects drawn let #107 draw each new prospect the same way every time. Each spoof's totals also keep the name and mark it had in its latest match, so a spoof that leaves the team can still be shown (#100). A new team starts with none of it; a version 5 team loads with no prospects, its stats kept.
 
 ### Stats
 

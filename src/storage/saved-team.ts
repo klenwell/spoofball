@@ -54,11 +54,10 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
  *   Since #90 it can also hold the match in progress: the scrums played so
  *   far, recorded as a forfeit if the game loads with it still there. Older
  *   version 5 code ignores it, so the version stays 5.
- * - 6 (#106): the team's Pharm (`Roster`): its draft picks, its losses toward
- *   the next one, and its prospects. Each spoof's totals also keep the name
+ * - 6 (#106): the team's Pharm (`Roster`): its prospects, which are its
+ *   draft picks (#105). Each spoof's totals also keep the name
  *   and mark it had in its latest match, for when it leaves the team (#100).
- *   A version 5 team loads with 0 picks, no progress and no prospects, its
- *   stats kept. The version changes because version 5 code, saving the team
+ *   A version 5 team loads with no prospects, so no picks, its stats kept. The version changes because version 5 code, saving the team
  *   again, would drop the roster.
  *
  * The skills are saved with the team. They stay hidden on screen, but anyone
@@ -206,8 +205,6 @@ function savedTeam(team: Team): SavedTeam {
 /** How a roster is saved: its prospects as spoofs are. */
 interface SavedRoster {
   seed: number;
-  picks: number;
-  lossesTowardPick: number;
   prospectsDrawn: number;
   prospects: SavedSpoof[];
 }
@@ -215,8 +212,6 @@ interface SavedRoster {
 function savedRoster(roster: Roster): SavedRoster {
   return {
     seed: roster.seed,
-    picks: roster.picks,
-    lossesTowardPick: roster.lossesTowardPick,
     prospectsDrawn: roster.prospectsDrawn,
     prospects: roster.prospects.map(savedSpoof),
   };
@@ -332,8 +327,8 @@ export type RosterResult =
   | { readonly ok: false; readonly problem: LoadProblem };
 
 /**
- * The saved team's Pharm (#106). A team saved before it has no picks, no
- * progress toward one and no prospects. With no team to load, the reason
+ * The saved team's Pharm (#106). A team saved before it has no prospects, so
+ * no draft picks. With no team to load, the reason
  * there's none. A roster that can't be read, or holds impossible values, is
  * left in place (`unreadable`).
  */
@@ -691,15 +686,8 @@ function statsFrom(data: unknown): TeamStats | null {
 /** A roster from saved data of the right shape, or null. `rosterProblems` checks its values. */
 function rosterFrom(data: unknown): Roster | null {
   if (!isObject(data) || !Array.isArray(data.prospects)) return null;
-  const { seed, picks, lossesTowardPick, prospectsDrawn } = data;
-  if (
-    typeof seed !== 'number' ||
-    typeof picks !== 'number' ||
-    typeof lossesTowardPick !== 'number' ||
-    typeof prospectsDrawn !== 'number'
-  ) {
-    return null;
-  }
+  const { seed, prospectsDrawn } = data;
+  if (typeof seed !== 'number' || typeof prospectsDrawn !== 'number') return null;
   const prospects: Spoof[] = [];
   for (const item of data.prospects as unknown[]) {
     // Prospects are new in version 6, so each has its name and mark.
@@ -708,7 +696,7 @@ function rosterFrom(data: unknown): Roster | null {
     if (!prospect) return null;
     prospects.push(prospect);
   }
-  return { seed, picks, lossesTowardPick, prospectsDrawn, prospects };
+  return { seed, prospectsDrawn, prospects };
 }
 
 /** A match in progress from saved data, or null when any part has the wrong shape. */

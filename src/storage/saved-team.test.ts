@@ -1048,13 +1048,11 @@ describe("the team's Pharm (#106)", () => {
     return matchRecord(match, { soFar: true });
   })();
 
-  /** A roster with a pick, progress toward the next, and 3 prospects. */
+  /** A roster holding 3 prospects, so 3 draft picks, the oldest drawn 2nd. */
   function aRoster(seed = 11): Roster {
     const names = ['Ada One', 'Bo Two', 'Cy Three'];
     return {
       seed,
-      picks: 1,
-      lossesTowardPick: 2,
       prospectsDrawn: 4,
       prospects: names.map((name, i) => ({
         ...generateSpoof(`x${String(i + 2)}`, 'knight', NEW_SPOOF_SKILL_TOTAL, createRandom(i + 1)),
@@ -1082,24 +1080,19 @@ describe("the team's Pharm (#106)", () => {
   };
 
   describe('a new team', () => {
-    it('starts with no picks, no progress and no prospects', () => {
+    it('starts with no prospects, so no draft picks', () => {
       const store = memoryStorage();
       saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
 
-      expect(rosterOf(store)).toMatchObject({
-        picks: 0,
-        lossesTowardPick: 0,
-        prospectsDrawn: 0,
-        prospects: [],
-      });
+      expect(rosterOf(store)).toMatchObject({ prospectsDrawn: 0, prospects: [] });
     });
 
-    it('starts fresh, replacing the old team’s picks and prospects', () => {
+    it('starts fresh, replacing the old team’s prospects', () => {
       const store = storeWithRoster();
 
       saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: DAY });
 
-      expect(rosterOf(store)).toMatchObject({ picks: 0, lossesTowardPick: 0, prospects: [] });
+      expect(rosterOf(store)).toMatchObject({ prospectsDrawn: 0, prospects: [] });
     });
   });
 
@@ -1133,7 +1126,9 @@ describe("the team's Pharm (#106)", () => {
       const store = storeWithRoster();
       const before = store.items.get(STORAGE_KEY);
 
-      const result = saveRoster(store, { ...aRoster(), picks: 4 });
+      const [first] = aRoster().prospects;
+      if (!first) throw new Error('no prospect');
+      const result = saveRoster(store, { ...aRoster(), prospects: [first, first] });
 
       expect(result).toMatchObject({ ok: false, problem: 'invalid' });
       expect(store.items.get(STORAGE_KEY)).toBe(before);
@@ -1208,10 +1203,10 @@ describe("the team's Pharm (#106)", () => {
       return store;
     }
 
-    it('loads with no picks, no progress and no prospects, its stats kept', () => {
+    it('loads with no prospects, so no picks, its stats kept', () => {
       const store = version5Store();
 
-      expect(rosterOf(store)).toMatchObject({ picks: 0, lossesTowardPick: 0, prospects: [] });
+      expect(rosterOf(store)).toMatchObject({ prospectsDrawn: 0, prospects: [] });
       const stats = loadStats(store);
       expect(stats.ok && stats.stats.log).toHaveLength(1);
     });
@@ -1254,9 +1249,9 @@ describe("the team's Pharm (#106)", () => {
 
     it.each([
       ['the wrong shape', (r: Record<string, unknown>) => (r.prospects = 'none')],
-      ['a missing count', (r: Record<string, unknown>) => delete r.picks],
-      ['impossible picks', (r: Record<string, unknown>) => (r.picks = 9)],
-      ['impossible progress', (r: Record<string, unknown>) => (r.lossesTowardPick = 3)],
+      ['a missing count', (r: Record<string, unknown>) => delete r.prospectsDrawn],
+      ['a missing seed', (r: Record<string, unknown>) => delete r.seed],
+      ['fewer drawn than held', (r: Record<string, unknown>) => (r.prospectsDrawn = 2)],
       [
         'a prospect with no mark',
         (r: Record<string, unknown>) => {
@@ -1280,7 +1275,7 @@ describe("the team's Pharm (#106)", () => {
     });
 
     it('doesn’t stop the team or its stats loading', () => {
-      const store = brokenStore((r) => (r.picks = 9));
+      const store = brokenStore((r) => (r.prospectsDrawn = 2));
 
       expect(loadTeam(store).ok).toBe(true);
       expect(loadStats(store).ok).toBe(true);

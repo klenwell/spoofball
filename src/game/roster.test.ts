@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createRandom } from './random';
-import {
-  LOSSES_PER_PICK,
-  MAX_DRAFT_PICKS,
-  PROSPECTS,
-  emptyRoster,
-  rosterProblems,
-  type Roster,
-} from './roster';
+import { PROSPECTS, emptyRoster, rosterProblems, type Roster } from './roster';
 import { generateSpoof, NEW_SPOOF_SKILL_TOTAL, type Spoof } from './teams';
 
 /** A prospect, drawn as the combine draws a candidate. */
@@ -27,48 +20,32 @@ function rosterWith(overrides: Partial<Roster> = {}): Roster {
 }
 
 describe('emptyRoster', () => {
-  it('starts a team with no picks, no progress toward one and no prospects (#105)', () => {
-    expect(emptyRoster(42)).toEqual({
-      seed: 42,
-      picks: 0,
-      lossesTowardPick: 0,
-      prospectsDrawn: 0,
-      prospects: [],
-    });
+  it('starts a team with no prospects, so no draft picks (#105)', () => {
+    expect(emptyRoster(42)).toEqual({ seed: 42, prospectsDrawn: 0, prospects: [] });
     expect(rosterProblems(emptyRoster(42))).toEqual([]);
   });
 });
 
-describe('the rules (#105)', () => {
-  it('holds at most 3 picks, earns one every 3 losses, and offers 3 prospects', () => {
-    expect([MAX_DRAFT_PICKS, LOSSES_PER_PICK, PROSPECTS]).toEqual([3, 3, 3]);
+describe('the rule (#105)', () => {
+  it('holds at most 3 prospects, which are its draft picks', () => {
+    expect(PROSPECTS).toBe(3);
   });
 });
 
 describe('rosterProblems', () => {
-  it('finds nothing wrong with a sound roster', () => {
-    expect(rosterProblems(rosterWith())).toEqual([]);
-    expect(rosterProblems(rosterWith({ picks: 3, lossesTowardPick: 2 }))).toEqual([]);
-  });
-
-  it('allows 0 to 3 picks, whole numbers only', () => {
-    expect(rosterProblems(rosterWith({ picks: 4 }))).toContain('Draft picks must be 0–3');
-    expect(rosterProblems(rosterWith({ picks: -1 }))).toContain('Draft picks must be 0–3');
-    expect(rosterProblems(rosterWith({ picks: 1.5 }))).toContain('Draft picks must be 0–3');
-  });
-
-  it('allows 0 to 2 losses toward the next pick: the 3rd earns it', () => {
-    expect(rosterProblems(rosterWith({ lossesTowardPick: 3 }))).toContain(
-      'Losses toward a pick must be 0–2',
-    );
-    expect(rosterProblems(rosterWith({ lossesTowardPick: -1 }))).toContain(
-      'Losses toward a pick must be 0–2',
-    );
+  it('finds nothing wrong with a sound roster, holding 0 to 3 prospects', () => {
+    const { prospects } = rosterWith();
+    for (let held = 0; held <= 3; held += 1) {
+      expect(rosterProblems(rosterWith({ prospects: prospects.slice(0, held) }))).toEqual([]);
+    }
   });
 
   it('needs a whole-number seed and a count of prospects drawn', () => {
     expect(rosterProblems(rosterWith({ seed: 0.5 }))).toContain('The seed must be a whole number');
     expect(rosterProblems(rosterWith({ prospectsDrawn: -1 }))).toContain(
+      'Prospects drawn must be a count',
+    );
+    expect(rosterProblems(rosterWith({ prospectsDrawn: 3.5 }))).toContain(
       'Prospects drawn must be a count',
     );
   });
