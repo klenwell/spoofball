@@ -50,7 +50,7 @@ function rosterAfterLosses(team: Team, losses: number, seed = 5): Roster {
   return roster;
 }
 
-describe('the ceiling', () => {
+describe('TEAM_SKILL_CEILING', () => {
   it('is never reached by a combine draft, even the 5 strongest of a pool', () => {
     for (let seed = 1; seed <= 300; seed += 1) {
       const totals = createPool(seed)
@@ -212,6 +212,35 @@ describe('drawProspect', () => {
     }
   });
 
+  it('draws types by the combine’s odds, among those allowed', () => {
+    // MIXED allows no royal: of the combine's odds left, pawns hold 50 of 90.
+    const types = Array.from({ length: 3000 }, (_, i) =>
+      drawProspect(MIXED, { ...emptyRoster(33), prospectsDrawn: i }),
+    ).map((p) => p.type);
+    const share = (match: (t: SpoofType) => boolean) => types.filter(match).length / types.length;
+    expect(share((t) => t.startsWith('pawn'))).toBeGreaterThan(0.5);
+    expect(share((t) => t.startsWith('pawn'))).toBeLessThan(0.61);
+    expect(share((t) => t === 'knight')).toBeGreaterThan(0.11);
+    expect(share((t) => t === 'knight')).toBeLessThan(0.2);
+  });
+
+  it('never turns a strong outlier into a weak spoof, near a type’s limit (#116 review)', () => {
+    // A queen, a rook at 740, and 3 between 560 and 600: the allowed faces top
+    // out at 748 and pawns at 704, below some high outliers.
+    const strong = teamOf([
+      ['queen', 560],
+      ['rook', 740],
+      ['bishop', 600],
+      ['knight', 580],
+      ['pawn-basic', 570],
+    ]);
+    const range = prospectRange(strong);
+    for (let i = 0; i < 2000; i += 1) {
+      const prospect = drawProspect(strong, { ...emptyRoster(12), prospectsDrawn: i });
+      expect(skillTotal(prospect.skills)).toBeGreaterThanOrEqual(Math.floor(range.low * 0.85));
+    }
+  });
+
   it('names it unlike the team’s spoofs and the other prospects, with no word reused', () => {
     let roster = emptyRoster(5);
     for (let loss = 0; loss < 300; loss += 1) {
@@ -246,12 +275,17 @@ describe('afterMatch', () => {
   });
 });
 
-describe('drafting', () => {
-  const three = rosterAfterLosses(MIXED, 3);
-
+describe('canDraft', () => {
   it('needs 3 prospects', () => {
     expect(canDraft(rosterAfterLosses(MIXED, 2))).toBe(false);
-    expect(canDraft(three)).toBe(true);
+    expect(canDraft(rosterAfterLosses(MIXED, 3))).toBe(true);
+  });
+});
+
+describe('draftProspect', () => {
+  const three = rosterAfterLosses(MIXED, 3);
+
+  it('refuses with fewer than 3 prospects', () => {
     const two = rosterAfterLosses(MIXED, 2);
     const id = two.prospects[0]?.id ?? '';
     expect(draftProspect(MIXED, two, id, 't1')).toEqual({ ok: false, problem: 'too-few' });
@@ -270,8 +304,11 @@ describe('drafting', () => {
     expect(result.roster).toEqual({ ...three, prospects: [] });
   });
 
-  it('refuses a prospect or spoof that isn’t there', () => {
+  it('refuses a prospect that isn’t there', () => {
     expect(draftProspect(MIXED, three, 'x99', 't1')).toEqual({ ok: false, problem: 'no-prospect' });
+  });
+
+  it('refuses a spoof that isn’t there', () => {
     const id = three.prospects[0]?.id ?? '';
     expect(draftProspect(MIXED, three, id, 't9')).toEqual({ ok: false, problem: 'no-spoof' });
   });

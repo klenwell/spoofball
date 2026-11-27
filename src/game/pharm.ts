@@ -159,6 +159,10 @@ export function drawProspect(
   const range = prospectRange(team, tuning);
   let total = drawProspectTotal(range, random, tuning);
   const allowed = prospectTypes(team);
+  // Never more than the strongest allowed type can hold: without this, a
+  // strong outlier beyond every type's limit fell through to the weakest
+  // possible pawn below (#116 review).
+  total = Math.min(total, Math.max(...allowed.map((type) => typeProfiles[type].maxTotal)));
   let fits = allowed.filter(
     (type) => minimumTotal(type) <= total && total <= typeProfiles[type].maxTotal,
   );
