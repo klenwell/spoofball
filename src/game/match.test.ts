@@ -731,6 +731,12 @@ describe('matchRecord', () => {
     );
   });
 
+  it("records each spoof's mark as it was at match time (#106)", () => {
+    expect(record.spoofs.map((s) => s.mark)).toEqual(
+      [...HOME.spoofs, ...VISITOR.spoofs].map((s) => s.mark),
+    );
+  });
+
   it("records every spoof's scrums played, points and behavior stats", () => {
     expect(record.spoofs).toHaveLength(HOME.spoofs.length + VISITOR.spoofs.length);
     for (const s of record.spoofs) {

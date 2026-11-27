@@ -12,6 +12,7 @@ import {
 import { courtMateNudge, matchForm, nudged } from './skew';
 import { clampSkill, skillNames, type Skills } from './skills';
 import type { ScrumSkills } from './spoof-motion';
+import type { MarkName } from './spoof-types';
 import type { Spoof, Team } from './teams';
 
 /**
@@ -447,6 +448,12 @@ export interface MatchRecord {
     readonly id: string;
     /** The spoof's name when the match was played: a spoof can be renamed later. */
     readonly name: string;
+    /**
+     * Its mark when the match was played (#106), so the stats can show a
+     * spoof that has left the team. Missing from a match in progress saved
+     * before it.
+     */
+    readonly mark?: MarkName;
     readonly scrumsPlayed: number;
     readonly points: number;
     readonly pointsByScrum: readonly (number | null)[];
@@ -478,6 +485,7 @@ export function matchRecord(
         team,
         id: m.spoof.id,
         name: m.spoof.name,
+        mark: m.spoof.mark,
         scrumsPlayed: m.points.filter((p) => p !== null).length,
         points: m.points.reduce<number>((a, p) => a + (p ?? 0), 0),
         pointsByScrum: m.points,

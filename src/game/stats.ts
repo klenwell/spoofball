@@ -1,6 +1,7 @@
 import type { BenchSide } from './arena';
 import type { MatchRecord, Outcome } from './match';
 import { emptyStats, type BehaviorStats } from './scrum';
+import type { MarkName } from './spoof-types';
 
 /**
  * Your team's stats (#89): running totals over every match it plays, and a
@@ -44,6 +45,12 @@ export interface SpoofTotals {
   readonly plusMinus: number;
   /** Summed over its scrums. Saved for later, never shown. */
   readonly behavior: BehaviorStats;
+  /**
+   * The name and mark it had in its latest match (#106), so a spoof that has
+   * left the team can still be shown (#100). Missing for totals saved before.
+   */
+  readonly name?: string;
+  readonly mark?: MarkName;
 }
 
 /** One match in the log. */
@@ -148,12 +155,15 @@ export function addMatch(
       plusMinus: 0,
       behavior: emptyStats(),
     };
+    const mark = line.mark ?? before.mark;
     spoofs[line.id] = {
       matches: before.matches + 1,
       scrums: before.scrums + line.scrumsPlayed,
       points: before.points + line.points,
       plusMinus: before.plusMinus + plusMinus,
       behavior: addBehavior(before.behavior, line.stats),
+      name: line.name,
+      ...(mark === undefined ? {} : { mark }),
     };
   }
 

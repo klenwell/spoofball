@@ -13,6 +13,7 @@ import {
   type SpoofTotals,
   type TeamStats,
 } from '../game/stats';
+import { emptyRoster, rosterProblems, type Roster } from '../game/roster';
 import { drawSpoofName } from '../game/spoof-names';
 import { createSpoof, teamProblems, type Spoof, type Team } from '../game/teams';
 import { skillNames, type Skills } from '../game/skills';
@@ -53,6 +54,12 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
  *   Since #90 it can also hold the match in progress: the scrums played so
  *   far, recorded as a forfeit if the game loads with it still there. Older
  *   version 5 code ignores it, so the version stays 5.
+ * - 6 (#106): the team's Pharm (`Roster`): its draft picks, its losses toward
+ *   the next one, and its prospects. Each spoof's totals also keep the name
+ *   and mark it had in its latest match, for when it leaves the team (#100).
+ *   A version 5 team loads with 0 picks, no progress and no prospects, its
+ *   stats kept. The version changes because version 5 code, saving the team
+ *   again, would drop the roster.
  *
  * The skills are saved with the team. They stay hidden on screen, but anyone
  * reading the browser's storage could see them: fine for a single-player game
@@ -63,7 +70,7 @@ import { teamColorNames, type TeamColorName } from '../design/tokens';
 export const STORAGE_KEY = 'spoofball';
 
 /** The version of the saved record this code writes. */
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 
 /** The part of the browser's `Storage` this module uses, so tests can pass a fake. */
 export type KeyValueStore = Pick<Storage, 'getItem' | 'setItem'>;
@@ -141,6 +148,27 @@ interface SavedRecord {
    * whatever was saved, kept as it was when it can't be read.
    */
   inProgress?: unknown;
+  /**
+   * The team's Pharm (#106): `Roster`, with its prospects saved as spoofs
+   * are, or whatever was saved, kept as it was when it can't be read.
+   */
+  roster?: unknown;
+}
+
+/** The parts of the record that belong to the saved team, beside it: kept as they are by saves that don't change them. */
+const TEAM_PARTS = ['stats', 'inProgress', 'roster'] as const;
+
+/** Copies the saved team's parts from the record `before` into `record`, as they were, except those named in `except`. */
+function keepTeamParts(
+  before: Record<string, unknown> | null,
+  record: SavedRecord,
+  except: readonly (typeof TEAM_PARTS)[number][] = [],
+): void {
+  for (const part of TEAM_PARTS) {
+    if (except.includes(part)) continue;
+    const value = before?.[part];
+    if (value !== undefined) record[part] = value;
+  }
 }
 
 /** A match in progress (#90): its scrums so far, and the day and local time (#95) they were played. */
@@ -155,20 +183,54 @@ export interface PlayedAt {
   readonly time?: string;
 }
 
+function savedSpoof(spoof: Spoof): SavedSpoof {
+  return {
+    id: spoof.id,
+    name: spoof.name,
+    type: spoof.type,
+    skills: { ...spoof.skills },
+    temperament: spoof.temperament,
+    mark: spoof.mark,
+  };
+}
+
 function savedTeam(team: Team): SavedTeam {
   return {
     name: team.name,
     color: team.color,
     logo: team.logo,
-    spoofs: team.spoofs.map((s) => ({
-      id: s.id,
-      name: s.name,
-      type: s.type,
-      skills: { ...s.skills },
-      temperament: s.temperament,
-      mark: s.mark,
-    })),
+    spoofs: team.spoofs.map(savedSpoof),
   };
+}
+
+/** How a roster is saved: its prospects as spoofs are. */
+interface SavedRoster {
+  seed: number;
+  picks: number;
+  lossesTowardPick: number;
+  prospectsDrawn: number;
+  prospects: SavedSpoof[];
+}
+
+function savedRoster(roster: Roster): SavedRoster {
+  return {
+    seed: roster.seed,
+    picks: roster.picks,
+    lossesTowardPick: roster.lossesTowardPick,
+    prospectsDrawn: roster.prospectsDrawn,
+    prospects: roster.prospects.map(savedSpoof),
+  };
+}
+
+/**
+ * A new team's roster seed, from what doesn't change about the team: its
+ * name and its spoofs' ids, in any order. So a version 5 team draws the same
+ * prospects on every load, even after a spoof is renamed or the roster
+ * reordered, until its roster is first saved.
+ */
+function rosterSeed(team: Team): number {
+  const ids = team.spoofs.map((s) => s.id).sort();
+  return textSeed(JSON.stringify([team.name, ids]));
 }
 
 function savedDraft(draft: Draft): SavedDraft {
@@ -220,13 +282,13 @@ export function saveTeam(
   const record: SavedRecord = { version: SAVE_VERSION, team: savedTeam(team) };
   if (draft) record.draft = savedDraft(draft);
   if (joined === undefined) {
-    const before = savedData(store);
-    if (before?.stats !== undefined) record.stats = before.stats;
-    if (before?.inProgress !== undefined) record.inProgress = before.inProgress;
+    keepTeamParts(savedData(store), record);
   } else {
-    // A new team replaces the old one and its record, so the old team's match
-    // in progress goes too: a forfeit would be discarded as it was written (#90).
+    // A new team replaces the old one, its record and its Pharm, so the old
+    // team's match in progress goes too: a forfeit would be discarded as it
+    // was written (#90).
     record.stats = emptyTeamStats(joined);
+    record.roster = savedRoster(emptyRoster(rosterSeed(team)));
   }
   return write(store, record);
 }
@@ -243,10 +305,8 @@ export function saveDraft(store: KeyValueStore | null, draft: Draft): SaveResult
   const loaded = loadTeam(store);
   const record: SavedRecord = { version: SAVE_VERSION, draft: savedDraft(draft) };
   if (loaded.ok) record.team = savedTeam(loaded.team);
-  const before = savedData(store);
-  if (before?.stats !== undefined) record.stats = before.stats;
   // Starting a new team doesn't forfeit the match in progress (#90): it waits.
-  if (before?.inProgress !== undefined) record.inProgress = before.inProgress;
+  keepTeamParts(savedData(store), record);
   return write(store, record);
 }
 
@@ -265,6 +325,51 @@ export function loadStats(store: KeyValueStore | null): StatsResult {
   if (data?.stats === undefined) return { ok: true, stats: emptyTeamStats(null) };
   const stats = statsFrom(data.stats);
   return stats ? { ok: true, stats } : { ok: false, problem: 'unreadable' };
+}
+
+export type RosterResult =
+  | { readonly ok: true; readonly roster: Roster }
+  | { readonly ok: false; readonly problem: LoadProblem };
+
+/**
+ * The saved team's Pharm (#106). A team saved before it has no picks, no
+ * progress toward one and no prospects. With no team to load, the reason
+ * there's none. A roster that can't be read, or holds impossible values, is
+ * left in place (`unreadable`).
+ */
+export function loadRoster(store: KeyValueStore | null): RosterResult {
+  const loaded = loadTeam(store);
+  if (!loaded.ok) return loaded;
+  const data = store ? savedData(store) : null;
+  if (data?.roster === undefined) return { ok: true, roster: emptyRoster(rosterSeed(loaded.team)) };
+  const roster = rosterFrom(data.roster);
+  return roster && rosterProblems(roster).length === 0
+    ? { ok: true, roster }
+    : { ok: false, problem: 'unreadable' };
+}
+
+/**
+ * Saves the saved team's Pharm (#106), keeping the rest of the record as it
+ * is. Refused (`invalid`) when it holds impossible values, and with no team
+ * saved (`none`) or one that can't be read.
+ */
+export function saveRoster(
+  store: KeyValueStore | null,
+  roster: Roster,
+):
+  | { readonly ok: true }
+  | { readonly ok: false; readonly problem: RecordProblem; readonly details?: readonly string[] } {
+  const problems = rosterProblems(roster);
+  if (problems.length > 0) return { ok: false, problem: 'invalid', details: problems };
+  const loaded = loadTeam(store);
+  if (!loaded.ok) return loaded;
+  if (!store) return { ok: false, problem: 'unavailable' };
+  const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team) };
+  const draft = loadDraft(store);
+  if (draft) saved.draft = savedDraft(draft);
+  keepTeamParts(savedData(store), saved, ['roster']);
+  saved.roster = savedRoster(roster);
+  return write(store, saved);
 }
 
 /** Why a match couldn't be added to the record. */
@@ -311,11 +416,10 @@ export function saveMatchInProgress(
   if (!store) return { ok: false, problem: 'unavailable' };
   if (!isDay(date) || !isTimeOrNone(time) || !playedBy(record, loaded.team))
     return { ok: false, problem: 'invalid' };
-  const before = savedData(store);
   const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team) };
   const draft = loadDraft(store);
   if (draft) saved.draft = savedDraft(draft);
-  if (before?.stats !== undefined) saved.stats = before.stats;
+  keepTeamParts(savedData(store), saved, ['inProgress']);
   const inProgress: MatchInProgress = { date, ...(time === undefined ? {} : { time }), record };
   saved.inProgress = inProgress;
   return write(store, saved);
@@ -362,6 +466,8 @@ function addToStats(
   const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(loaded.team), stats };
   const draft = loadDraft(store);
   if (draft) saved.draft = savedDraft(draft);
+  // The match it was is now recorded, so the match in progress goes.
+  keepTeamParts(savedData(store), saved, ['stats', 'inProgress']);
   const written = write(store, saved);
   return written.ok ? { ok: true, stats } : written;
 }
@@ -582,6 +688,29 @@ function statsFrom(data: unknown): TeamStats | null {
   return { joined, results, points, best, opponents, spoofs, log };
 }
 
+/** A roster from saved data of the right shape, or null. `rosterProblems` checks its values. */
+function rosterFrom(data: unknown): Roster | null {
+  if (!isObject(data) || !Array.isArray(data.prospects)) return null;
+  const { seed, picks, lossesTowardPick, prospectsDrawn } = data;
+  if (
+    typeof seed !== 'number' ||
+    typeof picks !== 'number' ||
+    typeof lossesTowardPick !== 'number' ||
+    typeof prospectsDrawn !== 'number'
+  ) {
+    return null;
+  }
+  const prospects: Spoof[] = [];
+  for (const item of data.prospects as unknown[]) {
+    // Prospects are new in version 6, so each has its name and mark.
+    if (!isObject(item) || item.mark === undefined) return null;
+    const prospect = spoofFrom(item, undefined);
+    if (!prospect) return null;
+    prospects.push(prospect);
+  }
+  return { seed, picks, lossesTowardPick, prospectsDrawn, prospects };
+}
+
 /** A match in progress from saved data, or null when any part has the wrong shape. */
 function matchInProgressFrom(data: unknown): MatchInProgress | null {
   if (!isObject(data) || !isDay(data.date) || !isTimeOrNone(data.time)) return null;
@@ -610,8 +739,10 @@ function matchRecordFrom(data: unknown): MatchRecord | null {
   const spoofs: MatchRecord['spoofs'][number][] = [];
   for (const value of data.spoofs as unknown[]) {
     if (!isObject(value) || !(SIDES as readonly unknown[]).includes(value.team)) return null;
-    const { id, name, scrumsPlayed, points } = value;
+    const { id, name, mark, scrumsPlayed, points } = value;
     if (typeof id !== 'string' || typeof name !== 'string') return null;
+    // A match in progress saved before version 6 (#106) has no marks.
+    if (mark !== undefined && !isMarkName(mark)) return null;
     if (!isCount(scrumsPlayed) || !isCount(points) || !Array.isArray(value.pointsByScrum))
       return null;
     const pointsByScrum: (number | null)[] = [];
@@ -625,6 +756,7 @@ function matchRecordFrom(data: unknown): MatchRecord | null {
       team: value.team as (typeof SIDES)[number],
       id,
       name,
+      ...(mark === undefined ? {} : { mark }),
       scrumsPlayed,
       points,
       pointsByScrum,
@@ -659,7 +791,20 @@ function spoofTotalsFrom(data: unknown): SpoofTotals | null {
   if (!isCount(matches) || !isCount(scrums) || !isCount(points)) return null;
   if (typeof plusMinus !== 'number' || !Number.isFinite(plusMinus)) return null;
   const behavior = behaviorFrom(data.behavior);
-  return behavior ? { matches, scrums, points, plusMinus, behavior } : null;
+  if (!behavior) return null;
+  // Since version 6 (#106): the name and mark it had in its latest match.
+  const { name, mark } = data;
+  if (name !== undefined && typeof name !== 'string') return null;
+  if (mark !== undefined && !isMarkName(mark)) return null;
+  return {
+    matches,
+    scrums,
+    points,
+    plusMinus,
+    behavior,
+    ...(name === undefined ? {} : { name }),
+    ...(mark === undefined ? {} : { mark }),
+  };
 }
 
 /** Behavior stats from saved data, or null unless every one is a count. */
