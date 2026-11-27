@@ -162,7 +162,8 @@ export function characterCount(text: string): number {
     .length;
 }
 
-function spoofProblems(spoof: Spoof): string[] {
+/** What's wrong with one spoof, if anything: its id, name, type, mark, skills and temperament. */
+export function spoofProblems(spoof: Spoof): string[] {
   const problems: string[] = [];
   const label = `Spoof ${spoof.id || '(no id)'}`;
   if (spoof.id === '') problems.push('A spoof has no id');

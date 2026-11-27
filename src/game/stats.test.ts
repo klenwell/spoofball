@@ -100,6 +100,28 @@ describe('addMatch', () => {
   });
 
   describe("each spoof's totals", () => {
+    it('keep the name and mark it had in its latest match (#106)', () => {
+      const first = aMatchRecord({
+        spoofs: [spoofLine('a', [1], { name: 'Old Al', mark: 'star' })],
+      });
+      const later = aMatchRecord({
+        spoofs: [spoofLine('a', [2], { name: 'New Al', mark: 'gem' })],
+      });
+
+      expect(afterMatches(first, later).spoofs.a).toMatchObject({ name: 'New Al', mark: 'gem' });
+    });
+
+    it('keep its earlier mark when a match records none (a match in progress saved before #106)', () => {
+      const first = aMatchRecord({ spoofs: [spoofLine('a', [1], { mark: 'star' })] });
+      const unmarked = aMatchRecord({ spoofs: [spoofLine('a', [2], { name: 'New Al' })] });
+
+      expect(afterMatches(first, unmarked).spoofs.a).toMatchObject({
+        name: 'New Al',
+        mark: 'star',
+      });
+      expect(afterMatches(unmarked).spoofs.a).not.toHaveProperty('mark');
+    });
+
     it('counts the matches and scrums it played, and its points', () => {
       const stats = afterMatches(aMatchRecord(), aMatchRecord());
 

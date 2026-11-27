@@ -13,14 +13,19 @@ import {
   STORAGE_PROBLEM_TEXT,
   browserStorage,
   loadDraft,
+  loadRoster,
   loadStats,
   loadTeam,
   recordForfeit,
   recordMatch,
   saveDraft,
   saveMatchInProgress,
+  saveRoster,
   saveTeam,
 } from './saved-team';
+import type { Roster } from '../game/roster';
+import { createRandom } from '../game/random';
+import { generateSpoof, NEW_SPOOF_SKILL_TOTAL } from '../game/teams';
 import {
   chooseMark,
   draftPool,
@@ -86,9 +91,9 @@ describe('saveTeam and loadTeam', () => {
     saveTeam(store, SPOOFS);
 
     expect([...store.items.keys()]).toEqual([STORAGE_KEY]);
-    expect(SAVE_VERSION).toBe(5);
+    expect(SAVE_VERSION).toBe(6);
     expect(JSON.parse(store.items.get(STORAGE_KEY) ?? '')).toMatchObject({
-      version: 5,
+      version: 6,
       team: { name: 'Spoofs', color: 'blue', logo: '👻' },
     });
   });
@@ -1030,6 +1035,349 @@ describe('a match in progress (#90)', () => {
 
       expect(recordForfeit(store)).toBeNull();
       expect(loadStats(store)).toEqual({ ok: true, stats: emptyTeamStats(LATER) });
+    });
+  });
+});
+
+describe("the team's Pharm (#106)", () => {
+  const DAY = '2026-11-27';
+  const PLAYED = matchRecord(computerMatch(SPOOFS, EMBERS, TEST_SEED));
+  const SO_FAR = (() => {
+    let match = startMatch(SPOOFS, EMBERS, TEST_SEED);
+    match = playScrum(match, computerMise(match));
+    return matchRecord(match, { soFar: true });
+  })();
+
+  /** A roster holding 3 prospects, so 3 draft picks, the oldest drawn 2nd. */
+  function aRoster(seed = 11): Roster {
+    const names = ['Ada One', 'Bo Two', 'Cy Three'];
+    return {
+      seed,
+      prospectsDrawn: 4,
+      prospects: names.map((name, i) => ({
+        ...generateSpoof(`x${String(i + 2)}`, 'knight', NEW_SPOOF_SKILL_TOTAL, createRandom(i + 1)),
+        name,
+        mark: 'star' as const,
+      })),
+    };
+  }
+
+  /** Storage holding the Spoofs, created on `DAY`, with `aRoster()` saved. */
+  function storeWithRoster() {
+    const store = memoryStorage();
+    saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+    expect(saveRoster(store, aRoster())).toEqual({ ok: true });
+    return store;
+  }
+
+  const raw = (store: ReturnType<typeof memoryStorage>) =>
+    JSON.parse(store.items.get(STORAGE_KEY) ?? '') as Record<string, unknown>;
+
+  const rosterOf = (store: ReturnType<typeof memoryStorage>) => {
+    const loaded = loadRoster(store);
+    if (!loaded.ok) throw new Error(loaded.problem);
+    return loaded.roster;
+  };
+
+  describe('a new team', () => {
+    it('starts with no prospects, so no draft picks', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+
+      expect(rosterOf(store)).toMatchObject({ prospectsDrawn: 0, prospects: [] });
+    });
+
+    it('saves its fresh roster with it', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+
+      expect(raw(store).roster).toEqual({
+        seed: rosterOf(store).seed,
+        prospectsDrawn: 0,
+        prospects: [],
+      });
+    });
+
+    it('gets a new seed when re-drafted with the same name and spoof ids (#114 review)', () => {
+      const first = memoryStorage();
+      saveTeam(first, SPOOFS, { endDraft: true, joined: DAY });
+      const redrafted = memoryStorage();
+      const others = SPOOFS.spoofs.map((s, i) => {
+        const fresh = generateSpoof(s.id, s.type, NEW_SPOOF_SKILL_TOTAL, createRandom(500 + i));
+        return { ...fresh, name: s.name };
+      });
+      saveTeam(redrafted, { ...SPOOFS, spoofs: others }, { endDraft: true, joined: DAY });
+
+      expect(rosterOf(redrafted).seed).not.toBe(rosterOf(first).seed);
+    });
+
+    it('starts fresh, replacing the old team’s prospects', () => {
+      const store = storeWithRoster();
+
+      saveTeam(store, { ...SPOOFS, name: 'Owls' }, { endDraft: true, joined: DAY });
+
+      expect(rosterOf(store)).toMatchObject({ prospectsDrawn: 0, prospects: [] });
+    });
+  });
+
+  describe('saveRoster and loadRoster', () => {
+    it('saves the roster, prospects and all, and loads it back the same', () => {
+      const store = storeWithRoster();
+
+      expect(rosterOf(store)).toEqual(aRoster());
+      expect(raw(store).version).toBe(6);
+    });
+
+    it('keeps the team, its stats, a draft and the match in progress', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      recordMatch(store, PLAYED, DAY);
+      saveMatchInProgress(store, SO_FAR, DAY);
+      const draft = startDraft({ name: 'Next', color: 'red', logo: '🐝' }, TEST_SEED);
+      saveDraft(store, draft);
+      const before = raw(store);
+
+      saveRoster(store, aRoster());
+
+      const after = raw(store);
+      expect(after.team).toEqual(before.team);
+      expect(after.stats).toEqual(before.stats);
+      expect(after.inProgress).toEqual(before.inProgress);
+      expect(loadDraft(store)).toEqual(draft);
+    });
+
+    it('refuses impossible values, saving nothing', () => {
+      const store = storeWithRoster();
+      const before = store.items.get(STORAGE_KEY);
+
+      const [first] = aRoster().prospects;
+      if (!first) throw new Error('no prospect');
+      const result = saveRoster(store, { ...aRoster(), prospects: [first, first] });
+
+      expect(result).toMatchObject({ ok: false, problem: 'invalid' });
+      expect(store.items.get(STORAGE_KEY)).toBe(before);
+    });
+
+    it('refuses without a saved team, or storage', () => {
+      expect(saveRoster(memoryStorage(), aRoster())).toEqual({ ok: false, problem: 'none' });
+      expect(saveRoster(null, aRoster())).toEqual({ ok: false, problem: 'unavailable' });
+      expect(loadRoster(memoryStorage())).toEqual({ ok: false, problem: 'none' });
+    });
+
+    it('says when storage is full', () => {
+      const store = storeWithRoster();
+      const full = fullStorage({ [STORAGE_KEY]: store.items.get(STORAGE_KEY) ?? '' });
+
+      expect(saveRoster(full, aRoster(12))).toEqual({ ok: false, problem: 'full' });
+    });
+  });
+
+  describe('every save keeps it', () => {
+    it('saving the same team again', () => {
+      const store = storeWithRoster();
+      saveTeam(store, SPOOFS);
+      expect(rosterOf(store)).toEqual(aRoster());
+    });
+
+    it('saving a draft', () => {
+      const store = storeWithRoster();
+      saveDraft(store, startDraft({ name: 'Next', color: 'red', logo: '🐝' }, TEST_SEED));
+      expect(rosterOf(store)).toEqual(aRoster());
+    });
+
+    it('recording a match', () => {
+      const store = storeWithRoster();
+      expect(recordMatch(store, PLAYED, DAY).ok).toBe(true);
+      expect(rosterOf(store)).toEqual(aRoster());
+    });
+
+    it('saving a match in progress, and recording it as a forfeit', () => {
+      const store = storeWithRoster();
+      saveMatchInProgress(store, SO_FAR, DAY);
+      expect(rosterOf(store)).toEqual(aRoster());
+
+      expect(recordForfeit(store)?.ok).toBe(true);
+      expect(rosterOf(store)).toEqual(aRoster());
+    });
+
+    it('clearing the match in progress when the stats can’t be read', () => {
+      const store = storeWithRoster();
+      saveMatchInProgress(store, SO_FAR, DAY);
+      const record = raw(store);
+      record.stats = 'broken';
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      recordMatch(store, PLAYED, DAY);
+
+      expect(raw(store)).not.toHaveProperty('inProgress');
+      expect(rosterOf(store)).toEqual(aRoster());
+    });
+  });
+
+  describe('a version 5 team', () => {
+    /** The Spoofs saved as version 5 wrote them: no roster. */
+    function version5Store() {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      recordMatch(store, PLAYED, DAY);
+      const record = raw(store);
+      record.version = 5;
+      delete record.roster;
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+      return store;
+    }
+
+    it('loads with no prospects, so no picks, its stats kept', () => {
+      const store = version5Store();
+
+      expect(rosterOf(store)).toMatchObject({ prospectsDrawn: 0, prospects: [] });
+      const stats = loadStats(store);
+      expect(stats.ok && stats.stats.log).toHaveLength(1);
+    });
+
+    it('gets the same roster seed on every load, so it draws the same prospects', () => {
+      expect(rosterOf(version5Store()).seed).toBe(rosterOf(version5Store()).seed);
+      const other = memoryStorage();
+      saveTeam(other, { ...SPOOFS, name: 'Owls' });
+      expect(rosterOf(other).seed).not.toBe(rosterOf(version5Store()).seed);
+    });
+
+    it('keeps its roster seed when a spoof is renamed or the roster reordered', () => {
+      const seed = rosterOf(version5Store()).seed;
+      const store = version5Store();
+      const [first, ...rest] = SPOOFS.spoofs;
+      if (!first) throw new Error('no spoof');
+      saveTeam(store, { ...SPOOFS, spoofs: [...rest, { ...first, name: 'Renamed Rex' }] });
+      const record = raw(store);
+      delete record.roster;
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      expect(rosterOf(store).seed).toBe(seed);
+    });
+
+    it('is still read by its stats and team', () => {
+      const store = version5Store();
+      expect(loadTeam(store)).toEqual({ ok: true, team: SPOOFS });
+    });
+  });
+
+  describe('a roster that can’t be read', () => {
+    /** Storage whose saved roster is changed by `edit`. */
+    function brokenStore(edit: (roster: Record<string, unknown>) => void) {
+      const store = storeWithRoster();
+      const record = raw(store);
+      edit(record.roster as Record<string, unknown>);
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+      return store;
+    }
+
+    it.each([
+      ['the wrong shape', (r: Record<string, unknown>) => (r.prospects = 'none')],
+      ['a missing count', (r: Record<string, unknown>) => delete r.prospectsDrawn],
+      ['a missing seed', (r: Record<string, unknown>) => delete r.seed],
+      ['fewer drawn than held', (r: Record<string, unknown>) => (r.prospectsDrawn = 2)],
+      [
+        'a prospect with no mark',
+        (r: Record<string, unknown>) => {
+          delete (r.prospects as Record<string, unknown>[])[0]?.mark;
+        },
+      ],
+      [
+        'a prospect with a skill out of range',
+        (r: Record<string, unknown>) => {
+          const first = (r.prospects as { skills: Record<string, number> }[])[0];
+          if (first) first.skills.burst = 500;
+        },
+      ],
+    ])('is unreadable with %s, and left in place', (_label, edit) => {
+      const store = brokenStore(edit);
+      const before = raw(store).roster;
+
+      expect(loadRoster(store)).toEqual({ ok: false, problem: 'unreadable' });
+      recordMatch(store, PLAYED, DAY);
+      expect(raw(store).roster).toEqual(before);
+    });
+
+    it('doesn’t stop the team or its stats loading', () => {
+      const store = brokenStore((r) => (r.prospectsDrawn = 2));
+
+      expect(loadTeam(store).ok).toBe(true);
+      expect(loadStats(store).ok).toBe(true);
+    });
+  });
+
+  describe("each spoof's latest name and mark (#100's data gap)", () => {
+    it('are saved with its totals, and load back', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      recordMatch(store, PLAYED, DAY);
+
+      const loaded = loadStats(store);
+      if (!loaded.ok) throw new Error(loaded.problem);
+      const played = SPOOFS.spoofs.filter((s) => loaded.stats.spoofs[s.id] !== undefined);
+      expect(played.length).toBeGreaterThan(0);
+      for (const spoof of played) {
+        expect(loaded.stats.spoofs[spoof.id]).toMatchObject({ name: spoof.name, mark: spoof.mark });
+      }
+    });
+
+    it('can’t be read with the wrong shape', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      recordMatch(store, PLAYED, DAY);
+      const record = raw(store) as { stats: { spoofs: Record<string, Record<string, unknown>> } };
+      const first = Object.values(record.stats.spoofs)[0];
+      if (first) first.mark = 'nonesuch';
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      expect(loadStats(store)).toEqual({ ok: false, problem: 'unreadable' });
+    });
+
+    it('can’t be read with a name that isn’t text', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      recordMatch(store, PLAYED, DAY);
+      const record = raw(store) as { stats: { spoofs: Record<string, Record<string, unknown>> } };
+      const first = Object.values(record.stats.spoofs)[0];
+      if (first) first.name = 42;
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      expect(loadStats(store)).toEqual({ ok: false, problem: 'unreadable' });
+    });
+
+    it('leaves a match in progress with a bad mark unread, and in place (#114 review)', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      saveMatchInProgress(store, SO_FAR, DAY);
+      const record = raw(store) as {
+        inProgress: { record: { spoofs: Record<string, unknown>[] } };
+      };
+      const line = record.inProgress.record.spoofs[0];
+      if (line) line.mark = 'nonesuch';
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+      const before = raw(store).inProgress;
+
+      expect(recordForfeit(store)).toEqual({ ok: false, problem: 'unreadable' });
+      expect(raw(store).inProgress).toEqual(before);
+      expect(loadStats(store).ok).toBe(true);
+    });
+
+    it('records a forfeit from a match in progress saved before marks', () => {
+      const store = memoryStorage();
+      saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+      saveMatchInProgress(store, SO_FAR, DAY);
+      const record = raw(store) as {
+        inProgress: { record: { spoofs: Record<string, unknown>[] } };
+      };
+      for (const line of record.inProgress.record.spoofs) delete line.mark;
+      store.items.set(STORAGE_KEY, JSON.stringify(record));
+
+      const result = recordForfeit(store);
+
+      expect(result?.ok).toBe(true);
+      const totals = result?.ok ? Object.values(result.stats.spoofs) : [];
+      expect(totals.length).toBeGreaterThan(0);
+      for (const t of totals) expect(t).not.toHaveProperty('mark');
     });
   });
 });
