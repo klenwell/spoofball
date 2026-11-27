@@ -10,3 +10,8 @@ if (!root) {
 }
 
 mountAppShell(root);
+
+// The QA console (#117): dev only. Vite replaces `import.meta.env.DEV` with
+// false in a production build and drops this, and scripts/check-dev-free.js
+// fails the build if any of it gets through.
+if (import.meta.env.DEV) void import('./dev/qa');
