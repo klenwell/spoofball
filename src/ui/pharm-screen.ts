@@ -216,6 +216,9 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
    */
   function dragByHandle(handle: HTMLElement, item: HTMLLIElement, list: HTMLOListElement): void {
     handle.addEventListener('pointerdown', (down) => {
+      // Only the main button of the first pointer: a right-click's menu could
+      // swallow the pointerup and leave the row following the mouse (#119 review).
+      if (!down.isPrimary || down.button !== 0) return;
       down.preventDefault();
       item.classList.add('is-dragging');
       // Followed on the window, not by pointer capture: moving the row in the

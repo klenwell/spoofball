@@ -82,7 +82,6 @@ function coins(price: number): string {
   return `${String(price)} ${price === 1 ? 'coin' : 'coins'}`;
 }
 
-/** A canvas sized to `css` pixels square, drawn at the screen's pixel ratio. */
 /** What each mark is called, for screen readers and the picker (#74). */
 const MARK_LABELS: Readonly<Record<MarkName, string>> = {
   crown: 'crown',
