@@ -73,7 +73,22 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
   /** Each spoof's warm-up, by id, so a reorder doesn't restart it. */
   const warmUps = new Map<string, WarmUp>();
   const seed = newSeed();
-  team.spoofs.forEach((s, i) => warmUps.set(s.id, startWarmUp(s, warmUpSeed(seed, i))));
+  let warmUpsStarted = 0;
+  /**
+   * A warm-up for each spoof on the team, and none for one that has left:
+   * a spoof swapped in (#110) gets its own, or its cell stays blank (#121 QA).
+   */
+  function keepWarmUps(): void {
+    for (const spoof of team.spoofs) {
+      if (warmUps.has(spoof.id)) continue;
+      warmUps.set(spoof.id, startWarmUp(spoof, warmUpSeed(seed, warmUpsStarted)));
+      warmUpsStarted += 1;
+    }
+    for (const id of warmUps.keys()) {
+      if (!team.spoofs.some((s) => s.id === id)) warmUps.delete(id);
+    }
+  }
+  keepWarmUps();
   let rows: Row[] = [];
   /** A spoof's card (#109) or its replace screen (#110) on screen, or null for the roster. */
   let card: SpoofCard | ReplaceView | null = null;
@@ -87,6 +102,7 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       rows = [];
       return;
     }
+    keepWarmUps();
     const stats = loadStats();
     const roster = loadRoster();
     const locked = matchInProgress();
