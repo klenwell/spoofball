@@ -14,6 +14,7 @@ import { el, newSeed } from './dom';
 import { createDrillCourt } from './drill-court';
 import { MARK_LABELS, markDisc, spoofLabel } from './spoof-label';
 import { spoofLineText } from './stats-text';
+import { replaceHash } from './routes';
 import { hashFor } from './tabs';
 import { drawWarmUpCell, sizeCanvas } from './warm-up-cell';
 
@@ -23,7 +24,7 @@ import { drawWarmUpCell, sizeCanvas } from './warm-up-cell';
  * with the combine's drills, renaming it and changing its mark. Outcomes
  * only (Decision 7): no skills, comps, subtypes or prices.
  *
- * "Replace this spoof" comes with #110: until then it isn't shown.
+ * **Replace this spoof** opens its replace screen (#110).
  */
 
 export interface SpoofCardOptions {
@@ -222,7 +223,13 @@ export function createSpoofCard(options: SpoofCardOptions): SpoofCard {
     if (ctx && current) drawWarmUpCell(ctx, CELL_SIZE, warmUp, current.mark, teamKit);
   }
 
-  element.append(back, top, tiles, scout, drills.element, edit);
+  // Replacing it (#110): its own screen, with your prospects.
+  const replace = el('a', 'button card-replace', 'Replace this spoof');
+  replace.href = replaceHash(spoofId);
+  const actions = el('div', 'card-actions');
+  actions.append(scout, replace);
+
+  element.append(back, top, tiles, actions, drills.element, edit);
   show();
   // The drill court follows the card's width, as in the combine.
   const resize = new ResizeObserver(() => {

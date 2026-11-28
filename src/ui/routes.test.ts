@@ -88,6 +88,7 @@ describe('hashForRoute', () => {
     [{ screen: 'combine' }, '#/combine'],
     [{ screen: 'tab', tab: 'pharm' }, '#/pharm'],
     [{ screen: 'tab', tab: 'pharm', spoofId: 'x12' }, '#/pharm/x12'],
+    [{ screen: 'tab', tab: 'pharm', spoofId: 'c3', replace: true }, '#/pharm/c3/replace'],
   ])('names %j as %s', (route, hash) => {
     expect(hashForRoute(route)).toBe(hash);
     expect(routeFromHash(hash, { ...later, hasDraft: true })).toEqual(route);
@@ -110,6 +111,15 @@ describe('routeFromHash, for a spoof’s card (#109)', () => {
 
   it('opens the splash screen with no team in play', () => {
     expect(routeFromHash('#/pharm/c3', noTeam)).toEqual({ screen: 'start' });
+  });
+
+  it('opens the screen to replace a spoof (#110)', () => {
+    expect(routeFromHash('#/pharm/c3/replace', later)).toEqual({
+      screen: 'tab',
+      tab: 'pharm',
+      spoofId: 'c3',
+      replace: true,
+    });
   });
 
   it('opens Match for a card address that names no spoof', () => {

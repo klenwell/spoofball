@@ -23,8 +23,10 @@ import {
   saveMatchInProgress,
   saveRoster,
   saveTeam,
+  swapInProspect,
 } from './saved-team';
-import type { Roster } from '../game/roster';
+import { emptyRoster, type Roster } from '../game/roster';
+import { afterMatch, renameSpoof } from '../game/pharm';
 import { createRandom } from '../game/random';
 import { generateSpoof, NEW_SPOOF_SKILL_TOTAL } from '../game/teams';
 import {
@@ -1445,5 +1447,120 @@ describe("the team's Pharm (#106)", () => {
       expect(totals.length).toBeGreaterThan(0);
       for (const t of totals) expect(t).not.toHaveProperty('mark');
     });
+  });
+});
+
+describe('swapInProspect (#110)', () => {
+  const DAY = '2026-11-27';
+  const PLAYED = matchRecord(computerMatch(SPOOFS, EMBERS, TEST_SEED));
+
+  /** The Spoofs with a match played, and `held` prospects drawn by losses. */
+  function storeWithProspects(held: number) {
+    const store = memoryStorage();
+    saveTeam(store, SPOOFS, { endDraft: true, joined: DAY });
+    recordMatch(store, PLAYED, DAY);
+    let roster = emptyRoster(5);
+    for (let i = 0; i < held; i += 1) roster = afterMatch(roster, SPOOFS, 'lost');
+    saveRoster(store, roster);
+    return { store, roster };
+  }
+
+  it('puts the prospect in the spoof’s place and cleans the slate, in one write', () => {
+    const { store, roster } = storeWithProspects(3);
+    const prospect = roster.prospects[1];
+    const leaving = SPOOFS.spoofs[2];
+    if (!prospect || !leaving) throw new Error('setup');
+    let writes = 0;
+    const counted = {
+      ...store,
+      setItem: (k: string, v: string) => {
+        writes += 1;
+        store.setItem(k, v);
+      },
+    };
+
+    const result = swapInProspect(counted, prospect.id, leaving.id);
+
+    expect(result.ok).toBe(true);
+    expect(writes).toBe(1);
+    const team = loadTeam(store);
+    expect(team.ok && team.team.spoofs.map((sp) => sp.id)).toEqual(
+      SPOOFS.spoofs.map((sp) => (sp.id === leaving.id ? prospect.id : sp.id)),
+    );
+    const after = loadRoster(store);
+    expect(after.ok && after.roster.prospects).toEqual([]);
+    expect(after.ok && after.roster.prospectsDrawn).toBe(3);
+  });
+
+  it('keeps the replaced spoof’s totals, with the name and mark it had when it left', () => {
+    const { store, roster } = storeWithProspects(3);
+    const leaving = SPOOFS.spoofs.find((sp) => {
+      const stats = loadStats(store);
+      return stats.ok && stats.stats.spoofs[sp.id] !== undefined;
+    });
+    const prospect = roster.prospects[0];
+    if (!leaving || !prospect) throw new Error('setup');
+    saveTeam(store, renameSpoof(SPOOFS, leaving.id, 'Gone Gus'));
+    const before = loadStats(store);
+
+    swapInProspect(store, prospect.id, leaving.id);
+
+    const stats = loadStats(store);
+    expect(stats.ok && stats.stats.spoofs[leaving.id]).toEqual({
+      ...(before.ok ? before.stats.spoofs[leaving.id] : {}),
+      name: 'Gone Gus',
+      mark: leaving.mark,
+    });
+    expect(stats.ok && stats.stats.results).toEqual(before.ok && before.stats.results);
+  });
+
+  it('refuses with fewer than 3 prospects, changing nothing', () => {
+    const { store, roster } = storeWithProspects(2);
+    const before = store.items.get(STORAGE_KEY);
+
+    const result = swapInProspect(store, roster.prospects[0]?.id ?? '', SPOOFS.spoofs[0]?.id ?? '');
+
+    expect(result).toEqual({ ok: false, problem: 'too-few' });
+    expect(store.items.get(STORAGE_KEY)).toBe(before);
+  });
+
+  it('refuses during a match, changing nothing', () => {
+    const { store, roster } = storeWithProspects(3);
+    let match = startMatch(SPOOFS, EMBERS, TEST_SEED);
+    match = playScrum(match, computerMise(match));
+    saveMatchInProgress(store, matchRecord(match, { soFar: true }), DAY);
+    const before = store.items.get(STORAGE_KEY);
+
+    const result = swapInProspect(store, roster.prospects[0]?.id ?? '', SPOOFS.spoofs[0]?.id ?? '');
+
+    expect(result).toEqual({ ok: false, problem: 'match-in-progress' });
+    expect(store.items.get(STORAGE_KEY)).toBe(before);
+  });
+
+  it('refuses a prospect or spoof that isn’t there', () => {
+    const { store, roster } = storeWithProspects(3);
+    expect(swapInProspect(store, 'x99', SPOOFS.spoofs[0]?.id ?? '')).toEqual({
+      ok: false,
+      problem: 'no-prospect',
+    });
+    expect(swapInProspect(store, roster.prospects[0]?.id ?? '', 'z9')).toEqual({
+      ok: false,
+      problem: 'no-spoof',
+    });
+  });
+
+  it('leaves everything as it was when the save fails', () => {
+    const { store, roster } = storeWithProspects(3);
+    const text = store.items.get(STORAGE_KEY) ?? '';
+    const full = fullStorage({ [STORAGE_KEY]: text });
+
+    const result = swapInProspect(full, roster.prospects[0]?.id ?? '', SPOOFS.spoofs[0]?.id ?? '');
+
+    expect(result).toEqual({ ok: false, problem: 'full' });
+    expect(full.getItem(STORAGE_KEY)).toBe(text);
+  });
+
+  it('needs a saved team', () => {
+    expect(swapInProspect(memoryStorage(), 'x1', 'c1')).toEqual({ ok: false, problem: 'none' });
   });
 });
