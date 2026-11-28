@@ -13,7 +13,7 @@ import {
   type SpoofTotals,
   type TeamStats,
 } from '../game/stats';
-import { afterMatch } from '../game/pharm';
+import { afterMatch, draftProspect, type DraftProblem } from '../game/pharm';
 import { emptyRoster, rosterProblems, type Roster } from '../game/roster';
 import { drawSpoofName } from '../game/spoof-names';
 import { createSpoof, teamProblems, type Spoof, type Team } from '../game/teams';
@@ -378,6 +378,56 @@ export function saveRoster(
   keepTeamParts(savedData(store), saved, ['roster']);
   saved.roster = savedRoster(roster);
   return write(store, saved);
+}
+
+/** Why a prospect couldn't be swapped in: the draft's rules, the save, or a match in progress. */
+export type SwapProblem = DraftProblem | LoadProblem | SaveProblem | 'match-in-progress';
+
+export type SwapResult =
+  | { readonly ok: true; readonly team: Team; readonly roster: Roster }
+  | { readonly ok: false; readonly problem: SwapProblem };
+
+/**
+ * Swaps a prospect in for a spoof (#110): the prospect takes the spoof's
+ * place, the slate is cleaned (`draftProspect`, #107), and the replaced
+ * spoof's totals keep the name and mark it had when it left, for #100. The
+ * team, the roster and the stats are saved in one write, so a failed save
+ * leaves all three as they were. Only between matches.
+ */
+export function swapInProspect(
+  store: KeyValueStore | null,
+  prospectId: string,
+  spoofId: string,
+): SwapResult {
+  const loaded = loadTeam(store);
+  if (!loaded.ok) return loaded;
+  if (!store) return { ok: false, problem: 'unavailable' };
+  if (hasMatchInProgress(store)) return { ok: false, problem: 'match-in-progress' };
+  const roster = loadRoster(store);
+  if (!roster.ok) return roster;
+  const drafted = draftProspect(loaded.team, roster.roster, prospectId, spoofId);
+  if (!drafted.ok) return drafted;
+
+  const saved: SavedRecord = { version: SAVE_VERSION, team: savedTeam(drafted.team) };
+  const draft = loadDraft(store);
+  if (draft) saved.draft = savedDraft(draft);
+  keepTeamParts(savedData(store), saved, ['roster']);
+  saved.roster = savedRoster(drafted.roster);
+  // The replaced spoof's line keeps its name and mark as it leaves (#100).
+  const stats = loadStats(store);
+  const leaving = loaded.team.spoofs.find((s) => s.id === spoofId);
+  const totals = stats.ok ? stats.stats.spoofs[spoofId] : undefined;
+  if (stats.ok && leaving && totals) {
+    saved.stats = {
+      ...stats.stats,
+      spoofs: {
+        ...stats.stats.spoofs,
+        [spoofId]: { ...totals, name: leaving.name, mark: leaving.mark },
+      },
+    };
+  }
+  const written = write(store, saved);
+  return written.ok ? { ok: true, team: drafted.team, roster: drafted.roster } : written;
 }
 
 /** Why a match couldn't be added to the record. */

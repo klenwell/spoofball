@@ -1,5 +1,5 @@
 import { kit } from '../design/kits';
-import { moveSpoof } from '../game/pharm';
+import { canReplace, moveSpoof } from '../game/pharm';
 import { PROSPECTS } from '../game/roster';
 import type { Team } from '../game/teams';
 import { startWarmUp, stepWarmUp, warmUpSeed, type WarmUp } from '../game/warm-up';
@@ -8,10 +8,12 @@ import {
   type RosterResult,
   type SaveResult,
   type StatsResult,
+  type SwapResult,
 } from '../storage/saved-team';
-import type { Panel } from './app-shell';
+import type { Panel, PanelDetail } from './app-shell';
 import { el, newSeed, teamLogo } from './dom';
-import { NEW_TEAM_HASH, cardHash } from './routes';
+import { NEW_TEAM_HASH, PROSPECTS_HASH, cardHash } from './routes';
+import { createReplaceView, type ReplaceView } from './replace-spoof';
 import { createSpoofCard, type SpoofCard } from './spoof-card';
 import { hashFor } from './tabs';
 import { spoofLabel } from './spoof-label';
@@ -48,6 +50,8 @@ export interface PharmScreenOptions {
   readonly matchInProgress: () => boolean;
   /** Saves the team as changed (a new order, a name, a mark) and puts it in play; says whether it was saved. */
   readonly onChange: (team: Team) => SaveResult;
+  /** Swaps a prospect in for a spoof (#110), saving it all, and puts the team in play. */
+  readonly onSwap: (prospectId: string, spoofId: string) => SwapResult;
 }
 
 /** A warm-up cell's size on the roster, in CSS px. */
@@ -62,17 +66,32 @@ interface Row {
 }
 
 export function createPharmScreen(options: PharmScreenOptions): Panel {
-  const { isSaved, loadStats, loadRoster, matchInProgress, onChange } = options;
+  const { isSaved, loadStats, loadRoster, matchInProgress, onChange, onSwap } = options;
   let team = options.team;
   const root = el('div', 'pharm-screen');
   const teamKit = kit(team.color, 'home');
   /** Each spoof's warm-up, by id, so a reorder doesn't restart it. */
   const warmUps = new Map<string, WarmUp>();
   const seed = newSeed();
-  team.spoofs.forEach((s, i) => warmUps.set(s.id, startWarmUp(s, warmUpSeed(seed, i))));
+  let warmUpsStarted = 0;
+  /**
+   * A warm-up for each spoof on the team, and none for one that has left:
+   * a spoof swapped in (#110) gets its own, or its cell stays blank (#121 QA).
+   */
+  function keepWarmUps(): void {
+    for (const spoof of team.spoofs) {
+      if (warmUps.has(spoof.id)) continue;
+      warmUps.set(spoof.id, startWarmUp(spoof, warmUpSeed(seed, warmUpsStarted)));
+      warmUpsStarted += 1;
+    }
+    for (const id of warmUps.keys()) {
+      if (!team.spoofs.some((s) => s.id === id)) warmUps.delete(id);
+    }
+  }
+  keepWarmUps();
   let rows: Row[] = [];
-  /** The spoof card on screen (#109), or null for the roster. */
-  let card: SpoofCard | null = null;
+  /** A spoof's card (#109) or its replace screen (#110) on screen, or null for the roster. */
+  let card: SpoofCard | ReplaceView | null = null;
   /** A line under the roster when a new order couldn't be saved, until one is. */
   const message = el('p', 'pharm-message');
   message.setAttribute('role', 'status');
@@ -83,6 +102,7 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       rows = [];
       return;
     }
+    keepWarmUps();
     const stats = loadStats();
     const roster = loadRoster();
     const locked = matchInProgress();
@@ -108,20 +128,61 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
     for (const row of rows) drawRow(row);
   }
 
-  /** A spoof's card (#109), or the roster when the spoof isn't on the team, such as one replaced. */
-  function renderCard(spoofId: string): void {
+  /** Your prospects, to scout, with no swapping (the owner, #110 QA). */
+  function renderProspects(): void {
+    if (!isSaved) {
+      window.location.replace(hashFor('pharm'));
+      return;
+    }
+    const roster = loadRoster();
+    card = createReplaceView({
+      team,
+      spoofId: null,
+      roster: roster.ok ? roster.roster : null,
+      locked: matchInProgress(),
+    });
+    rows = [];
+    root.replaceChildren(card.element);
+  }
+
+  /**
+   * A spoof's card (#109), or with `replace`, its replace screen (#110); or
+   * the roster when the spoof isn't on the team, such as one replaced.
+   */
+  function renderCard(spoofId: string, replace = false): void {
     if (!isSaved || !team.spoofs.some((s) => s.id === spoofId)) {
       // A real navigation, without a history entry: the shell routes to the
       // roster, with the tab's intro back (#120 review).
       window.location.replace(hashFor('pharm'));
       return;
     }
+    if (replace) {
+      const roster = loadRoster();
+      card = createReplaceView({
+        team,
+        spoofId,
+        roster: roster.ok ? roster.roster : null,
+        locked: matchInProgress(),
+        onSwap: (prospectId) => {
+          const swapped = onSwap(prospectId, spoofId);
+          if (swapped.ok) team = swapped.team;
+          return swapped;
+        },
+      });
+      rows = [];
+      root.replaceChildren(card.element);
+      return;
+    }
     const stats = loadStats();
+    const roster = loadRoster();
+    const locked = matchInProgress();
     card = createSpoofCard({
       team,
       spoofId,
       stats: stats.ok ? stats.stats : null,
-      locked: matchInProgress(),
+      locked,
+      // Only when a swap can happen (the owner, #110 QA).
+      canReplace: roster.ok && !locked && canReplace(team, roster.roster, spoofId),
       onChange: (next) => {
         const saved = onChange(next);
         if (saved.ok) team = next;
@@ -163,6 +224,12 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       line,
       el('p', 'pharm-picks-help', 'Each loss brings a pick: a prospect you can scout.'),
     );
+    // Your prospects, to scout before you can swap one in (the owner, #110 QA).
+    if (roster.roster.prospects.length > 0) {
+      const scout = el('a', 'button pharm-scout', 'Scout prospects');
+      scout.href = PROSPECTS_HASH;
+      box.append(scout);
+    }
     return box;
   }
 
@@ -355,13 +422,14 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
     get heading() {
       return card?.heading;
     },
-    // `spoofId` opens that spoof's card (#109); without it, the roster.
-    show: (spoofId?: string) => {
+    // A spoof's card (#109) or replace screen (#110); without one, the roster.
+    show: (detail?: PanelDetail) => {
       shown = true;
       card?.dispose();
       card = null;
-      if (spoofId === undefined) render();
-      else renderCard(spoofId);
+      if (detail === undefined) render();
+      else if ('prospects' in detail) renderProspects();
+      else renderCard(detail.spoofId, detail.replace === true);
       start();
     },
     hide: () => {

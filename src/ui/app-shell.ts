@@ -16,8 +16,10 @@ import {
   saveDraft,
   saveMatchInProgress,
   saveTeam,
+  swapInProspect,
   type KeyValueStore,
   type SaveResult,
+  type SwapResult,
 } from '../storage/saved-team';
 import { createCombineScreen } from './combine-screen';
 import { el, newSeed, timeOfDay, today } from './dom';
@@ -47,14 +49,19 @@ import { hashFor, tabById, tabs, type TabId } from './tabs';
 
 const SOURCE_URL = 'https://github.com/klenwell/spoofball';
 
+/** What a tab shows beyond its main screen: on Pharm, a spoof's card or replace screen, or your prospects. */
+export type PanelDetail =
+  { readonly spoofId: string; readonly replace?: true } | { readonly prospects: true };
+
 /** Extra content a screen shows, built the first time it opens. */
 export interface Panel {
   readonly element: HTMLElement;
   /**
    * Called each time the screen is shown, for example to show the latest
-   * stats (#91). The Pharm tab gets the spoof whose card to show (#109).
+   * stats (#91). The Pharm tab gets the spoof whose card to show (#109), or
+   * whose replace screen (#110).
    */
-  readonly show?: (spoofId?: string) => void;
+  readonly show?: (detail?: PanelDetail) => void;
   /** Called when the player leaves the screen, for example to pause a scrum. */
   readonly hide?: () => void;
   /** Called when the screen is thrown away (the team changed), to stop its timers and listeners. */
@@ -119,6 +126,7 @@ function panelBuilders(
   store: KeyValueStore | null,
   isSaved: (team: Team) => boolean,
   onChange: (team: Team) => SaveResult,
+  onSwap: (prospectId: string, spoofId: string) => SwapResult,
 ): Partial<Record<TabId, (team: Team) => Panel>> {
   return {
     match: (team) =>
@@ -131,10 +139,19 @@ function panelBuilders(
         loadRoster: () => loadRoster(store),
         matchInProgress: () => hasMatchInProgress(store),
         onChange,
+        onSwap,
       }),
     stats: (team) =>
       createStatsScreen({ team, isSaved: isSaved(team), loadStats: () => loadStats(store) }),
   };
+}
+
+/** What a tab route shows beyond the tab's main screen, if anything. */
+function panelDetail(route: Route): PanelDetail | undefined {
+  if (route.screen !== 'tab') return undefined;
+  if (route.prospects) return { prospects: true };
+  if (route.spoofId === undefined) return undefined;
+  return { spoofId: route.spoofId, ...(route.replace ? { replace: true as const } : {}) };
 }
 
 function tabLink(id: TabId, label: string): HTMLAnchorElement {
@@ -204,7 +221,7 @@ export function mountAppShell(root: HTMLElement): void {
 
   root.replaceChildren(header, screen, footer());
 
-  const builders = panelBuilders(store, (t) => t === savedTeam, changeTeam);
+  const builders = panelBuilders(store, (t) => t === savedTeam, changeTeam, swapIn);
 
   /**
    * Saves the team as changed in the Pharm, in a new order (#108) or with a
@@ -214,14 +231,25 @@ export function mountAppShell(root: HTMLElement): void {
    */
   function changeTeam(next: Team): SaveResult {
     const saved = saveTeam(store, next);
-    if (!saved.ok) return saved;
+    if (saved.ok) putInPlay(next);
+    return saved;
+  }
+
+  /** Swaps a prospect in for a spoof (#110), with the team, the prospects and the stats in one save. */
+  function swapIn(prospectId: string, spoofId: string): SwapResult {
+    const swapped = swapInProspect(store, prospectId, spoofId);
+    if (swapped.ok) putInPlay(swapped.team);
+    return swapped;
+  }
+
+  /** The saved team, changed in the Pharm, is the team in play: Match and Stats are built afresh. */
+  function putInPlay(next: Team): void {
     savedTeam = next;
     team = next;
     for (const id of ['match', 'stats'] as const) {
       builtPanels.get(id)?.dispose?.();
       builtPanels.delete(id);
     }
-    return saved;
   }
 
   function tabPanel(id: TabId, forTeam: Team): Panel | undefined {
@@ -313,8 +341,8 @@ export function mountAppShell(root: HTMLElement): void {
       root.dataset.tab = route.tab;
       heading.hidden = false;
       heading.textContent = tab.title;
-      // A spoof's card (#109) has its own heading and no intro.
-      body.textContent = route.spoofId === undefined ? tab.coming : '';
+      // A spoof's card (#109), and the screens beyond it, have their own heading and no intro.
+      body.textContent = panelDetail(route) === undefined ? tab.coming : '';
       document.title = `${tab.title} · Spoofball`;
     } else {
       delete root.dataset.tab;
@@ -328,7 +356,7 @@ export function mountAppShell(root: HTMLElement): void {
     }
     if (content) panel.replaceChildren(content.element);
     else panel.replaceChildren();
-    content?.show?.(route.screen === 'tab' ? route.spoofId : undefined);
+    content?.show?.(panelDetail(route));
     for (const link of links) {
       if (route.screen === 'tab' && link.dataset.tab === route.tab) {
         link.setAttribute('aria-current', 'page');
