@@ -49,11 +49,11 @@ import { hashFor, tabById, tabs, type TabId } from './tabs';
 
 const SOURCE_URL = 'https://github.com/klenwell/spoofball';
 
-/** Extra content a screen shows, built the first time it opens. */
 /** What a tab shows beyond its main screen: on Pharm, a spoof's card or replace screen, or your prospects. */
 export type PanelDetail =
   { readonly spoofId: string; readonly replace?: true } | { readonly prospects: true };
 
+/** Extra content a screen shows, built the first time it opens. */
 export interface Panel {
   readonly element: HTMLElement;
   /**

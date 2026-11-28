@@ -423,4 +423,18 @@ describe('canReplace (#110)', () => {
     expect(canReplace(MIXED, royal, 't4')).toBe(false);
     expect(canReplace(MIXED, three, 't9')).toBe(false);
   });
+
+  it('is true when only some prospects could take the spoof’s place (#121 review)', () => {
+    const three = rosterAfterLosses(MIXED, 3);
+    const [first, ...rest] = three.prospects;
+    if (!first) throw new Error('no prospect');
+    const king = {
+      ...generateSpoof(first.id, 'king', 520, createRandom(1), ['Nobody Here']),
+      name: first.name,
+    };
+    const mixed: Roster = { ...three, prospects: [king, ...rest] };
+
+    // The king can't replace a pawn (t4), but the other two prospects can.
+    expect(canReplace(MIXED, mixed, 't4')).toBe(true);
+  });
 });

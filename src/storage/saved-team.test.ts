@@ -26,7 +26,7 @@ import {
   swapInProspect,
 } from './saved-team';
 import { emptyRoster, type Roster } from '../game/roster';
-import { afterMatch, renameSpoof } from '../game/pharm';
+import { afterMatch, changeMark, renameSpoof } from '../game/pharm';
 import { createRandom } from '../game/random';
 import { generateSpoof, NEW_SPOOF_SKILL_TOTAL } from '../game/teams';
 import {
@@ -1500,7 +1500,8 @@ describe('swapInProspect (#110)', () => {
     });
     const prospect = roster.prospects[0];
     if (!leaving || !prospect) throw new Error('setup');
-    saveTeam(store, renameSpoof(SPOOFS, leaving.id, 'Gone Gus'));
+    // Renamed and re-marked since its last match: the totals take both as it leaves.
+    saveTeam(store, changeMark(renameSpoof(SPOOFS, leaving.id, 'Gone Gus'), leaving.id, 'heart'));
     const before = loadStats(store);
 
     swapInProspect(store, prospect.id, leaving.id);
@@ -1509,9 +1510,39 @@ describe('swapInProspect (#110)', () => {
     expect(stats.ok && stats.stats.spoofs[leaving.id]).toEqual({
       ...(before.ok ? before.stats.spoofs[leaving.id] : {}),
       name: 'Gone Gus',
-      mark: leaving.mark,
+      mark: 'heart',
     });
     expect(stats.ok && stats.stats.results).toEqual(before.ok && before.stats.results);
+  });
+
+  it('keeps the whole record when the spoof swapped out never played (#121 review)', () => {
+    const { store, roster } = storeWithProspects(3);
+    const leaving = SPOOFS.spoofs[4];
+    const prospect = roster.prospects[0];
+    if (!leaving || !prospect) throw new Error('setup');
+    // A spoof that sat out every scrum has no totals.
+    const record = JSON.parse(store.items.get(STORAGE_KEY) ?? '') as {
+      stats: { spoofs: Record<string, unknown> };
+    };
+    record.stats.spoofs = Object.fromEntries(
+      Object.entries(record.stats.spoofs).filter(([id]) => id !== leaving.id),
+    );
+    store.items.set(STORAGE_KEY, JSON.stringify(record));
+    const before = loadStats(store);
+
+    expect(swapInProspect(store, prospect.id, leaving.id).ok).toBe(true);
+
+    expect(loadStats(store)).toEqual(before);
+  });
+
+  it('keeps a draft in progress beside the team (#121 review)', () => {
+    const { store, roster } = storeWithProspects(3);
+    const draft = startDraft({ name: 'Next', color: 'red', logo: '🐝' }, TEST_SEED);
+    saveDraft(store, draft);
+
+    swapInProspect(store, roster.prospects[0]?.id ?? '', SPOOFS.spoofs[0]?.id ?? '');
+
+    expect(loadDraft(store)).toEqual(draft);
   });
 
   it('refuses with fewer than 3 prospects, changing nothing', () => {
