@@ -89,6 +89,7 @@ describe('hashForRoute', () => {
     [{ screen: 'tab', tab: 'pharm' }, '#/pharm'],
     [{ screen: 'tab', tab: 'pharm', spoofId: 'x12' }, '#/pharm/x12'],
     [{ screen: 'tab', tab: 'pharm', spoofId: 'c3', replace: true }, '#/pharm/c3/replace'],
+    [{ screen: 'tab', tab: 'pharm', prospects: true }, '#/pharm/prospects'],
   ])('names %j as %s', (route, hash) => {
     expect(hashForRoute(route)).toBe(hash);
     expect(routeFromHash(hash, { ...later, hasDraft: true })).toEqual(route);

@@ -2071,3 +2071,8 @@ a.button {
 .replace-actions .button[hidden] {
   display: none;
 }
+
+/* Scout your prospects (#110), under the draft picks. */
+.pharm-scout {
+  margin-top: var(--space-2);
+}

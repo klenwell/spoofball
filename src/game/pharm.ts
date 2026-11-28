@@ -284,3 +284,15 @@ export function changeMark(team: Team, spoofId: string, mark: MarkName): Team {
   if (!team.spoofs.some((s) => s.id === spoofId)) return team;
   return { ...team, spoofs: team.spoofs.map((s) => (s.id === spoofId ? { ...s, mark } : s)) };
 }
+
+/**
+ * Whether a spoof can be replaced now (#110, the owner's QA review): the team
+ * holds 3 picks, and one of its prospects could take this spoof's place
+ * within the type limits. Prospects are drawn to fit any spoof (#107), so
+ * in practice it's whether the team can draft; the check keeps that true.
+ */
+export function canReplace(team: Team, roster: Roster, spoofId: string): boolean {
+  return (
+    canDraft(roster) && roster.prospects.some((p) => draftProspect(team, roster, p.id, spoofId).ok)
+  );
+}

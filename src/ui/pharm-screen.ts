@@ -1,5 +1,5 @@
 import { kit } from '../design/kits';
-import { moveSpoof } from '../game/pharm';
+import { canReplace, moveSpoof } from '../game/pharm';
 import { PROSPECTS } from '../game/roster';
 import type { Team } from '../game/teams';
 import { startWarmUp, stepWarmUp, warmUpSeed, type WarmUp } from '../game/warm-up';
@@ -12,7 +12,7 @@ import {
 } from '../storage/saved-team';
 import type { Panel, PanelDetail } from './app-shell';
 import { el, newSeed, teamLogo } from './dom';
-import { NEW_TEAM_HASH, cardHash } from './routes';
+import { NEW_TEAM_HASH, PROSPECTS_HASH, cardHash } from './routes';
 import { createReplaceView, type ReplaceView } from './replace-spoof';
 import { createSpoofCard, type SpoofCard } from './spoof-card';
 import { hashFor } from './tabs';
@@ -128,6 +128,23 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
     for (const row of rows) drawRow(row);
   }
 
+  /** Your prospects, to scout, with no swapping (the owner, #110 QA). */
+  function renderProspects(): void {
+    if (!isSaved) {
+      window.location.replace(hashFor('pharm'));
+      return;
+    }
+    const roster = loadRoster();
+    card = createReplaceView({
+      team,
+      spoofId: null,
+      roster: roster.ok ? roster.roster : null,
+      locked: matchInProgress(),
+    });
+    rows = [];
+    root.replaceChildren(card.element);
+  }
+
   /**
    * A spoof's card (#109), or with `replace`, its replace screen (#110); or
    * the roster when the spoof isn't on the team, such as one replaced.
@@ -157,11 +174,15 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       return;
     }
     const stats = loadStats();
+    const roster = loadRoster();
+    const locked = matchInProgress();
     card = createSpoofCard({
       team,
       spoofId,
       stats: stats.ok ? stats.stats : null,
-      locked: matchInProgress(),
+      locked,
+      // Only when a swap can happen (the owner, #110 QA).
+      canReplace: roster.ok && !locked && canReplace(team, roster.roster, spoofId),
       onChange: (next) => {
         const saved = onChange(next);
         if (saved.ok) team = next;
@@ -203,6 +224,12 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       line,
       el('p', 'pharm-picks-help', 'Each loss brings a pick: a prospect you can scout.'),
     );
+    // Your prospects, to scout before you can swap one in (the owner, #110 QA).
+    if (roster.roster.prospects.length > 0) {
+      const scout = el('a', 'button pharm-scout', 'Scout prospects');
+      scout.href = PROSPECTS_HASH;
+      box.append(scout);
+    }
     return box;
   }
 
@@ -401,6 +428,7 @@ export function createPharmScreen(options: PharmScreenOptions): Panel {
       card?.dispose();
       card = null;
       if (detail === undefined) render();
+      else if ('prospects' in detail) renderProspects();
       else renderCard(detail.spoofId, detail.replace === true);
       start();
     },

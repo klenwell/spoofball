@@ -50,11 +50,9 @@ import { hashFor, tabById, tabs, type TabId } from './tabs';
 const SOURCE_URL = 'https://github.com/klenwell/spoofball';
 
 /** Extra content a screen shows, built the first time it opens. */
-/** What a tab shows beyond its main screen: on Pharm, a spoof's card or its replace screen. */
-export interface PanelDetail {
-  readonly spoofId: string;
-  readonly replace?: true;
-}
+/** What a tab shows beyond its main screen: on Pharm, a spoof's card or replace screen, or your prospects. */
+export type PanelDetail =
+  { readonly spoofId: string; readonly replace?: true } | { readonly prospects: true };
 
 export interface Panel {
   readonly element: HTMLElement;
@@ -146,6 +144,14 @@ function panelBuilders(
     stats: (team) =>
       createStatsScreen({ team, isSaved: isSaved(team), loadStats: () => loadStats(store) }),
   };
+}
+
+/** What a tab route shows beyond the tab's main screen, if anything. */
+function panelDetail(route: Route): PanelDetail | undefined {
+  if (route.screen !== 'tab') return undefined;
+  if (route.prospects) return { prospects: true };
+  if (route.spoofId === undefined) return undefined;
+  return { spoofId: route.spoofId, ...(route.replace ? { replace: true as const } : {}) };
 }
 
 function tabLink(id: TabId, label: string): HTMLAnchorElement {
@@ -335,8 +341,8 @@ export function mountAppShell(root: HTMLElement): void {
       root.dataset.tab = route.tab;
       heading.hidden = false;
       heading.textContent = tab.title;
-      // A spoof's card (#109) has its own heading and no intro.
-      body.textContent = route.spoofId === undefined ? tab.coming : '';
+      // A spoof's card (#109), and the screens beyond it, have their own heading and no intro.
+      body.textContent = panelDetail(route) === undefined ? tab.coming : '';
       document.title = `${tab.title} · Spoofball`;
     } else {
       delete root.dataset.tab;
@@ -350,11 +356,7 @@ export function mountAppShell(root: HTMLElement): void {
     }
     if (content) panel.replaceChildren(content.element);
     else panel.replaceChildren();
-    content?.show?.(
-      route.screen === 'tab' && route.spoofId !== undefined
-        ? { spoofId: route.spoofId, ...(route.replace ? { replace: true as const } : {}) }
-        : undefined,
-    );
+    content?.show?.(panelDetail(route));
     for (const link of links) {
       if (route.screen === 'tab' && link.dataset.tab === route.tab) {
         link.setAttribute('aria-current', 'page');

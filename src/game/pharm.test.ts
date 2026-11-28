@@ -5,6 +5,7 @@ import {
   TEAM_SKILL_CEILING,
   afterMatch,
   canDraft,
+  canReplace,
   draftProspect,
   drawProspect,
   changeMark,
@@ -396,5 +397,30 @@ describe('changeMark (#109)', () => {
   it('leaves the team as it is for an unknown spoof or mark', () => {
     expect(changeMark(MIXED, 't9', 'heart')).toBe(MIXED);
     expect(changeMark(MIXED, 't1', 'nonesuch' as 'heart')).toBe(MIXED);
+  });
+});
+
+describe('canReplace (#110)', () => {
+  it('is true with 3 prospects, for any spoof on the team', () => {
+    const three = rosterAfterLosses(MIXED, 3);
+    expect(MIXED.spoofs.every((s) => canReplace(MIXED, three, s.id))).toBe(true);
+  });
+
+  it('is false with fewer than 3', () => {
+    expect(canReplace(MIXED, rosterAfterLosses(MIXED, 2), 't1')).toBe(false);
+  });
+
+  it('is false for a spoof no prospect may replace, or one not on the team', () => {
+    const three = rosterAfterLosses(MIXED, 3);
+    const kings = three.prospects.map((p, i) => ({
+      ...generateSpoof(p.id, 'king', 520, createRandom(i + 1), ['Nobody Here']),
+      name: p.name,
+    }));
+    const royal: Roster = { ...three, prospects: kings };
+
+    // The team has a queen (t1): a king may replace her, but no other spoof.
+    expect(canReplace(MIXED, royal, 't1')).toBe(true);
+    expect(canReplace(MIXED, royal, 't4')).toBe(false);
+    expect(canReplace(MIXED, three, 't9')).toBe(false);
   });
 });

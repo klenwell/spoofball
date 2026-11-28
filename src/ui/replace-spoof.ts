@@ -7,6 +7,7 @@ import { STORAGE_PROBLEM_TEXT, type SwapProblem, type SwapResult } from '../stor
 import { el, newSeed } from './dom';
 import { createDrillCourt } from './drill-court';
 import { cardHash } from './routes';
+import { hashFor } from './tabs';
 import { spoofLabel } from './spoof-label';
 import { draftPicksText } from './stats-text';
 import { drawWarmUpCell, sizeCanvas } from './warm-up-cell';
@@ -19,20 +20,24 @@ import { drawWarmUpCell, sizeCanvas } from './warm-up-cell';
  * cleans the slate (the owner, #105). With fewer, you can scout the ones
  * you have. Only between matches.
  *
+ * Without a spoof to replace, it's your prospects to scout, at
+ * `#/pharm/prospects` (the owner's QA review on #110): the same cells and
+ * drills, and no swapping.
+ *
  * Outcomes only (Decision 7): no prices, no skill numbers, no subtypes, and
  * no hint of which prospect is an outlier.
  */
 
 export interface ReplaceViewOptions {
   readonly team: Team;
-  /** The spoof being replaced. */
-  readonly spoofId: string;
+  /** The spoof being replaced, or null to scout your prospects only. */
+  readonly spoofId: string | null;
   /** The team's prospects, or null when they can't be read. */
   readonly roster: Roster | null;
   /** A match is in progress: you can scout, but not swap. */
   readonly locked: boolean;
-  /** Swaps the prospect in and saves; says how it went. */
-  readonly onSwap: (prospectId: string) => SwapResult;
+  /** Swaps the prospect in and saves; says how it went. Only with a spoof to replace. */
+  readonly onSwap?: (prospectId: string) => SwapResult;
 }
 
 export interface ReplaceView {
@@ -64,19 +69,21 @@ let dialogs = 0;
 
 export function createReplaceView(options: ReplaceViewOptions): ReplaceView {
   const { team, spoofId, roster, locked, onSwap } = options;
-  const leaving = team.spoofs.find((s) => s.id === spoofId);
-  if (!leaving) throw new Error(`No spoof ${spoofId} on the team`);
+  const leaving = spoofId === null ? null : team.spoofs.find((s) => s.id === spoofId);
+  if (leaving === undefined) throw new Error(`No spoof ${String(spoofId)} on the team`);
   const teamKit = kit(team.color, 'home');
   const prospects = roster?.prospects ?? [];
-  const ready = roster !== null && canDraft(roster) && !locked;
+  const ready = leaving !== null && roster !== null && canDraft(roster) && !locked;
 
   const element = el('section', 'replace-view');
   const back = el('a', 'card-back');
-  back.href = cardHash(spoofId);
-  back.append('‹ ', spoofLabel(leaving));
+  back.href = leaving ? cardHash(leaving.id) : hashFor('pharm');
+  if (leaving) back.append('‹ ', spoofLabel(leaving));
+  else back.append('‹ Roster');
   const heading = el('h2', 'replace-title');
   heading.tabIndex = -1;
-  heading.append('Replace ', spoofLabel(leaving));
+  if (leaving) heading.append('Replace ', spoofLabel(leaving));
+  else heading.append('Your prospects');
 
   // --- The picks held, and what they let you do.
   const picks = el('p', 'pharm-picks-line replace-picks');
@@ -91,9 +98,13 @@ export function createReplaceView(options: ReplaceViewOptions): ReplaceView {
   );
   const help = el('p', 'pharm-picks-help');
   if (roster === null) help.textContent = "Your prospects couldn't be read.";
-  else if (locked) help.textContent = 'A match is in progress: finish it before replacing a spoof.';
   else if (prospects.length === 0) help.textContent = 'No prospects yet. Each loss brings one.';
-  else if (!ready) {
+  else if (!leaving && canDraft(roster)) {
+    help.textContent =
+      "Tap one to scout it. To swap one in, open a spoof's card and choose Replace this spoof.";
+  } else if (leaving && locked) {
+    help.textContent = 'A match is in progress: finish it before replacing a spoof.';
+  } else if (!ready) {
     help.textContent = `Tap one to scout it. You draft at ${String(PROSPECTS)}, and each loss brings one.`;
   } else {
     help.textContent = `Pick one to swap in for ${leaving.name}. The other ${String(PROSPECTS - 1)} go.`;
@@ -139,9 +150,11 @@ export function createReplaceView(options: ReplaceViewOptions): ReplaceView {
   const swap = el('button', 'button button-primary', 'Swap in');
   swap.type = 'button';
   const cancel = el('a', 'button', 'Cancel');
-  cancel.href = cardHash(spoofId);
+  cancel.href = leaving ? cardHash(leaving.id) : hashFor('pharm');
   actions.append(swap, cancel);
   swap.hidden = !ready;
+  // Scouting only: nothing to swap, so nothing to cancel either.
+  actions.hidden = leaving === null;
   const status = el('p', 'card-status');
   status.setAttribute('role', 'status');
 
@@ -176,7 +189,7 @@ export function createReplaceView(options: ReplaceViewOptions): ReplaceView {
       cell.button.classList.toggle('is-picked', on);
       cell.button.setAttribute('aria-pressed', String(on));
     }
-    swap.textContent = prospect ? `Swap in ${prospect.name}` : 'Swap in';
+    swap.textContent = prospect && leaving ? `Swap in ${prospect.name}` : 'Swap in';
     swap.setAttribute('aria-disabled', 'false');
     if (prospect) drills.open({ spoof: prospect }, prospects.indexOf(prospect));
   }
@@ -184,6 +197,7 @@ export function createReplaceView(options: ReplaceViewOptions): ReplaceView {
   swap.setAttribute('aria-disabled', 'true');
   swap.addEventListener('click', () => {
     const prospect = prospects.find((p) => p.id === picked);
+    if (!leaving) return;
     if (!prospect) {
       status.textContent = 'Tap a prospect to pick it first.';
       return;
@@ -200,7 +214,7 @@ export function createReplaceView(options: ReplaceViewOptions): ReplaceView {
     const prospect = prospects.find((p) => p.id === picked);
     dialog.returnValue = 'swap';
     dialog.close();
-    if (!prospect) return;
+    if (!prospect || !leaving || !onSwap) return;
     const result = onSwap(prospect.id);
     if (!result.ok) {
       status.textContent = `${prospect.name} couldn't be swapped in. ${SWAP_PROBLEM_TEXT[result.problem]}`;

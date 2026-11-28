@@ -34,6 +34,8 @@ export interface SpoofCardOptions {
   readonly stats: TeamStats | null;
   /** While a match is in progress, the spoof can't be renamed or re-marked. */
   readonly locked: boolean;
+  /** Whether a swap can happen now: 3 picks, between matches (#110). Only then is Replace shown. */
+  readonly canReplace: boolean;
   /** Saves the team with the change and puts it in play; says whether it was saved. */
   readonly onChange: (team: Team) => SaveResult;
 }
@@ -227,7 +229,8 @@ export function createSpoofCard(options: SpoofCardOptions): SpoofCard {
   const replace = el('a', 'button card-replace', 'Replace this spoof');
   replace.href = replaceHash(spoofId);
   const actions = el('div', 'card-actions');
-  actions.append(scout, replace);
+  actions.append(scout);
+  if (options.canReplace) actions.append(replace);
 
   element.append(back, top, tiles, actions, drills.element, edit);
   show();
